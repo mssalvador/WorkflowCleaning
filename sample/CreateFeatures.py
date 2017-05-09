@@ -1,14 +1,16 @@
 #Python related imports
 from ipywidgets import widgets
 from IPython.display import display, Javascript, HTML
+import pyspark.ml.clustering as clusters
 
 class AssembleKmeans(object):
 
-    def __init__(self, feature_cols="features"):
+    def __init__(self, feature_cols=[]):
         self.numberClusters = widgets.IntText()
         self.featureCols = feature_cols
         self.predictionCols = widgets.Text()
         self.initialMode = widgets.Text()
+        self.featureColsOutput = None
         self.initialSteps = widgets.IntText()
         self.iterations = widgets.IntText()
         self.standardize = widgets.IntText()
@@ -21,6 +23,22 @@ class AssembleKmeans(object):
             # rows=10,
             description='Methods:',
             disabled=False
+        )
+
+        algorithm = widgets.Select(
+            options = [i for i in clusters.__all__ if "Model" not in i],
+            value='KMeans',
+            # rows=10,
+            description='Clustering methods:',
+            disabled=False
+        )
+
+        feature_select = widgets.SelectMultiple(
+            options = self.featureCols,
+            value = [self.featureCols[0]],
+            description = "Feature columns",
+            disabled = False
+
         )
 
         standardization_checkbox = widgets.Checkbox(
@@ -77,13 +95,20 @@ class AssembleKmeans(object):
             self.initialSteps.value = initialsteps
 
         sliders = widgets.interactive(set_slider_values,
-                                      cluster=number_clusters,
-                                      initialsteps=number_init_steps,
-                                      iterations=number_iterations)
+                                      cluster = number_clusters,
+                                      initialsteps = number_init_steps,
+                                      iterations = number_iterations,
+                                      )
+
+        def set_feature_columns(features):
+            self.featureColsOutput = features
+
+        multiple_feature_select = widgets.interactive(set_feature_columns,features=feature_select)
+
 
         cluster_number_button = widgets.Button(description="Show me the money!")
 
-        firstline = widgets.HBox([initial_mode,standardization_checkbox])
+        firstline = widgets.HBox(list(multiple_feature_select.children)+[algorithm,standardization_checkbox])
         secondline = widgets.HBox(sliders.children)
         thridline = widgets.HBox([cluster_number_button])
 
@@ -95,12 +120,14 @@ class AssembleKmeans(object):
         print(self.numberClusters.value)
         print(self.initialSteps.value)
         print(self.iterations.value)
+        print(self.featureCols)
 
     def export_values(self):
         return {"iterations":self.iterations.value,
                 "initialstep":self.initialSteps.value,
                 "clusters":self.numberClusters.value,
                 "standardize":self.standardize.value,
-                "features": self.featureCols,
-                "prediction":self.predictionCols.value
+                "features": self.featureColsOutput,
+                "prediction":self.predictionCols.value,
+                "initialmode":"random" #!!! HARDCODED FOR TESTING PURPOSES !!!
                 }

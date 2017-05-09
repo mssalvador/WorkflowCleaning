@@ -5,6 +5,8 @@ from pyspark.sql.types import StructField, StructType, IntegerType
 
 from sample.DataIO import DataIO
 from sample.CreateFeatures import AssembleKmeans
+from sample.ExecuteWorkflow import ExecuteWorkFlow
+
 import argparse
 import os
 import sys
@@ -21,10 +23,12 @@ if __name__ == '__main__':
     sc = SparkContext("local[*]", "cleaning workflow")
     sqlContext = SQLContext(sc)
 
+    work_flow = ExecuteWorkFlow()
+    work_flow.model = "KMeans"
+    print(work_flow.construct_pipeLine())
+
     #data_imports = DataIO(sc, PARQUET_PATH + "//featureDataCvr.parquet", PARQUET_PATH + "/companyCvrData")
 
     #data_imports.get_latest_company(["cvrNummer"], ["periode_gyldigFra"]).show()
     #data_imports.mergeCompanyFeatureData().show()
-    params = AssembleKmeans()
-    params.select_parameters()
 

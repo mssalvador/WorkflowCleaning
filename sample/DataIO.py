@@ -61,12 +61,8 @@ class DataIO:
 
         clean_company_df = self.get_latest_company(["cvrNummer"],["periode_gyldigFra"]) #Get company on the right form
 
-        if output_cols == []:
+        if not output_cols:
             output_cols = self._import_features_df.columns+[i for i in clean_company_df.columns if i not in self._import_features_df.columns]
-
-
-
-
 
         joined_df = (self._import_features_df
                      .filter((F.col("kortBeskrivelse") == "APS") | (F.col("kortBeskrivelse") == "AS"))
@@ -75,7 +71,7 @@ class DataIO:
 
         value_types = ("int", "float", "double", "long")
         value_columns = [i[0] for i in joined_df.dtypes if i[1] in value_types]
-        print(value_columns)
+        #print(value_columns) # show columns that contain values
 
         return (joined_df
                 .distinct()

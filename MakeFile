@@ -1,0 +1,4 @@
+build:
+    mkdir ./dist
+    cp ./sample/main.py ./dist
+    cd ./sample && zip -x main.py -r ../dist/jobs.zip .

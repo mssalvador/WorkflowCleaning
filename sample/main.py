@@ -23,7 +23,7 @@ if __name__ == '__main__':
     sc = SparkContext("local[*]", "cleaning workflow")
     sqlContext = SQLContext(sc)
 
-    work_flow = ExecuteWorkFlow()
+    work_flow = ExecuteWorkflow()
     work_flow.model = "KMeans"
     print(work_flow.construct_pipeLine())
 

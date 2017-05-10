@@ -8,7 +8,7 @@ class AssembleKmeans(object):
     def __init__(self, feature_cols=[]):
         self.numberClusters = widgets.IntText()
         self.featureCols = feature_cols
-        self.predictionCols = widgets.Text()
+        self.predictionCols = "Prediction"
         self.initialMode = widgets.Text()
         self.featureColsOutput = None
         self.initialSteps = widgets.IntText()
@@ -131,13 +131,13 @@ class AssembleKmeans(object):
         print(self.featureCols)
 
     def export_values(self):
-        return {"iterations":self.iterations.value,
-                "initialstep":self.initialSteps.value,
-                "clusters":self.numberClusters.value,
-                "standardize":self.standardize,
+        return {"iterations": self.iterations.value,
+                "initialstep": self.initialSteps.value,
+                "clusters": self.numberClusters.value,
+                "standardize": self.standardize,
                 "features": self.featureColsOutput,
-                "prediction":self.predictionCols.value,
-                "model":self.algorithm,
+                "prediction": self.predictionCols,
+                "model": self.algorithm,
 
                 "initialmode": "random" #!!! HARDCODED FOR TESTING PURPOSES !!!
                 }

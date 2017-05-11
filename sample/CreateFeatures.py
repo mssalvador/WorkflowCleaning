@@ -6,7 +6,7 @@ import pyspark.ml.clustering as clusters
 class AssembleKmeans(object):
 
     def __init__(self, feature_cols=[]):
-        self.numberClusters = widgets.IntText()
+        self.numberClusters = 50
         self.featureCols = feature_cols
         self.predictionCols = "Prediction"
         self.initialMode = widgets.Text()
@@ -14,7 +14,7 @@ class AssembleKmeans(object):
         self.initialSteps = widgets.IntText()
         self.iterations = widgets.IntText()
         self.standardize = False
-        self.algorithm = None
+        self.algorithm = "KMeans"
 
     def select_parameters(self):
 
@@ -92,7 +92,7 @@ class AssembleKmeans(object):
 
         def set_slider_values(cluster, initialsteps, iterations):
             self.iterations.value = iterations
-            self.numberClusters.value = cluster
+            self.numberClusters = cluster
             self.initialSteps.value = initialsteps
 
         sliders = widgets.interactive(set_slider_values,
@@ -125,7 +125,7 @@ class AssembleKmeans(object):
 
     def on_number_clusters_click(self, b):
 
-        print(self.numberClusters.value)
+        print(self.numberClusters)
         print(self.initialSteps.value)
         print(self.iterations.value)
         print(self.featureCols)
@@ -133,7 +133,7 @@ class AssembleKmeans(object):
     def export_values(self):
         return {"iterations": self.iterations.value,
                 "initialstep": self.initialSteps.value,
-                "clusters": self.numberClusters.value,
+                "clusters": self.numberClusters,
                 "standardize": self.standardize,
                 "features": self.featureColsOutput,
                 "prediction": self.predictionCols,

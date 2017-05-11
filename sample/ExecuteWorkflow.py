@@ -3,6 +3,7 @@ import pyspark.ml.clustering as models
 import pyspark.ml.feature as features
 from pydoc import locate
 from pyspark.ml import Pipeline
+from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
@@ -16,7 +17,6 @@ class ExecuteWorkflow(object):
 
     def __init__(self):
         # , data=None, model="kmeans", params={}
-
         self._params = None  # dict of parameters including model, mode and so on
         # self._data = None #Perhaps it is needed
 
@@ -31,27 +31,46 @@ class ExecuteWorkflow(object):
 
     def construct_pipeline(self):
 
-        vectorized_features = features.VectorAssembler(inputCols=self._params["features"], outputCol="features")  # vectorization
+        vectorized_features = features.VectorAssembler(inputCols = self._params["features"], outputCol = "features")  # vectorization
+
+        caster = ConvertAllToVecToMl(inputCol=vectorized_features.getOutputCol(),
+                                     outputCol="casted_features")  # does the double and ml.densevector cast
+
         if self._params["standardize"]:
-            scaling_model = features.StandardScaler(inputCol=vectorized_features.getOutputCol(),
-                                                    outputCol="features",
-                                                    withMean=True,
-                                                    withStd=True
-                                                    )
+            scaling_model = features.StandardScaler(
+                inputCol = caster.getOutputCol(),
+                outputCol = "scaled_features",
+                withMean = True,
+                withStd = True
+            )
         else:
-            scaling_model = None
+            scaling_model = features.StandardScaler(
+                inputCol = vectorized_features.getOutputCol(),
+                outputCol = "scaled_features",
+                withMean = False,
+                withStd = False
+            )
+
 
         cluster_model = getattr(models, self._params["model"])  # Clustering method
+        if self._params["model"] == "KMeans":
+            cluster_object = cluster_model(
+                featuresCol = scaling_model.getOutputCol(),
+                predictionCol ="prediction",#  self._params["prediction"],
+                k = self._params["iterations"],
+                initMode = self._params["initialmode"],
+                initSteps = self._params["initialstep"],
+                tol = 1e-4,
+                maxIter = self._params["iterations"],
+                seed = None
+            )
+        else:
+            raise NotImplementedError(str(self._params["model"])+" is not implemented")
 
+        stages = [vectorized_features, caster, scaling_model]#, cluster_object]
 
+        return Pipeline(stages = stages)
 
-
-        params = [{}]
-
-        stages = list(filter(lambda stage: stage is not None, [vectorized_features, scaling_model, cluster_model]))
-        return Pipeline(stages), params
-
-    @staticmethod
     def run(self, data):
         '''
         A pyspark.ml.clustering model
@@ -60,6 +79,8 @@ class ExecuteWorkflow(object):
         :return: A fitted model in the pipeline
         '''
 
-        pipeline, params = self.construct_pipeline()
-        pipeline.fit(data, params)
+        pipeline = self.construct_pipeline()
+        return pipeline.fit(data)
+
+
 

@@ -57,7 +57,7 @@ class DataIO:
                 .orderBy("cvrNummer")
          )
 
-    def mergeCompanyFeatureData(self,output_cols = []):
+    def mergeCompanyFeatureData(self, output_cols = []):
 
         clean_company_df = self.get_latest_company(["cvrNummer"],["periode_gyldigFra"]) #Get company on the right form
 

@@ -47,6 +47,8 @@ class TestExecuteWorkflow(TestCase):
 
         self.assertListEqual(list(self.mock_dict[0]),list(self.output_dict[0]))
 
+        self.assertIsInstance(self.output_dict,dict)
+
 
     #def test_run(self):
     #    self.fail()

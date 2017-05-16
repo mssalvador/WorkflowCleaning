@@ -13,6 +13,17 @@ import sys
 
 PARQUET_PATH = "/home/svanhmic/workspace/data/DABAI/sparkdata/parquet"
 
+TEST_DICT = {'features': ('AarsVaerk_1',),
+             'initialstep': 10,
+             'standardize': False,
+             'clusters': 50,
+             'model': 'KMeans',
+             'initialmode': 'random',
+             'prediction': 'Prediction',
+             'iterations': 20
+             }
+
+
 if __name__ == '__main__':
 
     if os.path.exists('jobs.zip'):
@@ -20,16 +31,17 @@ if __name__ == '__main__':
     else:
         sys.path.insert(0, './jobs')
 
-    sc = SparkContext("local[*]", "cleaning workflow")
-    sqlContext = SQLContext(sc)
+    sc = SparkContext.getOrCreate()#SparkContext("local[*]", "cleaning workflow")
+    #sqlContext = SQLContext(sc)
+
+    data = DataIO(sc,
+                  feature_path=PARQUET_PATH + "/featureDataCvr.parquet",
+                  company_path=PARQUET_PATH + "/companyCvrData")
+    feature_data = data.mergeCompanyFeatureData()
+
+    feature_data.show()
 
     work_flow = ExecuteWorkflow()
-    work_flow.model = "KMeans"
-    print(work_flow.construct_pipeLine())
-
-
-    #data_imports = DataIO(sc, PARQUET_PATH + "//featureDataCvr.parquet", PARQUET_PATH + "/companyCvrData")
-
-    #data_imports.get_latest_company(["cvrNummer"], ["periode_gyldigFra"]).show()
-    #data_imports.mergeCompanyFeatureData().show()
+    work_flow.params = TEST_DICT
+    work_flow.run(feature_data)
 

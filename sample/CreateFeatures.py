@@ -11,8 +11,8 @@ class AssembleKmeans(object):
         self.predictionCols = "Prediction"
         self.initialMode = widgets.Text()
         self.featureColsOutput = None
-        self.initialSteps = widgets.IntText()
-        self.iterations = widgets.IntText()
+        self.initialSteps = 10
+        self.iterations = 20
         self.standardize = False
         self.algorithm = "KMeans"
 
@@ -91,9 +91,9 @@ class AssembleKmeans(object):
         )
 
         def set_slider_values(cluster, initialsteps, iterations):
-            self.iterations.value = iterations
+            self.iterations = iterations
             self.numberClusters = cluster
-            self.initialSteps.value = initialsteps
+            self.initialSteps = initialsteps
 
         sliders = widgets.interactive(set_slider_values,
                                       cluster = number_clusters,
@@ -126,13 +126,13 @@ class AssembleKmeans(object):
     def on_number_clusters_click(self, b):
 
         print(self.numberClusters)
-        print(self.initialSteps.value)
-        print(self.iterations.value)
+        print(self.initialSteps)
+        print(self.iterations)
         print(self.featureCols)
 
     def export_values(self):
-        return {"iterations": self.iterations.value,
-                "initialstep": self.initialSteps.value,
+        return {"iterations": self.iterations,
+                "initialstep": self.initialSteps,
                 "clusters": self.numberClusters,
                 "standardize": self.standardize,
                 "features": self.featureColsOutput,

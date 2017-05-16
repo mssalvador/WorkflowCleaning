@@ -27,6 +27,7 @@ if __name__ == '__main__':
     work_flow.model = "KMeans"
     print(work_flow.construct_pipeLine())
 
+
     #data_imports = DataIO(sc, PARQUET_PATH + "//featureDataCvr.parquet", PARQUET_PATH + "/companyCvrData")
 
     #data_imports.get_latest_company(["cvrNummer"], ["periode_gyldigFra"]).show()

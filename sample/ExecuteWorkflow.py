@@ -1,10 +1,16 @@
 # This class should execute the kmeans model on the recived data.
 import pyspark.ml.clustering as models
 import pyspark.ml.feature as features
-from pydoc import locate
 from pyspark.ml import Pipeline
 from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
+from shared.context import JobContext
+from pyspark import SparkContext
+from pyspark.ml.linalg import VectorUDT
+from pyspark.sql import functions as F
+import numpy as np
 
+
+sc = SparkContext.getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 
@@ -57,7 +63,7 @@ class ExecuteWorkflow(object):
             cluster_object = cluster_model(
                 featuresCol = scaling_model.getOutputCol(),
                 predictionCol ="prediction",#  self._params["prediction"],
-                k = self._params["iterations"],
+                k = self._params["clusters"],
                 initMode = self._params["initialmode"],
                 initSteps = self._params["initialstep"],
                 tol = 1e-4,
@@ -67,20 +73,31 @@ class ExecuteWorkflow(object):
         else:
             raise NotImplementedError(str(self._params["model"])+" is not implemented")
 
-        stages = [vectorized_features, caster, scaling_model]#, cluster_object]
+        stages = [vectorized_features, caster, scaling_model, cluster_object]#]
 
         return Pipeline(stages = stages)
 
     def run(self, data):
         '''
-        A pyspark.ml.clustering model
+        A pyspark.ml.clustering model the method inserts the cluster centers to each data point
         :param self: 
         :param data: A pyspark data frame with the relevant data
         :return: A fitted model in the pipeline
         '''
 
         pipeline = self.construct_pipeline()
-        return pipeline.fit(data)
+        model = pipeline.fit(data)
 
+        transformed = model.transform(data)
+        centers = dict(zip(np.array(range(0, self._params["clusters"]), 1), model.stages[-1].clusterCenters()))
+        broadcast_center = sc.broadcast(centers)
+
+        assignClusterUdf = F.udf(lambda x: broadcast_center.value[x],VectorUDT())
+        transformed.withColumn("centers", assignClusterUdf("Predictions"))
+
+        return transformed
+
+    def gen_cluster_center(self,k,centers):
+        return dict(zip(np.array(range(0, k, 1)), centers))
 
 

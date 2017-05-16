@@ -11,7 +11,15 @@ import argparse
 import os
 import sys
 
-PARQUET_PATH = "/home/svanhmic/workspace/data/DABAI/sparkdata/parquet"
+import getpass
+
+user = getpass.getuser()
+
+if user == "sidsel":
+    PARQUET_PATH = "/home/" + user + "/workspace/sparkdata/parquet/"
+
+elif user == "svanhmic":
+    PARQUET_PATH = "/home/" + user + "/workspace/data/DABAI/sparkdata/parquet/"
 
 TEST_DICT = {'features': ('AarsVaerk_1',),
              'initialstep': 10,

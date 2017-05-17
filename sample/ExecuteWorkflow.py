@@ -87,16 +87,15 @@ class ExecuteWorkflow(object):
 
         pipeline = self.construct_pipeline()
         model = pipeline.fit(data)
-
         transformed = model.transform(data)
+
         #centers = dict(zip(np.array(range(0, self._params["clusters"]), 1), model.stages[-1].clusterCenters()))
         centers = self.gen_cluster_center(self._params["clusters"],model.stages[-1].clusterCenters())
-
         broadcast_center = sc.broadcast(centers)
 
         udf_assign_cluster = F.udf(lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
 
-        return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol()))
+        return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol())), model
 
     def gen_cluster_center(self,k,centers):
         assert isinstance(k,int) , str(k)+" is not integer"

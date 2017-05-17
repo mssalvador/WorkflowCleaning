@@ -24,7 +24,6 @@ class DataIO:
     def import_features_df(self):
         return self.sqlContext.read.parquet(self.feature_path)
 
-
     def import_companies_df(self):
         return self.sqlContext.read.parquet(self.company_path)
 

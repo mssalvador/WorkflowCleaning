@@ -29,7 +29,6 @@ class ComputeDistances(Transformer, HasInputCols, HasOutputCol):
 
     def _transform(self, dataset):
 
-
         t = VectorUDT()
         out_col = self.getOutputCol()
         print(self.getInputCols())

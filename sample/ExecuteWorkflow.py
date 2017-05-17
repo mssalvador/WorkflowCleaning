@@ -5,7 +5,7 @@ from pyspark.ml import Pipeline
 from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 from shared.context import JobContext
 from pyspark import SparkContext
-from pyspark.ml.linalg import VectorUDT
+from pyspark.ml.linalg import VectorUDT, Vectors
 from pyspark.sql import functions as F
 import numpy as np
 
@@ -94,10 +94,9 @@ class ExecuteWorkflow(object):
 
         broadcast_center = sc.broadcast(centers)
 
-        assignClusterUdf = F.udf(lambda x: broadcast_center.value[x],VectorUDT())
-        transformed.withColumn("centers", assignClusterUdf(pipeline.getStages()[-1].getPredictionCol()))
+        udf_assign_cluster = F.udf(lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
 
-        return transformed
+        return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol()))
 
     def gen_cluster_center(self,k,centers):
         assert isinstance(k,int) , str(k)+" is not integer"

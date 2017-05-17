@@ -21,7 +21,7 @@ if user == "sidsel":
 elif user == "svanhmic":
     PARQUET_PATH = "/home/" + user + "/workspace/data/DABAI/sparkdata/parquet/"
 
-TEST_DICT = {'features': ('AarsVaerk_1',),
+TEST_DICT = {'features': ('AarsVaerk_1','AarsVaerk_2','AarsVaerk_3'),
              'initialstep': 10,
              'standardize': False,
              'clusters': 50,
@@ -51,5 +51,5 @@ if __name__ == '__main__':
 
     work_flow = ExecuteWorkflow()
     work_flow.params = TEST_DICT
-    work_flow.run(feature_data)
-
+    prediction = work_flow.run(feature_data)
+    prediction.show()

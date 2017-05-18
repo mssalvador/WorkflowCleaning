@@ -28,7 +28,7 @@ class AssembleKmeans(object):
 
         algorithm = widgets.Select(
             options = [i for i in clusters.__all__ if "Model" not in i],
-            value='KMeans',
+            value=self.algorithm,
             # rows=10,
             description='Clustering methods:',
             disabled=False
@@ -49,7 +49,7 @@ class AssembleKmeans(object):
         )
 
         number_clusters = widgets.IntSlider(
-            value=50,
+            value=self.numberClusters,
             min=2,
             max=100,
             step=1,
@@ -63,7 +63,7 @@ class AssembleKmeans(object):
         )
 
         number_init_steps = widgets.IntSlider(
-            value=10,
+            value=self.initialSteps,
             min=2,
             max=100,
             step=1,
@@ -77,7 +77,7 @@ class AssembleKmeans(object):
         )
 
         number_iterations = widgets.IntSlider(
-            value=10,
+            value=self.iterations,
             min=2,
             max=100,
             step=1,

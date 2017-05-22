@@ -4,7 +4,7 @@ from pyspark import SQLContext, SparkContext
 from pyspark.sql.types import StructField, StructType, IntegerType
 
 from sample.DataIO import DataIO
-from sample.CreateFeatures import AssembleKmeans
+from sample.CreateParameters import CreateParameters
 from sample.ExecuteWorkflow import ExecuteWorkflow
 
 import argparse

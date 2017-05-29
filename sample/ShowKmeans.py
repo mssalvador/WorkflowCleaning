@@ -1,5 +1,6 @@
 #Python related imports
 from ipywidgets import widgets
+from pyspark.sql import functions as F, Window
 from IPython.display import display, Javascript, HTML
 import pyspark.ml.clustering as clusters
 
@@ -10,8 +11,8 @@ import pyspark.ml.clustering as clusters
 
 class ShowResults(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, nc=10):
+        self.numberClusters = nc
 
     def show_outliers(self, dataframe):
         '''
@@ -21,13 +22,15 @@ class ShowResults(object):
         '''
         print("Nothing has been made, yet!")
 
-    def show_prototypes(self, dataframe):
+    def show_prototypes(self, dataframe, cn):
         '''
         This method should take all prototypes from a specific cluster
         :param dataframe: Spark data frame containing data from a cluster or all clusters? 
         :return: 
         '''
-        print("Nothing has been made, yet!")
+
+        dataframe.filter(F.col("Prediction") == cn).toPandas()
+
 
     def show_clusters(self):
         pass
@@ -39,12 +42,17 @@ class ShowResults(object):
         :param: 
         :return: 
         '''
-
+        cluster_holder = widgets.IntText()
         button_prototypes = widgets.Button(description="Show prototypes")
-        button_prototypes.on_click(self.show_prototypes(dataframe))
+
+        def cluster_number(b):
+            cluster_holder.value = dropdown_prototypes.value
+            print(cluster_holder.value)
+
+        button_prototypes.on_click(cluster_number, self.show_prototypes(dataframe, cluster_holder.value))
 
         dropdown_prototypes = widgets.Dropdown(
-            options = [1,2,3],
+            options = list(map(lambda x: x+1, range(self.numberClusters))),
             value = 1,
             description = "Select Cluster",
             disabled = False

@@ -20,7 +20,7 @@ class CreateParameters(object):
         self.featureCols = feature_cols
         self.predictionCols = "Prediction"
         self.initialMode = widgets.Text()
-        self.featureColsOutput = None
+        self.featureColsOutput = widgets.SelectMultiple(options=self.featureCols, value=[])
         self.initialSteps = widgets.IntText(value=10)
         self.iterations = widgets.IntText(value=20)
         self.standardize = widgets.IntText(0)
@@ -63,7 +63,7 @@ class CreateParameters(object):
 
     def create_integer_slider(self,**kwargs):
 
-        return widgets.IntSlider(description,value=kwargs.get("value",50),min=kwargs.get("min",2),max=kwargs.get("max",100),step=1)
+        return widgets.IntSlider(description , value=kwargs.get("value", 50), min=kwargs.get("min", 2), max=kwargs.get("max", 100), step=1)
 
 
     def select_kmeans(self):
@@ -86,14 +86,13 @@ class CreateParameters(object):
 
         return dic
 
-    def set_kmeans_columns(self, cluster, initialsteps, iterations,features, method, standard):
+    def set_kmeans_columns(self, cluster, initialsteps, iterations, features, method, standard):
         traitlets.link((iterations, 'value'), (self.iterations, 'value'))
         traitlets.link((cluster, 'value'), (self.numberClusters, 'value'))
         traitlets.link((initialsteps, 'value'), (self.initialSteps, 'value'))
-        traitlets.link((method, 'value'), (self.initialMode, 'value'))
+        #traitlets.link((method, 'value'), (self.initialMode, 'value'))
         traitlets.link((standard, 'value'), (self.standardize, 'value'))
-
-        self.featureColsOutput = features.value
+        traitlets.link((features, 'value'), (self.featureColsOutput, 'value'))
 
     def select_second_params(self):
 
@@ -110,17 +109,29 @@ class CreateParameters(object):
         slide_cluster = widgets.IntSlider(value=10, min=2, max=100, step=1, description='Clusters: ')
         probability = widgets.Select(options=["x", "y", "z"], value="x", description="Probabilty", disabled=False)
         slide_initial_steps = widgets.IntSlider(value=10, min=2, max=100, step=1, description='Inital Steps: ')
-        multi_select_features = self.create_multi_select(self.featureCols,"Features",False)
+        multi_select_features = self.create_multi_select(self.featureCols, "Features", False)
         checkbox_standardize = widgets.Checkbox(value=False, description='Standardization', disabled=False)
+        self.initialMode = km
+        self.initialSteps = slide_initial_steps
+        self.iterations = slide_iteration
+        self.numberClusters = slide_cluster
+        self.featureColsOutput = multi_select_features
+        self.standardize = checkbox_standardize
 
-        new_box = widgets.HBox([km, slide_cluster, slide_iteration,slide_initial_steps,multi_select_features,checkbox_standardize])
-        self.set_kmeans_columns(slide_iteration, slide_cluster, slide_initial_steps, multi_select_features, km, checkbox_standardize)
+        # new_box = widgets.HBox([widgets.VBox([multi_select_features, km, slide_iteration]),
+        #                         widgets.VBox([checkbox_standardize, slide_cluster, slide_initial_steps])])
+        new_box = widgets.HBox([widgets.VBox([multi_select_features, km, slide_iteration]),
+                                widgets.VBox([checkbox_standardize, slide_cluster, slide_initial_steps])])
+        # self.set_kmeans_columns(cluster=slide_cluster, initialsteps=slide_initial_steps, iterations=slide_iteration,
+        #                         features=multi_select_features,
+        #                         method=km,
+        #                         standard=checkbox_standardize)
 
         def changes_to_algorithm(change):
 
             new_line = [slide_cluster]
             if change.new == "KMeans":
-                new_line.append(km)
+                new_line.append(self.initialMode)
                 new_line.append(slide_iteration)
 
                 #self.set_kmeans_columns(cluster_slider,slide,slide,slide,slide,slide)
@@ -133,14 +144,11 @@ class CreateParameters(object):
 
             new_box.children = [i for i in new_line]
 
-
         algorithm.observe(changes_to_algorithm, names="value")
         #self.set_kmeans_columns(cluster_slider, probability, slide, slide, slide, slide)
 
         display(algorithm)
         display(new_box)
-
-
 
     def select_parameters(self):
 
@@ -197,7 +205,7 @@ class CreateParameters(object):
                 "initialstep": self.initialSteps.value,
                 "clusters": self.numberClusters.value,
                 "standardize": self.standardize.value,
-                "features": self.featureColsOutput,
+                "features": self.featureColsOutput.value,
                 "prediction": self.predictionCols,
                 "model": self.algorithm,
                 "initialmode": self.initialMode.value #!!! HARDCODED FOR TESTING PURPOSES !!!

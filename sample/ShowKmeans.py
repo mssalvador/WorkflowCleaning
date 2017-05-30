@@ -11,8 +11,8 @@ import pyspark.ml.clustering as clusters
 
 class ShowResults(object):
 
-    def __init__(self, nc=10):
-        self.numberClusters = nc
+    def __init__(self, dict):
+        self.data_dict = dict
 
     def show_outliers(self, dataframe):
         '''
@@ -29,8 +29,7 @@ class ShowResults(object):
         :return: 
         '''
 
-        dataframe.filter(F.col("Prediction") == cn).toPandas()
-
+        return dataframe.filter(F.col("Prediction")+F.lit(1) == cn-1).withColumn(F.col("Prediction"))
 
     def show_clusters(self):
         pass
@@ -44,24 +43,27 @@ class ShowResults(object):
         '''
         cluster_holder = widgets.IntText()
         button_prototypes = widgets.Button(description="Show prototypes")
-
-        def cluster_number(b):
-            cluster_holder.value = dropdown_prototypes.value
-            print(cluster_holder.value)
-
-        button_prototypes.on_click(cluster_number, self.show_prototypes(dataframe, cluster_holder.value))
+        counter = dataframe.select((F.col("Prediction") + 1).alias("Prediction")).groupBy(F.col("Prediction")).count()\
+            .orderBy("Prediction")
 
         dropdown_prototypes = widgets.Dropdown(
-            options = list(map(lambda x: x+1, range(self.numberClusters))),
+            options = list(map(lambda x: x+1, range(self.data_dict["clusters"]))),
             value = 1,
             description = "Select Cluster",
             disabled = False
         )
 
-        first_line = widgets.HBox((dropdown_prototypes,button_prototypes))
-        display(first_line)
+        def cluster_number(b):
+            cluster_holder.value = dropdown_prototypes.value
+            display(self.show_prototypes(dataframe, dropdown_prototypes.value).toPandas())
 
-    def select_outliers(self,dataframe):
+        button_prototypes.on_click(cluster_number)
+
+        counter.show()
+        first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
+        display(first_line, cluster_holder)
+
+    def select_outliers(self, dataframe):
         '''
         This method should contain a widget that handles the selection of outliers.
         The method call show_outliers. 

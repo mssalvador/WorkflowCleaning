@@ -58,7 +58,6 @@ class ExecuteWorkflow(object):
                 withStd = False
             )
 
-
         cluster_model = getattr(models, self._params["model"])  # Clustering method
         if self._params["model"] == "KMeans":
             cluster_object = cluster_model(

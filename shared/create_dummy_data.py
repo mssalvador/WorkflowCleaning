@@ -1,7 +1,8 @@
 from pyspark.sql import functions as F
 from pyspark.sql import Row
 from pyspark.sql import SQLContext
-from pyspark import  SparkContext
+from pyspark import SparkContext
+from random import random, randint
 
 sc = SparkContext.getOrCreate()
 sqlCtx = SQLContext(sc)
@@ -10,9 +11,10 @@ class DummyData(object):
     @object this method contains dummy data for spark. The purpose of this is to test spark functions from end to end.
     '''
 
-    def __init__(self):
-        dummy_row = Row("label","value")
-        self._df = sqlCtx.createDataFrame([dummy_row(i, i*100) for i in range(0, 10, 1)])
+    def __init__(self, number_of_samples=50):
+        dummy_row = Row("label","x","y","z")
+
+        self._df = sqlCtx.createDataFrame([dummy_row(randint(0,5),random(),random(),random()) for _ in range(0, number_of_samples, 1)])
 
     @property
     def df(self):

@@ -1,8 +1,10 @@
 #Python related imports
 from ipywidgets import widgets
-from pyspark.sql import functions as F, Window
+from pyspark.sql import functions as F, types, Window
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
+from shared.ComputeDistances import *
+from pyspark.ml.linalg import VectorUDT
 
 #TODO: Vi skal finde ud af strukturen i denne klasse. DVS. skal show_*** vise et cluster eller alle?
 #TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?
@@ -30,8 +32,12 @@ class ShowResults(object):
         '''
         pass
 
-    def show_clusters(self):
-        pass
+    def show_cluster(self, df):
+        distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
+        dist = df.select(distanceUdf(df[-2], df[-3]).alias('distance'))
+        display(dist.show())
+        make_histogram(dist)
+        return dist
 
     def select_prototypes(self, dataframe):
         '''
@@ -58,8 +64,9 @@ class ShowResults(object):
 
         def cluster_number(b):
             clear_output()
-            display(updated_dataframe
-                    .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value).toPandas())
+            cluster_dataframe = updated_dataframe\
+                .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value)
+            self.show_cluster(cluster_dataframe)
 
         button_prototypes.on_click(cluster_number)
 

@@ -3,7 +3,8 @@ Created on May 15, 2017
 
 @author: svanhmic
 '''
-import numpy as np
+import seaborn as sns, numpy as np
+import matplotlib.pyplot as plt
 import math
 
 
@@ -23,5 +24,9 @@ def compute_distance(point, center):
     return math.sqrt(squared_dist)
 
 
-def subtract_points(point, center):
-    pass
+def make_histogram(dist):
+    ddist = [i["distance"] for i in dist.collect()]
+    sns.distplot(ddist, rug=True)
+    plt.show()
+
+

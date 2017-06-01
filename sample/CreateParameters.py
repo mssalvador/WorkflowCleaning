@@ -9,8 +9,7 @@ CLUSTER_METHODS = [i for i in clusters.__all__ if "Model" not in i]
 
 class CreateParameters(object):
     '''
-    Description:
-    
+    Description: This class contains the user interface for selecting parameters
     '''
 
     def __init__(self, feature_cols=[]):
@@ -42,20 +41,24 @@ class CreateParameters(object):
             description='Clustering methods:',
             disabled=False
         )
+        display(algorithm)
 
         box_column_first = widgets.VBox([self._number_clusters, self._seed, self._cols_feature_output]) # always the same
         box_column_second = widgets.VBox([self._iterations, self._initial_steps, self._tolerance])
         box_column_third = widgets.VBox([self._standardize])
 
+        display(widgets.HBox((box_column_first, box_column_second, box_column_third)))
+
         def changes_to_algorithm(change):
 
             self._algorithm = change.new
+
             if change.new == CLUSTER_METHODS[0]: #Bisecting Kmeans
                 second_column = [self._iterations, self._minimum_divisible_cluster_size]
                 third_column = [self._standardize]
             elif change.new == CLUSTER_METHODS[1]: #KMeans
                 second_column = [self._iterations, self._initial_steps, self._tolerance]
-                third_column = [self._initial_mode]
+                third_column = [self._standardize, self._initial_mode]
             elif change.new == CLUSTER_METHODS[2]: #Gaussian Mixture
                 second_column = [self._iterations, self._cols_probability, self._tolerance]
                 third_column = [self._standardize]
@@ -68,8 +71,7 @@ class CreateParameters(object):
             box_column_third.children = [i for i in third_column]
 
         algorithm.observe(changes_to_algorithm, names="value")
-        display(algorithm)
-        display(widgets.HBox((box_column_first, box_column_second, box_column_third)))
+
 
     def export_values(self):
         return {"iterations": self._iterations.value,

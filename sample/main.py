@@ -1,11 +1,11 @@
 # the usual include statements
 
-from pyspark import SQLContext, SparkContext
-from pyspark.sql.types import StructField, StructType, IntegerType
+from pyspark import SparkContext
 
 from sample.DataIO import DataIO
 from sample.CreateParameters import CreateParameters
 from sample.ExecuteWorkflow import ExecuteWorkflow
+from shared.create_dummy_data import DummyData
 
 import argparse
 import os
@@ -39,17 +39,14 @@ if __name__ == '__main__':
     else:
         sys.path.insert(0, './jobs')
 
-    sc = SparkContext.getOrCreate()#SparkContext("local[*]", "cleaning workflow")
-    #sqlContext = SQLContext(sc)
+    sc = SparkContext.getOrCreate()
+    dd = DummyData()
 
-    data = DataIO(sc,
-                  feature_path=PARQUET_PATH + "/featureDataCvr.parquet",
-                  company_path=PARQUET_PATH + "/companyCvrData")
-    feature_data = data.mergeCompanyFeatureData()
+    # examples on splitting
+    ddx = dd.df[dd.df["x"] > 0.5]
+    ddx.show(5)
 
-    feature_data.show()
+    # slicing a data frame is as follows
 
-    work_flow = ExecuteWorkflow()
-    work_flow.params = TEST_DICT
-    prediction = work_flow.run(feature_data)
-    prediction.show()
+    ddy = dd.df["label", "x"]
+    ddy.show(5)

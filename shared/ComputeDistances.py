@@ -20,7 +20,7 @@ def compute_distance(point, center):
     assert isinstance(point, np.ndarray), str(point)+" is not an a numpy array"
     assert isinstance(center, np.ndarray), str(center)+" is not an a numpy array"
 
-    squared_dist = np.dot((center-point), (center-point))
+    squared_dist = np.dot(subtract_vectors(center-point), subtract_vectors(center-point))
 
     return math.sqrt(squared_dist)
 
@@ -34,5 +34,15 @@ def make_histogram(dist, dim):
     sns.distplot(ddist, rug=True)
 
     plt.show()
+
+
+def subtract_vectors(vector_a: np.ndarray, vector_b: np.ndarray):
+    '''
+    Subtracts two numpy vectors from each other
+    :param vector_a: numpy ndarray
+    :param vector_b: numpy ndarray
+    :return: numpy ndarray with subtracted vectors
+    '''
+    return vector_a - vector_b
 
 

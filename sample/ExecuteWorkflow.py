@@ -10,7 +10,8 @@ from pyspark.sql import functions as F
 import numpy as np
 
 
-sc = SparkContext.getOrCreate()
+
+#sc = SparkContext().getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 

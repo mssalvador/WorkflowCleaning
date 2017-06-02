@@ -36,7 +36,8 @@ class ShowResults(object):
         distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
         dist = df.select(distanceUdf(df[-2], df[-3]).alias('distance'))
         display(dist.show())
-        make_histogram(dist)
+        dim = len(self.data_dict["features"])
+        make_histogram(dist, dim)
         return dist
 
     def select_prototypes(self, dataframe):
@@ -48,6 +49,7 @@ class ShowResults(object):
         '''
 
         button_prototypes = widgets.Button(description="Show prototypes")
+
         updated_dataframe = dataframe.\
             select('*', (F.col(self.data_dict['prediction']) + 1).alias(self.data_dict['prediction']))\
             .drop(dataframe.prediction)

@@ -1,4 +1,5 @@
 #Python related imports
+from pyspark.context import SparkContext
 from ipywidgets import widgets
 from pyspark.sql import functions as F, types, Window
 from IPython.display import display, clear_output, Javascript, HTML
@@ -10,11 +11,16 @@ from pyspark.ml.linalg import VectorUDT
 #TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?
 #TODO: Hvad skal vi lægge ind i ShowResults klassen?
 
+sc = SparkContext.getOrCreate()
+
 
 class ShowResults(object):
 
     def __init__(self, dict):
         self.data_dict = dict
+        self.dimensions = len(self.data_dict["features"])
+        self.boundary = chi2.ppf(0.99, self.dimensions)
+        self.selected_cluster = 1
 
     def show_outliers(self, dataframe):
         '''
@@ -33,28 +39,34 @@ class ShowResults(object):
         pass
 
     def show_cluster(self, df):
-        distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
-        dist = df.select(distanceUdf(df[-2], df[-3]).alias('distance'))
-        display(dist.show())
-        dim = len(self.data_dict["features"])
-        make_histogram(dist, dim)
-        return dist
+        #display(df.select(df.distances).show())
+        make_histogram(df.select(df.distances), self.dimensions)
 
     def select_prototypes(self, dataframe):
         '''
-        This method should contain a widget that handles the selection of prototypes.
-        The method call show_prototypes. 
-        :param: 
-        :return: 
-        '''
+                This method should contain a widget that handles the selection of prototypes.
+                The method call show_prototypes. 
+                :param: 
+                :return: 
+                '''
 
         button_prototypes = widgets.Button(description="Show prototypes")
 
-        updated_dataframe = dataframe.\
-            select('*', (F.col(self.data_dict['prediction']) + 1).alias(self.data_dict['prediction']))\
+        updated_dataframe = dataframe. \
+            select('*', (F.col(self.data_dict['prediction']) + 1).alias(self.data_dict['prediction'])) \
             .drop(dataframe.prediction)
 
-        counter = updated_dataframe.groupBy(F.col(self.data_dict['prediction']))\
+        # broadcast clusters and their center points to each node
+        b = sc.broadcast(dict(list(map(lambda x: (x[0], x[1]), updated_dataframe
+                                       .select(F.col('prediction'), F.col('centers')).distinct().collect()))))
+
+        distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
+        updated_dataframe = updated_dataframe.withColumn('distances', distanceUdf(updated_dataframe[-2], updated_dataframe[-3]))
+
+        outliers_dataframe = updated_dataframe.select('*', F.when(updated_dataframe.distances > self.boundary, 1)
+                                                      .otherwise(0).alias('outliers'))
+
+        counter = updated_dataframe.groupBy(F.col(self.data_dict['prediction'])) \
             .count().orderBy(self.data_dict['prediction'])
 
         dropdown_prototypes = widgets.Dropdown(
@@ -64,13 +76,18 @@ class ShowResults(object):
             disabled = False
         )
 
-        def cluster_number(b):
+        def selected_cluster_number(b):
             clear_output()
-            cluster_dataframe = updated_dataframe\
+            cluster_dataframe = updated_dataframe \
                 .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value)
             self.show_cluster(cluster_dataframe)
+            self.selected_cluster = dropdown_prototypes.value
+            display(outliers_dataframe
+                    .select(*self.data_dict['features'], 'distances', 'outliers')
+                    .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))
+                    .toPandas())
 
-        button_prototypes.on_click(cluster_number)
+        button_prototypes.on_click(selected_cluster_number)
 
         counter.show()
         first_line = widgets.HBox((dropdown_prototypes, button_prototypes))

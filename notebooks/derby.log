@@ -1,13 +1,13 @@
 ----------------------------------------------------------------
-Tue May 30 15:36:30 CEST 2017:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.12.1.1 - (1704137): instance a816c00e-015c-5992-772a-000004f1d5b8 
-on database directory /home/sidsel/workspace/DABAI/PyCharmProjects/WorkflowCleaning/notebooks/metastore_db with class loader org.apache.spark.sql.hive.client.IsolatedClientLoader$$anon$1@413bdc 
-Loaded from file:/usr/local/share/spark/jars/derby-10.12.1.1.jar
+Fri Jun 09 09:55:02 CEST 2017:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.11.1.1 - (1616546): instance a816c00e-015c-8bd9-7246-00001d3bad60 
+on database directory /home/svanhmic/workspace/DABAI/WorkflowCleaning/notebooks/metastore_db with class loader org.apache.spark.sql.hive.client.IsolatedClientLoader$$anon$1@2187dd8 
+Loaded from file:/usr/local/share/spark/jars/derby-10.11.1.1.jar
 java.vendor=Oracle Corporation
 java.runtime.version=1.8.0_131-8u131-b11-0ubuntu1.16.04.2-b11
-user.dir=/home/sidsel/workspace/DABAI/PyCharmProjects/WorkflowCleaning/notebooks
+user.dir=/home/svanhmic/workspace/DABAI/WorkflowCleaning/notebooks
 os.name=Linux
 os.arch=amd64
-os.version=4.8.0-49-generic
+os.version=4.8.0-53-generic
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''

@@ -11,7 +11,7 @@ import numpy as np
 
 
 
-#sc = SparkContext().getOrCreate()
+sc = SparkContext.getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 

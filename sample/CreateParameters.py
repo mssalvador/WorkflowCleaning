@@ -25,7 +25,7 @@ class CreateParameters(object):
         self._cols_feature_output = widgets.SelectMultiple(options=self._cols_feature, value=self._cols_feature[:1],
                                                            description="Features", disabled=False)
         self._standardize = widgets.Checkbox(value=False, description='Standardization', disabled=False)
-        self._cols_probability = widgets.Select(options=["x", "y", "z"], value="x", description="Probabilty",
+        self._cols_probability = widgets.Select(options=self._cols_feature+[None], value=self._cols_feature[0], description="Probabilty",
                                                 disabled=False)
         self._optimizer = None #LDA Specific
         self._minimum_divisible_cluster_size = widgets.FloatText(value=1.0, description="Minimum Divisble Cluster Size") #Bisecting Kmeans specific

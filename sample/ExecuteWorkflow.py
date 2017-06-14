@@ -71,6 +71,24 @@ class ExecuteWorkflow(object):
                 maxIter = self._params["iterations"],
                 seed = None
             )
+        elif self._params["model"] == "GaussianMixture":
+            cluster_object = cluster_model(
+                featuresCol = scaling_model.getOutputCol(),
+                predictionCol ="prediction",#  self._params["prediction"],
+                k = self._params["clusters"],
+                tol = 1e-4,
+                maxIter = self._params["iterations"],
+                seed = None
+            )
+        elif self._params["model"] == "BisectingKMeans":
+            cluster_object = cluster_model(
+                featuresCol = scaling_model.getOutputCol(),
+                predictionCol ="prediction",#  self._params["prediction"],
+                k = self._params["clusters"],
+                maxIter = self._params["iterations"],
+                minDivisibleClusterSize = self._params["mindivisbleClusterSize"],
+                seed = None
+            )
         else:
             raise NotImplementedError(str(self._params["model"])+" is not implemented")
 
@@ -95,8 +113,14 @@ class ExecuteWorkflow(object):
         broadcast_center = sc.broadcast(centers)
 
         udf_assign_cluster = F.udf(lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
-
-        return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol()))
+        if self._params["model"] == "KMeans":
+            return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol()))
+        elif self._params["model"] == "GaussianMixture":
+            raise NotImplementedError(str(self._params["model"]) + " is not implemented")
+        elif self._params["model"] == "BisectingKMeans":
+            return transformed.withColumn("centers", udf_assign_cluster(pipeline.getStages()[-1].getPredictionCol()))
+        else:
+            raise NotImplementedError(str(self._params["model"]) + " is not implemented")
 
     def gen_cluster_center(self, k, centers):
         '''

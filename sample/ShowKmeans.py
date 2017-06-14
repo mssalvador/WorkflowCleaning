@@ -61,13 +61,15 @@ class ShowResults(object):
                                        .select(F.col('prediction'), F.col('centers')).distinct().collect()))))
 
         distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
-        updated_dataframe = updated_dataframe.withColumn('distances', distanceUdf(updated_dataframe[-2], updated_dataframe[-3]))
-
-        outliers_dataframe = updated_dataframe.select('*', F.when(updated_dataframe.distances > self.boundary, 1)
-                                                      .otherwise(0).alias('outliers'))
+        updated_dataframe = (updated_dataframe
+                             .withColumn('distances', distanceUdf(updated_dataframe[-2], updated_dataframe[-3]))
+                             .withColumn('outliers', F.when(F.col('distances') > self.boundary, 1).otherwise(0))
+                             )
 
         counter = updated_dataframe.groupBy(F.col(self.data_dict['prediction'])) \
-            .count().orderBy(self.data_dict['prediction'])
+            .agg(F.count(F.lit(1)).alias("Count"), F.sum(F.col("outliers")).alias("Outlier Count"))\
+            .orderBy(self.data_dict['prediction'])
+
 
         dropdown_prototypes = widgets.Dropdown(
             options = list(map(lambda x: x+1, range(self.data_dict["clusters"]))),
@@ -80,11 +82,14 @@ class ShowResults(object):
             clear_output()
             cluster_dataframe = updated_dataframe \
                 .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value)
+
             self.show_cluster(cluster_dataframe)
             self.selected_cluster = dropdown_prototypes.value
-            display(outliers_dataframe
-                    .select(*self.data_dict['features'], 'distances', 'outliers')
+
+            display(updated_dataframe
+                    .select(*self.data_dict['features'], 'distances', 'outliers',"cvrNummer","navn")
                     .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))
+                    .orderBy(F.col("distances").desc())
                     .toPandas())
 
         button_prototypes.on_click(selected_cluster_number)

@@ -27,12 +27,14 @@ def compute_distance(point, center):
 
 def make_histogram(dist, dim):
     ddist = [i["distances"] for i in dist.collect()]
-
-    fig, ax = plt.subplots(1, 1)
-    x = np.linspace(chi2.ppf(0.01, dim), chi2.ppf(0.99, dim), 100)
-    ax.plot(x, chi2.pdf(x, dim), 'r-', lw=5, alpha=0.6, label='chi2 pdf')
-    sns.distplot(ddist, rug=True)
-    plt.show()
+    if len(ddist) > 2:
+        fig, ax = plt.subplots(1, 1)
+        x = np.linspace(chi2.ppf(0.01, dim), chi2.ppf(0.99, dim), 100)
+        ax.plot(x, chi2.pdf(x, dim), 'r-', lw=5, alpha=0.6, label='chi2 pdf')
+        sns.distplot(ddist, rug=True)
+        plt.show()
+    else:
+        print('Too few datapoints to show')
 
 
 def subtract_vectors(vector_a: np.ndarray, vector_b: np.ndarray):

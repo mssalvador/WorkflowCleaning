@@ -39,7 +39,6 @@ class ShowResults(object):
         pass
 
     def show_cluster(self, df):
-        #display(df.select(df.distances).show())
         make_histogram(df.select(df.distances), self.dimensions)
 
     def select_prototypes(self, dataframe):
@@ -62,20 +61,21 @@ class ShowResults(object):
 
         distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
         updated_dataframe = (updated_dataframe
-                             .withColumn('distances', distanceUdf(updated_dataframe[-2], updated_dataframe[-3]))
+                             .withColumn('distances', distanceUdf(updated_dataframe.centers, updated_dataframe.scaled_features))
                              .withColumn('outliers', F.when(F.col('distances') > self.boundary, 1).otherwise(0))
                              )
 
         counter = updated_dataframe.groupBy(F.col(self.data_dict['prediction'])) \
             .agg(F.count(F.lit(1)).alias("Count"), F.sum(F.col("outliers")).alias("Outlier Count"))\
-            .orderBy(self.data_dict['prediction'])
-
+            .orderBy(self.data_dict['prediction'])\
+            .filter(F.col("Count") > 1)
 
         dropdown_prototypes = widgets.Dropdown(
-            options = list(map(lambda x: x+1, range(self.data_dict["clusters"]))),
-            value = 1,
-            description = "Select Cluster",
-            disabled = False
+            #options=list(map(lambda x: x+1, range(self.data_dict["clusters"]))),
+            options=list(map(lambda x: str(x), list([int(i.prediction) for i in counter.collect()]))),
+            #value=1,
+            description="Select Cluster",
+            disabled=False
         )
 
         def selected_cluster_number(b):
@@ -86,11 +86,22 @@ class ShowResults(object):
             self.show_cluster(cluster_dataframe)
             self.selected_cluster = dropdown_prototypes.value
 
-            display(updated_dataframe
-                    .select(*self.data_dict['features'], 'distances', 'outliers',"cvrNummer","navn")
-                    .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))
-                    .orderBy(F.col("distances").desc())
+            # if updated_dataframe\
+            #         .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))\
+            #         .count() > 0:
+            if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
+                display(cluster_dataframe.select('cvrNummer', 'navn', *self.data_dict['features'], 'distances', 'outliers')\
+                    .filter(F.col('outliers') == 1)\
+                    .orderBy(F.col('distances').desc())
                     .toPandas())
+
+            #        display(updated_dataframe
+            #             .select(*self.data_dict['features'], 'distances', 'outliers', "cvrNummer", "navn")
+            #             .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))
+            #             .orderBy(F.col("distances").desc())
+            #             .toPandas())
+            else:
+                print("There seems to be no outliers in this cluster")
 
         button_prototypes.on_click(selected_cluster_number)
 

@@ -5,7 +5,7 @@ import pyspark.ml.clustering as clusters
 import traitlets
 
 KMEANS_ALGORITHM = ["random", "k-means||"]
-CLUSTER_METHODS = [i for i in clusters.__all__ if "Model" not in i]
+CLUSTER_METHODS = [i for i in clusters.__all__ if "Model" not in i if "BisectingKMeans" not in i]
 
 class CreateParameters(object):
     '''

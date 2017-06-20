@@ -44,6 +44,7 @@ class ExecuteWorkflow(object):
         caster = ConvertAllToVecToMl(inputCol=vectorized_features.getOutputCol(),
                                      outputCol="casted_features")  # does the double and ml.densevector cast
 
+
         if self._params["standardize"]:
             scaling_model = features.StandardScaler(
                 inputCol="casted_features",
@@ -59,10 +60,13 @@ class ExecuteWorkflow(object):
                 withStd=False
             )
 
+        caster_after_scale = ConvertAllToVecToMl(inputCol=scaling_model.getOutputCol(),
+                                                 outputCol="scaled_features")  # does the double and ml.densevector cast
+
         cluster_model = getattr(models, self._params["model"])  # Clustering method
         if self._params["model"] == "KMeans":
             cluster_object = cluster_model(
-                featuresCol=scaling_model.getOutputCol(),
+                featuresCol=caster_after_scale.getOutputCol(),
                 predictionCol="prediction",#  self._params["prediction"],
                 k=self._params["clusters"],
                 initMode=self._params["initialmode"],
@@ -73,16 +77,17 @@ class ExecuteWorkflow(object):
             )
         elif self._params["model"] == "BisectingKMeans":
             cluster_object = cluster_model(
-                featuresCol=scaling_model.getOutputCol(),
+                featuresCol=caster_after_scale.getOutputCol(),
                 predictionCol="prediction",#  self._params["prediction"],
                 k=self._params["clusters"],
                 maxIter=self._params["iterations"],
                 minDivisibleClusterSize=self._params["mindivisbleClusterSize"],
                 seed=None
             )
+            raise NotImplementedError(str(self._params["model"]) + " is not implemented")
         elif self._params["model"] == "GaussianMixture":
             cluster_object = cluster_model(
-                featuresCol=scaling_model.getOutputCol(),
+                featuresCol=caster_after_scale.getOutputCol(),
                 predictionCol="prediction",#  self._params["prediction"],
                 k=self._params["clusters"],
                 #probabilityCol=["probability"],
@@ -93,7 +98,7 @@ class ExecuteWorkflow(object):
         else:
             raise NotImplementedError(str(self._params["model"])+" is not implemented")
 
-        stages = [vectorized_features, caster, scaling_model, cluster_object]
+        stages = [vectorized_features, caster, scaling_model, caster_after_scale]#, cluster_object]
 
         return Pipeline(stages=stages)
 
@@ -108,6 +113,7 @@ class ExecuteWorkflow(object):
         pipeline = self.construct_pipeline()
         model = pipeline.fit(data)
         transformed = model.transform(data)
+
         if self._params["model"] == "KMeans" or self._params["model"] == "BisectingKMeans":
             centers = self.gen_cluster_center(self._params["clusters"], model.stages[-1].clusterCenters())
             broadcast_center = sc.broadcast(centers)

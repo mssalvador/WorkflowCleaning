@@ -14,7 +14,7 @@ class DummyData(object):
     def __init__(self, number_of_samples=50):
         dummy_row = Row("label","x","y","z")
 
-        self._df = sqlCtx.createDataFrame([dummy_row(randint(0,5),random(),random(),random()) for _ in range(0, number_of_samples, 1)])
+        self._df = sqlCtx.createDataFrame([dummy_row(randint(0,5),3*random(),4*random(),5*random()) for _ in range(0, number_of_samples, 1)])
 
     @property
     def df(self):

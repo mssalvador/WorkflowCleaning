@@ -3,6 +3,7 @@ from pyspark.sql import Row
 from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from random import random, randint
+from pyspark.sql.types import FloatType
 
 sc = SparkContext.getOrCreate()
 sqlCtx = SQLContext(sc)
@@ -32,3 +33,14 @@ class DummyData(object):
 
         self._df = sqlCtx.createDataFrame([row_class(key, val) for key, val in dic.items()])
 
+    def create_outliers(self, column, outlier_factor):
+
+        def make_possible_outlier(x):
+            if random() > 0.5:
+                return x*outlier_factor
+            else:
+                return x
+
+        is_outlier = F.udf(lambda x: make_possible_outlier(x), FloatType())
+
+        self._df = self._df.withColumn(column, is_outlier(column))

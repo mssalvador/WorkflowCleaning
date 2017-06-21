@@ -19,6 +19,7 @@ class ShowResults(object):
     def __init__(self, dict):
         self.data_dict = dict
         self.dimensions = len(self.data_dict["features"])
+        self.lables = [self.data_dict["label"]]# TODO Should be part of data dict!!!
         self.boundary = chi2.ppf(0.99, self.dimensions)
         self.selected_cluster = 1
 
@@ -41,7 +42,7 @@ class ShowResults(object):
     def show_cluster(self, df):
         make_histogram(df.select(df.distances), self.dimensions)
 
-    def select_prototypes(self, dataframe):
+    def select_prototypes(self, dataframe, **kwargs):
         '''
                 This method should contain a widget that handles the selection of prototypes.
                 The method call show_prototypes. 
@@ -90,16 +91,13 @@ class ShowResults(object):
             #         .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))\
             #         .count() > 0:
             if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
-                display(cluster_dataframe.select('cvrNummer', 'navn', *self.data_dict['features'], 'distances', 'outliers')\
+
+                output_cols = list(self.lables)+list(self.data_dict['features'])+['distances', 'outliers']
+
+                display(cluster_dataframe.select(*output_cols)\
                     .filter(F.col('outliers') == 1)\
                     .orderBy(F.col('distances').desc())
                     .toPandas())
-
-            #        display(updated_dataframe
-            #             .select(*self.data_dict['features'], 'distances', 'outliers', "cvrNummer", "navn")
-            #             .filter((F.col(self.data_dict['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))
-            #             .orderBy(F.col("distances").desc())
-            #             .toPandas())
             else:
                 print("There seems to be no outliers in this cluster")
 

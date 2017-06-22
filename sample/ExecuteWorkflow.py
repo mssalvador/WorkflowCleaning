@@ -98,7 +98,7 @@ class ExecuteWorkflow(object):
         else:
             raise NotImplementedError(str(self._params["model"])+" is not implemented")
 
-        stages = [vectorized_features, caster, scaling_model, caster_after_scale]#, cluster_object]
+        stages = [vectorized_features, caster, scaling_model, cluster_object]
 
         return Pipeline(stages=stages)
 

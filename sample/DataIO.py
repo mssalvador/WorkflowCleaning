@@ -5,21 +5,25 @@ from IPython.display import display, Javascript, HTML
 
 from pyspark.sql import SQLContext, Window
 from pyspark.sql import functions as F
+from pyspark import SparkContext
 
 class DataIO:
     'This class contains the data-import class for Cleaning'
 
-    def __init__(self, sc, feature_path, company_path):
+    def __init__(self, sc: SparkContext, feature_path, company_path):
         # some small assertations that cover if the files are there
         assert os.path.exists(path=feature_path), "features data frame does not exist! Consider changing directory"
         assert os.path.exists(path=company_path), "company data frame does not exist! Consider changing directory"
 
         self.feature_path = feature_path
         self.company_path = company_path
-        self.sc = sc
+        self.sc = sc.getOrCreate()
         self.sqlContext = SQLContext(sc)
         self._import_features_df = self.import_features_df()
         self._import_companies_df = self.import_companies_df()
+
+    def __del__(self):
+        self.sc.stop()
 
     def import_features_df(self):
         return self.sqlContext.read.parquet(self.feature_path)

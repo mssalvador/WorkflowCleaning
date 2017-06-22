@@ -5,19 +5,26 @@ from pyspark import SparkContext
 from random import random, randint
 from pyspark.sql.types import FloatType
 
-sc = SparkContext.getOrCreate()
-sqlCtx = SQLContext(sc)
-
 
 class DummyData(object):
     '''
     @object this method contains dummy data for spark. The purpose of this is to test spark functions from end to end.
     '''
 
-    def __init__(self, number_of_samples=50):
-        dummy_row = Row("label","x","y","z")
+    def __init__(self, sc: SparkContext, number_of_samples=50):
 
-        self._df = sqlCtx.createDataFrame([dummy_row(randint(0,5),3*random(),4*random(),5*random()) for _ in range(0, number_of_samples, 1)])
+        self.sc = sc
+        self.sqlCtx = SQLContext.getOrCreate(sc)
+        dummy_row = Row("label", "x", "y", "z")
+        list_of_struct = [StructField(dummy_row[0], StringType())]+[StructField(i, FloatType()) for i in dummy_row[1:]]
+        schema = StructType(list_of_struct)
+        self._df = self.sqlCtx.createDataFrame([dummy_row(randint(0, 5), 3*random(), 4*random(), 5*random()) for _ in range(0, number_of_samples, 1)],schema)
+
+    def __del__(self):
+        print("destroyed")
+        self.sc.stop()
+
+
 
     @property
     def df(self):
@@ -33,7 +40,7 @@ class DummyData(object):
         for key in dic.keys():
             assert key in row_class, key+str(" is not in the row")
 
-        self._df = sqlCtx.createDataFrame([row_class(key, val) for key, val in dic.items()])
+        self._df = self.sqlCtx.createDataFrame([row_class(key, val) for key, val in dic.items()])
 
     def create_outliers(self, column, outlier_factor):
 
@@ -46,3 +53,6 @@ class DummyData(object):
         is_outlier = F.udf(lambda x: make_possible_outlier(x), FloatType())
 
         self._df = self._df.withColumn(column, is_outlier(column))
+
+    def show(self):
+        self._df.show()

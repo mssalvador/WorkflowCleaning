@@ -7,6 +7,8 @@ from pyspark.sql.types import FloatType
 
 sc = SparkContext.getOrCreate()
 sqlCtx = SQLContext(sc)
+
+
 class DummyData(object):
     '''
     @object this method contains dummy data for spark. The purpose of this is to test spark functions from end to end.

@@ -40,7 +40,15 @@ class ShowResults(object):
         pass
 
     def show_cluster(self, df):
-        make_histogram(df.select(df.distances), self.dimensions)
+        '''
+
+        :param df: Spark data frame
+        :return:
+        '''
+
+        list_distances = [i["distances"] for i in df.collect()]
+
+        make_histogram(list_distances, self.dimensions)
 
     def select_prototypes(self, dataframe, **kwargs):
         '''
@@ -51,29 +59,50 @@ class ShowResults(object):
                 '''
 
         button_prototypes = widgets.Button(description="Show prototypes")
+        udf_distance = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
 
-        updated_dataframe = dataframe. \
-            select('*', (F.col(self.data_dict['prediction']) + 1).alias(self.data_dict['prediction'])) \
-            .drop(dataframe.prediction)
+        # Shift the prediction column with for, so it goes from 1 to n+1
+        dataframe_updated = (dataframe
+                             .withColumn(self.data_dict['prediction'], F.col(self.data_dict['prediction'])+1)
+                             .withColumn('distances',
+                                         udf_distance(dataframe.centers, dataframe.scaled_features))
+                             .withColumn('outliers', F.when(F.col('distances') > self.boundary, 1).otherwise(0))
+                             .persist()
+                             )
+        #dataframe_updated.show()
 
         # broadcast clusters and their center points to each node
-        b = sc.broadcast(dict(list(map(lambda x: (x[0], x[1]), updated_dataframe
-                                       .select(F.col('prediction'), F.col('centers')).distinct().collect()))))
+        #b = sc.broadcast(dict(list(map(lambda x: (x[0], x[1]), updated_dataframe
+        #                               .select(F.col('prediction'), F.col('centers')).distinct().collect()))))
 
-        distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
-        updated_dataframe = (updated_dataframe
-                             .withColumn('distances', distanceUdf(updated_dataframe.centers, updated_dataframe.scaled_features))
-                             .withColumn('outliers', F.when(F.col('distances') > self.boundary, 1).otherwise(0))
+        # create summary for the clusters along with number in each cluster and number of outliers
+        list_stats_cols = [self.data_dict['prediction'], "outliers", "distances"]
+
+        dataframe_for_stats = dataframe_updated.select(*list_stats_cols)
+
+        dataframe_counter = (dataframe_for_stats
+                             .groupBy(self.data_dict['prediction'])
+                             .agg(F.count(self.data_dict['prediction']).alias("Count"), F.sum(F.col("outliers")).alias("Outlier Count"))
+                             .orderBy(self.data_dict['prediction'])
+                             .filter(F.col("Count") >= 1)
                              )
+        dataframe_counter.show()
 
-        counter = updated_dataframe.groupBy(F.col(self.data_dict['prediction'])) \
-            .agg(F.count(F.lit(1)).alias("Count"), F.sum(F.col("outliers")).alias("Outlier Count"))\
-            .orderBy(self.data_dict['prediction'])\
-            .filter(F.col("Count") > 1)
+        # find out how many unique data points we got
+        dataframe_unique_values = (dataframe_for_stats
+                                   .select("prediction", "distances")
+                                   .distinct()
+                                   .groupBy(F.col("prediction"))
+                                   .count()
+                                   .filter(F.col("count") >= 2)
+                                   )
+
+        list_clusters_with_outliers = sorted(map(lambda x: x[self.data_dict['prediction']], dataframe_unique_values.collect()))
+        print(list_clusters_with_outliers)
 
         dropdown_prototypes = widgets.Dropdown(
-            #options=list(map(lambda x: x+1, range(self.data_dict["clusters"]))),
-            options=list(map(lambda x: str(x), list([int(i.prediction) for i in counter.collect()]))),
+            options=list_clusters_with_outliers,
+            #options=list(map(lambda x: str(x), list([int(i.prediction) for i in counter.collect()]))),
             #value=1,
             description="Select Cluster",
             disabled=False
@@ -81,8 +110,9 @@ class ShowResults(object):
 
         def selected_cluster_number(b):
             clear_output()
-            cluster_dataframe = updated_dataframe \
-                .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value)
+            cluster_dataframe = (dataframe_updated
+                                 .filter(F.col(self.data_dict['prediction']) == dropdown_prototypes.value)
+                                 )
 
             self.show_cluster(cluster_dataframe)
             self.selected_cluster = dropdown_prototypes.value
@@ -94,16 +124,16 @@ class ShowResults(object):
 
                 output_cols = list(self.lables)+list(self.data_dict['features'])+['distances', 'outliers']
 
-                display(cluster_dataframe.select(*output_cols)\
-                    .filter(F.col('outliers') == 1)\
-                    .orderBy(F.col('distances').desc())
-                    .toPandas())
+                display(cluster_dataframe.select(*output_cols)
+                        .filter(F.col('outliers') == 1)
+                        .orderBy(F.col('distances').desc())
+                        .toPandas()
+                        )
             else:
                 print("There seems to be no outliers in this cluster")
 
         button_prototypes.on_click(selected_cluster_number)
 
-        counter.show()
         first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
         display(first_line)
 

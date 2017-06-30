@@ -2,9 +2,9 @@
 
 from pyspark import SparkContext
 
-from sample.DataIO import DataIO
-from sample.CreateParameters import CreateParameters
-from sample.ExecuteWorkflow import ExecuteWorkflow
+#from sample.DataIO import DataIO
+#from sample.CreateParameters import CreateParameters
+#from sample.ExecuteWorkflow import ExecuteWorkflow
 from shared.create_dummy_data import DummyData
 
 import argparse
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         sys.path.insert(0, './jobs')
 
     sc = SparkContext.getOrCreate()
-    dd = DummyData()
+    dd = DummyData(sc)
 
     # examples on splitting
     ddx = dd.df[dd.df["x"] > 0.5]

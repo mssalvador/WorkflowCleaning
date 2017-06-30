@@ -25,13 +25,22 @@ def compute_distance(point, center):
     return math.sqrt(squared_dist)
 
 
-def make_histogram(dist, dim):
-    ddist = [i["distances"] for i in dist.collect()]
-    if len(ddist) > 2:
+def make_histogram(dist : list, dim):
+
+    '''
+    :param dist: Spark data frame  TODO: make this a list input instead
+    :param dim: number of dimensions that needs to be plotted
+    :return:
+    '''
+
+    # isolate the distances from the data frame
+    set_of_distances = set(dist)
+
+    if len(set_of_distances) > 1:
         fig, ax = plt.subplots(1, 1)
         x = np.linspace(chi2.ppf(0.01, dim), chi2.ppf(0.99, dim), 100)
         ax.plot(x, chi2.pdf(x, dim), 'r-', lw=5, alpha=0.6, label='chi2 pdf')
-        sns.distplot(ddist, rug=True)
+        sns.distplot(dist, rug=True, kde=True, norm_hist=False)
         plt.show()
     else:
         print('Too few datapoints to show')

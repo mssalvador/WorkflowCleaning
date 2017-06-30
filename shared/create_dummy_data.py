@@ -3,7 +3,7 @@ from pyspark.sql import Row
 from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from random import random, randint
-from pyspark.sql.types import FloatType
+from pyspark.sql.types import FloatType, StructType, StructField, StringType
 
 
 class DummyData(object):
@@ -22,7 +22,6 @@ class DummyData(object):
 
     def __del__(self):
         print("destroyed")
-        self.sc.stop()
 
 
 

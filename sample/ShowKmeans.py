@@ -61,7 +61,9 @@ class ShowResults(object):
         button_prototypes = widgets.Button(description="Show prototypes")
         udf_distance = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), types.DoubleType())
 
-        # Shift the prediction column with for, so it goes from 1 to n+1
+        # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
+        # ensure the consistency in the results.
+
         dataframe_updated = (dataframe
                              .withColumn(self.data_dict['prediction'], F.col(self.data_dict['prediction'])+1)
                              .withColumn('distances',
@@ -98,7 +100,7 @@ class ShowResults(object):
                                    )
 
         list_clusters_with_outliers = sorted(map(lambda x: x[self.data_dict['prediction']], dataframe_unique_values.collect()))
-        print(list_clusters_with_outliers)
+        #print(list_clusters_with_outliers)
 
         dropdown_prototypes = widgets.Dropdown(
             options=list_clusters_with_outliers,

@@ -15,6 +15,7 @@ class DummyData(object):
 
         self.sc = sc
         self.sqlCtx = SQLContext.getOrCreate(sc)
+        self.samples = number_of_samples
         dummy_row = Row("label", "x", "y", "z")
         list_of_struct = [StructField(dummy_row[0], StringType())]+[StructField(i, FloatType()) for i in dummy_row[1:]]
         schema = StructType(list_of_struct)
@@ -58,3 +59,10 @@ class DummyData(object):
 
     def to_parquet(self, path):
         self._df.write.parquet(path + ".parquet", mode="overwrite")
+
+    def __repr__(self):
+        return "DummyData('{}', '{}')".format(self.sc, self.samples)
+
+    def __str__(self):
+        return "DummyData('{}', '{}')".format(self.sc, self.samples)
+

@@ -12,8 +12,8 @@ class DataIO:
 
     def __init__(self, sc: SparkContext, feature_path, company_path):
         # some small assertations that cover if the files are there
-        assert os.path.exists(path=feature_path), "features data frame does not exist! Consider changing directory"
-        assert os.path.exists(path=company_path), "company data frame does not exist! Consider changing directory"
+        #assert os.path.exists(path=feature_path), "features data frame does not exist! Consider changing directory"
+        #assert os.path.exists(path=company_path), "company data frame does not exist! Consider changing directory"
 
         self.feature_path = feature_path
         self.company_path = company_path

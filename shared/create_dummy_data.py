@@ -19,7 +19,7 @@ class DummyData(object):
         dummy_row = Row("label", "x", "y", "z")
         list_of_struct = [StructField(dummy_row[0], StringType())]+[StructField(i, FloatType()) for i in dummy_row[1:]]
         schema = StructType(list_of_struct)
-        self._df = self.sqlCtx.createDataFrame([dummy_row(randint(0, 5), 3*random(), 4*random(), 5*random()) for _ in range(0, number_of_samples, 1)],schema)
+        self._df = self.sqlCtx.createDataFrame([dummy_row(randint(0, 5), random(), random(), random()) for _ in range(0, number_of_samples, 1)],schema)
 
     def __del__(self):
         print("destroyed")
@@ -56,6 +56,9 @@ class DummyData(object):
 
     def show(self):
         self._df.show()
+
+    def to_parquet(self, path):
+        self._df.write.parquet(path + ".parquet", mode="overwrite")
 
     def __repr__(self):
         return "DummyData('{}', '{}')".format(self.sc, self.samples)

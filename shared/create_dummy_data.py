@@ -4,65 +4,95 @@ from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from random import random, randint
 from pyspark.sql.types import FloatType, StructType, StructField, StringType
+from string import digits, ascii_letters, ascii_uppercase
+from random import choice
+import sys
+
+sqlCont = SQLContext.getOrCreate(sc=SparkContext.getOrCreate())
 
 
-class DummyData(object):
+def create_dummy_data(number_of_samples, **kwargs):
+    r'''
+    :param number_of_samples
+        number of rows in the dataframe
+    :type 'int'
+    :param \**kwargs
+        see below
+        
+    :keyword 
+     * *labels* ('dict') --
+      label columns
+    * *features* ('dict') -- 
+      feature columns
+    * *outlier_number* ('float') or ('int') --
+      number of outliers in the in the dataframe; 
+       either in procentage of total dataframe as float,
+       or integer for number of rows in total 
+    * *outlier_factor* ('int') --
+      large number being multiplied on random() 
+      to make outliers in the data
+    
+    :return: dataframe of size 'number_of_samples', with 'number_of_outliers' outliers of a 'outlier_factor'  
     '''
-    @object this method contains dummy data for spark. The purpose of this is to test spark functions from end to end.
-    '''
 
-    def __init__(self, sc: SparkContext, number_of_samples=50):
+    labels = kwargs.get("labels", [])
+    features = kwargs.get("features", [])
+    outlier_number = kwargs.get("outlier_number", None)
+    outlier_factor = kwargs.get("outlier_factor", None)
 
-        self.sc = sc
-        self.sqlCtx = SQLContext.getOrCreate(sc)
-        self.samples = number_of_samples
-        dummy_row = Row("label", "x", "y", "z")
-        list_of_struct = [StructField(dummy_row[0], StringType())]+[StructField(i, FloatType()) for i in dummy_row[1:]]
-        schema = StructType(list_of_struct)
-        self._df = self.sqlCtx.createDataFrame([dummy_row(randint(0, 5), random(), random(), random()) for _ in range(0, number_of_samples, 1)],schema)
+    # if neither labels nor features are found, the program will stop and show an error message
+    if labels == [] and features == []:
+        sys.exit("You must provide at least labels or features as a dictionary")
 
-    def __del__(self):
-        print("destroyed")
+    if number_of_samples < outlier_number:
+        sys.exit("Your total size needs to be bigger then your outlier size")
+
+    if isinstance(outlier_number, float):
+        outlier_number = int(outlier_number*number_of_samples)
+
+    dummy_row = Row(*(labels+features))
+    list_of_struct = []
+
+    def structing(header, L=None):
+        los = []
+        if isinstance(header, list):
+            for x in header:
+                try:
+                    los += [StructField(x, StringType()) if L else StructField(x, FloatType())]
+                except:
+                    print("{} must be string".format(header))
+        return los
+
+    def data_row(number_of_labels, number_of_features, factor=1):
+        dr = []
+        if number_of_labels != 0:
+            dr.append(''.join([choice(ascii_uppercase+digits) for _ in range(8)]))
+            for x in range(1, number_of_labels):
+                dr.append('NR.'+''.join([choice(digits) for _ in range(4)]))
+        if number_of_features != 0:
+            for _ in range(number_of_features):
+                dr.append(random()*factor)
+        return dr
+
+    def make_row_outlier(outlier_size, label_size, feature_size, factor=10):
+        outliers = [data_row(label_size, feature_size, factor) for _ in range(outlier_size)]
+        return outliers
+
+    list_of_struct += structing(labels, L=1) + structing(features)
+    schema = StructType(list_of_struct)
+
+    dummy_data = [data_row(len(labels), len(features)) for _ in range(number_of_samples - outlier_number)]
+    dummy_df = sqlCont.createDataFrame(list(map(lambda x: dummy_row(*x), dummy_data)), schema)
+
+    outlier_data = make_row_outlier(outlier_number, len(labels), len(features), outlier_factor)
+    outlier_df = sqlCont.createDataFrame(list(map(lambda x: dummy_row(*x), outlier_data)), schema)
+
+    dummy_df_with_outliers = dummy_df.union(outlier_df)
+    return dummy_df_with_outliers
+
+def make_outliers(df, number_of_outliers, outlier_factor, **kwargs):
+    features = kwargs.get("features", [])
 
 
 
-    @property
-    def df(self):
-        return self._df
-
-    @df.setter
-    def df(self, dic: dict, row_class: Row):
-        '''
-        :param dict:
-        :param row_class:
-        :return: pyspark dataframe with dummy data
-        '''
-        for key in dic.keys():
-            assert key in row_class, key+str(" is not in the row")
-
-        self._df = self.sqlCtx.createDataFrame([row_class(key, val) for key, val in dic.items()])
-
-    def create_outliers(self, column, outlier_factor):
-
-        def make_possible_outlier(x):
-            if random() > 0.5:
-                return x*outlier_factor
-            else:
-                return x
-
-        is_outlier = F.udf(lambda x: make_possible_outlier(x), FloatType())
-
-        self._df = self._df.withColumn(column, is_outlier(column))
-
-    def show(self):
-        self._df.show()
-
-    def to_parquet(self, path):
-        self._df.write.parquet(path + ".parquet", mode="overwrite")
-
-    def __repr__(self):
-        return "DummyData('{}', '{}')".format(self.sc, self.samples)
-
-    def __str__(self):
-        return "DummyData('{}', '{}')".format(self.sc, self.samples)
 

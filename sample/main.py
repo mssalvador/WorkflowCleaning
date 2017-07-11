@@ -5,7 +5,7 @@ from pyspark import SparkContext
 #from sample.DataIO import DataIO
 #from sample.CreateParameters import CreateParameters
 #from sample.ExecuteWorkflow import ExecuteWorkflow
-from shared.create_dummy_data import DummyData
+from shared.create_dummy_data import *
 
 import argparse
 import os
@@ -39,14 +39,22 @@ if __name__ == '__main__':
     else:
         sys.path.insert(0, './jobs')
 
-    sc = SparkContext.getOrCreate()
-    dd = DummyData(sc)
+    # sc = SparkContext.getOrCreate()
+    # dd = DummyData(sc)
+    #
+    # # examples on splitting
+    # ddx = dd.df[dd.df["x"] > 0.5]
+    # ddx.show(5)
+    #
+    # # slicing a data frame is as follows
+    #
+    # ddy = dd.df["label", "x"]
+    # ddy.show(5)
 
-    # examples on splitting
-    ddx = dd.df[dd.df["x"] > 0.5]
-    ddx.show(5)
-
-    # slicing a data frame is as follows
-
-    ddy = dd.df["label", "x"]
-    ddy.show(5)
+    df_outliers = create_dummy_data(number_of_samples=20,
+                                    labels=['header_1', 'header_2', 'header_3'],
+                                    #features=['feature_1', 'feature_2', 'feature_3', 'feature_4'],
+                                    outlier_factor=100,
+                                    outlier_number=5)
+    df_outliers.show()
+    print(df_outliers.count())

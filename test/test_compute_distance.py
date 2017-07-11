@@ -12,8 +12,7 @@ class TestCompute_distance(TestCase):
 
     def test_compute_distance(self):
 
-
         self.distance = compute_dist.compute_distance(self.dummy_point, self.dummy_center)
-        self.assertIsInstance(self.distance,float,str(type(self.distance)))
-        self.assertEqual(self.distance, math.sqrt(6),str(self.distance)+" is not equal to: "+str(math.sqrt(3)))
+        self.assertIsInstance(self.distance, float, str(type(self.distance)))
+        self.assertEqual(self.distance, math.sqrt(6), str(self.distance)+" is not equal to: "+str(math.sqrt(3)))
 

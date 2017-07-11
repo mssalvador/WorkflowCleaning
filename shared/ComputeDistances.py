@@ -25,7 +25,7 @@ def compute_distance(point, center):
     return math.sqrt(squared_dist)
 
 
-def make_histogram(dist : list, dim):
+def make_histogram(dist: list, dim):
 
     '''
     :param dist: Spark data frame  TODO: make this a list input instead

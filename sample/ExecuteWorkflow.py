@@ -76,15 +76,15 @@ class ExecuteWorkflow(object):
                 seed=None
             )
         elif self._params["model"] == "BisectingKMeans":
-            cluster_object = cluster_model(
-                featuresCol=caster_after_scale.getOutputCol(),
-                predictionCol="prediction",#  self._params["prediction"],
-                k=self._params["clusters"],
-                maxIter=self._params["iterations"],
-                minDivisibleClusterSize=self._params["mindivisbleClusterSize"],
-                seed=None
-            )
-            raise NotImplementedError(str(self._params["model"]) + " is not implemented")
+            # cluster_object = cluster_model(
+            #     featuresCol=caster_after_scale.getOutputCol(),
+            #     predictionCol="prediction",#  self._params["prediction"],
+            #     k=self._params["clusters"],
+            #     maxIter=self._params["iterations"],
+            #     minDivisibleClusterSize=self._params["mindivisbleClusterSize"],
+            #     seed=None
+            #)
+            raise NotImplementedError(str(self._params["model"]) + " is not implemented yet due to an error in Spark 2.0")
         elif self._params["model"] == "GaussianMixture":
             cluster_object = cluster_model(
                 featuresCol=caster_after_scale.getOutputCol(),

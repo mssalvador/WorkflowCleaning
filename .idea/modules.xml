@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/WorkflowCleaning.iml" filepath="$PROJECT_DIR$/.idea/WorkflowCleaning.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Workflows.iml" filepath="$PROJECT_DIR$/.idea/Workflows.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Workflows.iml" filepath="$PROJECT_DIR$/.idea/Workflows.iml" />
     </modules>
   </component>
 </project>

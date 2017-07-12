@@ -14,6 +14,6 @@ class OwnFloatSlider(widgets.FloatRangeSlider):
         :keyword
             name:
         '''
-
+        kwargs['continuous_update'] = False
         self.name = kwargs.pop("name", "widget")
         super().__init__(**kwargs)

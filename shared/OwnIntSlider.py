@@ -7,5 +7,7 @@ class OwnIntSlider(widgets.IntRangeSlider):
 
     def __init__(self, **kwargs):
 
+
+        kwargs['continuous_update'] = False
         self.name = kwargs.pop("name", "widget")
         super().__init__(**kwargs)

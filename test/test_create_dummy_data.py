@@ -77,6 +77,31 @@ class TestCreateOutliers(TestCase):
 
         self.assertEqual(str(res), '[StringType]')
 
+    def test_type_wo_outlierfactor(self):
+        '''test if the DF only consists of StringTypes, if we remove features'''
+
+        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
+                                           labels=['label'],
+                                           features=TestCreateOutliers.feature_list,
+                                           #outlier_factor=TestCreateOutliers.factor,
+                                           outlier_number=TestCreateOutliers.number_of_outliers)
+
+        res = df_outliers.count()
+        self.assertEqual(res, TestCreateOutliers.sample_size)
+
+    def test_type_wo_outliernumber(self):
+        '''test if the DF only consists of StringTypes, if we remove features'''
+
+        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
+                                           labels=['label'],
+                                           features=TestCreateOutliers.feature_list,
+                                           outlier_factor=TestCreateOutliers.factor,
+                                           #outlier_number=TestCreateOutliers.number_of_outliers)
+                                           )
+
+        res = df_outliers.count()
+        self.assertEqual(res, TestCreateOutliers.sample_size)
+
     def test_size_wo_labels_features(self):
         '''test for an error when there's no features or labels'''
 

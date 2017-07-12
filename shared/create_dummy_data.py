@@ -7,6 +7,8 @@ from pyspark.sql.types import FloatType, StructType, StructField, StringType
 from string import digits, ascii_letters, ascii_uppercase
 from random import choice
 import sys
+import pandas as pd
+import numpy as np
 
 sqlCont = SQLContext.getOrCreate(sc=SparkContext.getOrCreate())
 
@@ -37,8 +39,8 @@ def create_dummy_data(number_of_samples, **kwargs):
 
     labels = kwargs.get("labels", [])
     features = kwargs.get("features", [])
-    outlier_number = kwargs.get("outlier_number", None)
-    outlier_factor = kwargs.get("outlier_factor", None)
+    outlier_number = kwargs.get("outlier_number", 0)
+    outlier_factor = kwargs.get("outlier_factor", 0)
 
     # if neither labels nor features are found, the program will stop and show an error message
     if labels == [] and features == []:
@@ -84,15 +86,30 @@ def create_dummy_data(number_of_samples, **kwargs):
     dummy_data = [data_row(len(labels), len(features)) for _ in range(number_of_samples - outlier_number)]
     dummy_df = sqlCont.createDataFrame(list(map(lambda x: dummy_row(*x), dummy_data)), schema)
 
-    outlier_data = make_row_outlier(outlier_number, len(labels), len(features), outlier_factor)
-    outlier_df = sqlCont.createDataFrame(list(map(lambda x: dummy_row(*x), outlier_data)), schema)
+    if outlier_number > 0:
+        outlier_data = make_row_outlier(outlier_number, len(labels), len(features), outlier_factor)
+        outlier_df = sqlCont.createDataFrame(list(map(lambda x: dummy_row(*x), outlier_data)), schema)
 
-    dummy_df_with_outliers = dummy_df.union(outlier_df)
-    return dummy_df_with_outliers
+        dummy_df_with_outliers = dummy_df.union(outlier_df)
+        return dummy_df_with_outliers
+    else:
+        return dummy_df
+
 
 def make_outliers(df, number_of_outliers, outlier_factor, **kwargs):
     features = kwargs.get("features", [])
 
+    df_split = df.randomSplit([float(number_of_outliers), float(df.count() - number_of_outliers)])
+    if df_split[0]:
+        while not number_of_outliers*0.9 <= df_split[0].count() <= number_of_outliers*1.1:
+            df_split = df.randomSplit([float(number_of_outliers), float(df.count() - number_of_outliers)])
 
+    outlier_feat = [(F.col(feat) * outlier_factor).alias(feat) for feat in features]
+    other_feat = [i for i in df.schema.names if i not in features]
+
+    outlier_df = df_split[0].select(other_feat + outlier_feat)
+    df = outlier_df.union(df_split[1])
+
+    return df
 
 

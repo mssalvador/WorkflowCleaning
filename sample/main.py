@@ -51,10 +51,15 @@ if __name__ == '__main__':
     # ddy = dd.df["label", "x"]
     # ddy.show(5)
 
-    df_outliers = create_dummy_data(number_of_samples=20,
+    df_outliers = create_dummy_data(number_of_samples=300,
                                     labels=['header_1', 'header_2', 'header_3'],
-                                    #features=['feature_1', 'feature_2', 'feature_3', 'feature_4'],
-                                    outlier_factor=100,
-                                    outlier_number=5)
-    df_outliers.show()
-    print(df_outliers.count())
+                                    features=['feature_1', 'feature_2', 'feature_3', 'feature_4'],
+                                    #outlier_factor=100,
+                                    #outlier_number=5)
+                                    )
+    #df_outliers.show()
+    #print(df_outliers.count())
+
+    df = make_outliers(df_outliers, 20, 100, features=['feature_3', 'feature_4'])
+    print('Number of outliers = ' + str(df.where(F.col("feature_4") > 1).count()))
+    df.show()

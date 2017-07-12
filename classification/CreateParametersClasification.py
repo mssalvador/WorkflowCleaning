@@ -149,10 +149,6 @@ class ParamsClassification(object):
                                                         description="Regularization",
                                                         name="regParam")
 
-        widget_standardization = OwnCheckBox.OwnCheckBox(value=dict.get("standardization", True),
-                                                         description="Standardization",
-                                                         name="standardization")
-
         widget_threshold = OwnFloatSlider.OwnFloatSlider(value=dict.get("threshold", 0.5),
                                                          min=0.0,
                                                          max=1.0,
@@ -170,7 +166,7 @@ class ParamsClassification(object):
         all_lists = [[widget_elasticNetParam, widget_regParam, widget_maxIter],
                      [widget_predictionCol, widget_probabilityCol],
                      [widget_rawPredictionCol, widget_labelCol],
-                     [widget_fitIntercept, widget_standardization, widget_threshold, widget_tol]]
+                     [widget_fitIntercept, widget_threshold, widget_tol]]
 
         return list(map(lambda x: widgets.HBox(x), all_lists))
 

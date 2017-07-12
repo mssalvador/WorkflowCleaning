@@ -1,6 +1,6 @@
 from ipywidgets import widgets
 
-class OwnIntSlider(widgets.IntSlider):
+class OwnIntSlider(widgets.IntRangeSlider):
     '''
     Inherrent class for FloatSlider
     '''

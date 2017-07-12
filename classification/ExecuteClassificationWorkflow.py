@@ -19,9 +19,10 @@ logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
 
 class ExecuteWorkflowClassification(object):
 
-    def __init__(self, dict_params):
+    def __init__(self, dict_params, standardize):
 
-        self.params = dict_params
+        self._params = dict_params
+        self._standardize = standardize
         logger_execute.info("ExecuteWorkflowClassification created with '{}'"
                             .format(str(ExecuteWorkflowClassification)))
 
@@ -38,10 +39,10 @@ class ExecuteWorkflowClassification(object):
                                    .format(parameters, type(parameters)))
 
     def __str__(self):
-        return "algorithm: {}".format(self.params.get("algortihm", None))
+        return "algorithm: {}".format(self._params.get("algortihm", None))
 
     def __repr__(self):
-        return "ExecuteWorkflowClassification('{}')".format(self.params)
+        return "ExecuteWorkflowClassification('{}')".format(self._params)
 
     def create_pipeline(self):
         pass

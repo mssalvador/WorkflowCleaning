@@ -48,16 +48,6 @@ class GeneralDataImport(object):
 
         logger_data_import.info("GeneralDataImport object created. {}".format(str(GeneralDataImport)))
 
-    @staticmethod
-    def cast_to_right_type(name_and_type):
-        import pyspark.sql.functions as F
-        import pyspark.sql.types as T
-
-        if name_and_type.dataType == T.StringType():
-            return F.col(name_and_type.name).cast('float').alias(name_and_type.name)
-        else:
-            return F.col(name_and_type.name)
-
     @property
     def data_frame(self):
         '''
@@ -97,6 +87,10 @@ class GeneralDataImport(object):
     @property
     def list_features(self):
         return self._list_features
+
+    @property
+    def standardize(self):
+        return self._standardize
 
     def __del__(self):
         GeneralDataImport.counter = 0
@@ -146,6 +140,22 @@ class GeneralDataImport(object):
         # register button event and show widgets
         button_import_file.on_click(button_import_on_click)
         display.display(widgets.HBox([text_import_file, button_import_file, checkbox_standardize_data]))
+
+    @staticmethod
+    def cast_to_right_type(name_and_type):
+        '''
+        Method to check if the datatype is not string
+        :param name_and_type: Pyspark StructType
+        :return: Pyspark column that is either casted to a FloatType or is unchanged.
+        '''
+
+        # Imports
+        import pyspark.sql.functions as F
+        import pyspark.sql.types as T        # Logic
+        if name_and_type.dataType == T.StringType():
+            return F.col(name_and_type.name).cast('float').alias(name_and_type.name)
+        else:
+            return F.col(name_and_type.name)
 
     @staticmethod
     def extract_type(path_string):

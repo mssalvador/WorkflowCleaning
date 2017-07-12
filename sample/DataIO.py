@@ -1,11 +1,17 @@
-import sys
-import os
-from ipywidgets import widgets
-from IPython.display import display, Javascript, HTML
-
 from pyspark.sql import SQLContext, Window
 from pyspark.sql import functions as F
 from pyspark import SparkContext
+import logging
+
+logger_dataIO = logging.getLogger(__name__)
+logger_dataIO.setLevel(logging.INFO)
+
+formatter_dataIO = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+
+file_handler_dataIO = logging.FileHandler('/tmp/dataio.log')
+file_handler_dataIO.setFormatter(formatter_dataIO)
+
+logger_dataIO.addHandler(file_handler_dataIO)
 
 class DataIO:
     'This class contains the data-import class for Cleaning'
@@ -22,7 +28,10 @@ class DataIO:
         self._import_features_df = self.import_features_df()
         self._import_companies_df = self.import_companies_df()
 
+        logger_dataIO.info(' Created DataIO : {} - {}'.format(self.feature_path, self.company_path))
+
     def __del__(self):
+        logger_dataIO.info('Destroyed DataIO')
         self.sc.stop()
 
     def import_features_df(self):

@@ -6,6 +6,14 @@ class OwnFloatSlider(widgets.FloatSlider):
     '''
 
     def __init__(self, **kwargs):
+        r'''
+
+        :param \**kwargs:
+
+
+        :keyword
+            name:
+        '''
 
         self.name = kwargs.pop("name", "widget")
         super().__init__(**kwargs)

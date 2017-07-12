@@ -36,6 +36,12 @@ class ParamsClassification(object):
         self.selected_parameters = {"algorithm": self.algorithm_classification[0]}
         self.algorithms_and_paramters = self.create_parameters()
 
+    def __repr__(self):
+        return "ParamsClassification()"
+
+    def __str__(self):
+        return '{}'.format(self.selected_parameters.get("algorithm",self.__repr__()))
+
     @staticmethod
     def output_parameters(params):
 

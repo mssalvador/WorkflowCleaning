@@ -6,14 +6,14 @@ from setuptools import setup, find_packages
 
 def setup_package():
     setup(
-        name = 'DABAI-Workflow Classification',
+        name = 'dabaiworkflows',
 
         # Versions should comply with PEP440.  For a discussion on single-sourcing
         # the version across setup.py and the project code, see
         # https://packaging.python.org/en/latest/single_source_version.html
-        version = '0.0.2',
+        version = '0.0.3',
 
-        install_requires = open('./requirements.txt').read().split(),
+        install_requires = open('requirements.txt').read().split(),
 
         packages = find_packages(),
         url = 'https://github.com/mssalvador/ReadData',

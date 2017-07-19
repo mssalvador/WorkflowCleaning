@@ -50,16 +50,19 @@ if __name__ == '__main__':
     #
     # ddy = dd.df["label", "x"]
     # ddy.show(5)
-
-    df_outliers = create_dummy_data(number_of_samples=300,
-                                    labels=['header_1', 'header_2', 'header_3'],
-                                    features=['feature_1', 'feature_2', 'feature_3', 'feature_4'],
+    labels = ['header_1', 'header_2', 'header_3']
+    features = ['feature_1', 'feature_2', 'feature_3', 'feature_4']
+    df_outliers = create_dummy_data(number_of_samples=3000,
+                                    labels=labels,
+                                    features=features,
                                     #outlier_factor=100,
                                     #outlier_number=5)
                                     )
     #df_outliers.show()
     #print(df_outliers.count())
 
-    df = make_outliers(df_outliers, 20, 100, features=['feature_3', 'feature_4'])
-    print('Number of outliers = ' + str(df.where(F.col("feature_4") > 1).count()))
+    df = make_outliers(df_outliers, 0.5, 100)
+    print('Number of outliers = ' + str(df.where(' or '.join(map(lambda f: '(' + f + ' > 1)',
+                                                                 [f[0] for f in df.dtypes if f[1] == 'float']))).count()))
     df.show()
+    #df_outliers.write.parquet('/home/sidsel/workspace/sparkdata/parquet/outlier_df.parquet')

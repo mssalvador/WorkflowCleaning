@@ -126,3 +126,13 @@ class TestCreateOutliers(TestCase):
 
         self.assertEqual(cm.exception.code, "Your total size needs to be bigger then your outlier size")
 
+    def test_make_outliers(self):
+        '''test if number of outliers is as expected'''
+        df = dd.create_dummy_data(number_of_samples=100,
+                             labels=TestCreateOutliers.label_list,
+                             features=TestCreateOutliers.feature_list,
+                             )
+        outlier_number = 40
+        out_df = dd.make_outliers(df, outlier_number, 100, features=["feature_4"])
+        res = out_df.where(F.col("feature_4") > 1).count()
+        self.assertTrue(outlier_number*0.90 <= res <= outlier_number*1.1)

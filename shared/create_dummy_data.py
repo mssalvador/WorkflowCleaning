@@ -1,14 +1,18 @@
+'''
+Created on June, 2017
+
+@author: sidselsrensen
+'''
+
 from pyspark.sql import functions as F
 from pyspark.sql import Row
 from pyspark.sql import SQLContext
 from pyspark import SparkContext
-from random import random, randint
+from random import random
 from pyspark.sql.types import FloatType, StructType, StructField, StringType
-from string import digits, ascii_letters, ascii_uppercase
+from string import digits, ascii_uppercase
 from random import choice
 import sys
-import pandas as pd
-import numpy as np
 
 sqlCont = SQLContext.getOrCreate(sc=SparkContext.getOrCreate())
 
@@ -16,7 +20,7 @@ sqlCont = SQLContext.getOrCreate(sc=SparkContext.getOrCreate())
 def create_dummy_data(number_of_samples, **kwargs):
     r'''
     :param number_of_samples
-        number of rows in the dataframe
+        number of rows in the Pyspark.dataframe
     :type 'int'
     :param \**kwargs
         see below
@@ -27,14 +31,14 @@ def create_dummy_data(number_of_samples, **kwargs):
     * *features* ('dict') -- 
       feature columns
     * *outlier_number* ('float') or ('int') --
-      number of outliers in the in the dataframe; 
-       either in procentage of total dataframe as float,
+      number of outliers in the in the Pyspark.dataframe; 
+       either in procentage of total Pyspark.dataframe as float,
        or integer for number of rows in total 
     * *outlier_factor* ('int') --
       large number being multiplied on random() 
       to make outliers in the data
     
-    :return: dataframe of size 'number_of_samples', with 'number_of_outliers' outliers of a 'outlier_factor'  
+    :return: Pyspark.dataframe of size 'number_of_samples', with 'number_of_outliers' outliers of a 'outlier_factor'  
     '''
 
     labels = kwargs.get("labels", [])
@@ -97,7 +101,18 @@ def create_dummy_data(number_of_samples, **kwargs):
 
 
 def make_outliers(df, number_of_outliers, outlier_factor, **kwargs):
-    features = kwargs.get("features", [])
+    '''
+    :param df: Pyspark.dataframe that needs outliers
+    :param number_of_outliers: integer or float
+    :param outlier_factor: factor by which the columns are multiplied to create outliers
+    :param kwargs: if only specific columns need changed. 
+        dict with "features"
+    :return: A modified Pyspark.dataframe with outlier data
+    '''
+
+    features = kwargs.get("features", [f[0] for f in df.dtypes if f[1] == 'float'])
+    if isinstance(number_of_outliers, float):
+        number_of_outliers = number_of_outliers*df.count()
 
     df_split = df.randomSplit([float(number_of_outliers), float(df.count() - number_of_outliers)])
     if df_split[0]:

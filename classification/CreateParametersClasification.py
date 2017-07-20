@@ -74,7 +74,7 @@ class ParamsClassification(object):
                                                              value=ParamsClassification.algorithm_classification[0],
                                                              description="Algorithms",
                                                              disabled=False,
-                                                             name="algortihm")
+                                                             name="algorithm")
 
         all_widgets = widgets.VBox([widget_dropdown_algorithms])
 

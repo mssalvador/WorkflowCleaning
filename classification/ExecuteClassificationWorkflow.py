@@ -30,11 +30,11 @@ class ExecuteWorkflowClassification(object):
         '''
 
         try:
-            self._algortihm = dict_params.pop('algortihm', 'LogisticRegression')
+            self._algorithm = dict_params.pop('algorithm', 'LogisticRegression')
         except AttributeError as ae:
             tb = sys.exc_info()[2]
             logger_execute.warning(ae.with_traceback(tb))
-            self._algortihm = 'LogisticRegression'
+            self._algorithm = 'LogisticRegression'
 
         self._params = dict_params
         self._standardize = standardize
@@ -59,20 +59,8 @@ class ExecuteWorkflowClassification(object):
         logger_execute.debug('Exported pipeline: {}'.format(self._pipeline.getStages()))
         return self._pipeline
 
-    @staticmethod
-    def show_parameters(parameters):
-        try:
-            assert isinstance(parameters, dict)
-            output_string = ', '.join(['{:s} = {}'
-                                      .format(key, val) for key, val in parameters])
-            print(output_string)
-
-        except AssertionError:
-            logger_execute.warning("Parameter '{}' is not of type dict but type '{}'"
-                                   .format(parameters, type(parameters)))
-
     def __str__(self):
-        return "algorithm: {}".format(self._algortihm)
+        return "algorithm: {}".format(self._algorithm)
 
     def __repr__(self):
         return "ExecuteWorkflowClassification('{}')".format(self._params)
@@ -120,18 +108,18 @@ class ExecuteWorkflowClassification(object):
         #print(label_dict)
 
         # Model is set
-        model = eval("classification." + self._algortihm)(**label_dict)
+        model = eval("classification." + self._algorithm)(**label_dict)
 
         # Parameter is set
         param_grid = tuning.ParamGridBuilder()
         for idx, val in feature_dict.items():
             param_grid.addGrid(eval('model.'+idx), val)
 
-        return Pipeline(stages=[vectorizer, standardizes, model]), param_grid.build()
+        pipe = Pipeline(stages=[vectorizer, standardizes, model])
+        return pipe, param_grid.build()
 
     def run_cross_val(self, data, evaluator, n_folds):
         '''
-
         :param data:
         :param evaluator:
         :param n_folds:
@@ -164,8 +152,10 @@ class ExecuteWorkflowClassification(object):
         '''
 
         import numpy as np
-        for key, val in dict_param.items():
+        params = dict(filter(lambda x: isinstance(x[1], tuple), dict_param.items()))
+        for key, val in params.items():
             if isinstance(val, tuple) and isinstance(val[0], int):
                 yield (key, np.linspace(val[0], val[1], number_of_spaces, True, dtype=int))
             else:
                 yield (key, np.linspace(val[0], val[1], number_of_spaces, True, dtype=float))
+

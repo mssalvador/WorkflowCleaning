@@ -25,6 +25,7 @@ logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
 
 sc = SparkContext.getOrCreate()
 
+
 class ParamsClassification(object):
 
     algorithm_classification = [str(i) for i in classification.__all__
@@ -33,23 +34,21 @@ class ParamsClassification(object):
     def __init__(self):
         logger_parameter_select.info(" Create_Classification_Parameters created")
 
-        self.selected_parameters = {"algorithm": self.algorithm_classification[0]}
-        self.algorithms_and_paramters = self.create_parameters()
+        self._selected_parameters = {"algorithm": self.algorithm_classification[0]}
+        self._algorithms_and_paramters = ParamsClassification.create_parameters()
 
     def __repr__(self):
         return "ParamsClassification()"
 
     def __str__(self):
-        return '{}'.format(self.selected_parameters.get("algorithm", self.__repr__()))
+        return '{}'.format(self._selected_parameters.get("algorithm", self.__repr__()))
 
     @staticmethod
     def output_parameters(params):
-
         return dict([(x.name, x.value) for l in params.children for x in l.children])
 
-
-
-    def create_parameters(self):
+    @classmethod
+    def create_parameters(cls):
         '''
         Initial method for creating all parameters for all algorithms along with default vals
         :return:
@@ -57,7 +56,7 @@ class ParamsClassification(object):
 
         algo_and_params = dict()
 
-        for i in ParamsClassification.algorithm_classification:
+        for i in cls.algorithm_classification:
             model = getattr(classification, i)()
             maps = model.extractParamMap()
 
@@ -93,7 +92,7 @@ class ParamsClassification(object):
 
             if change in widget_and_algorithms.keys():
                 logger_parameter_select.debug(" Algorithm changed to: {}".format(change))
-                return widget_and_algorithms[change](self.algorithms_and_paramters[change])
+                return widget_and_algorithms[change](self._algorithms_and_paramters[change])
             else:
                 raise NotImplementedError
 
@@ -157,10 +156,10 @@ class ParamsClassification(object):
                                                          description="Threshold",
                                                          name="threshold")
 
-        widget_tol = OwnFloatSlider.OwnFloatSlider(value=(dict.get("tol", 1e-06), 1e-04),
-                                                   min=1e-08,
-                                                   max=1e-01,
-                                                   step=1e-06,
+        widget_tol = OwnFloatSlider.OwnFloatSlider(value=(dict.get("tol", 0.001), 0.01),
+                                                   min=0.01,
+                                                   max=0.1,
+                                                   step=0.01,
                                                    description="Tolerance",
                                                    name="tol")
 
@@ -408,7 +407,7 @@ class ParamsClassification(object):
                                                   description="Raw prediction",
                                                   name="rawPredictionCol")
 
-        widget_numTrees = OwnIntSlider.OwnIntSlider(value=dict.get("numTrees", 20),
+        widget_numTrees = OwnIntSlider.OwnIntSlider(value=(5, dict.get("numTrees", 20)),
                                                     min=1,
                                                     max=100,
                                                     step=1,
@@ -515,5 +514,5 @@ class ParamsClassification(object):
                 widgets.HBox([widget_predictionCol, widget_labelCol])]
 
     @staticmethod
-    def create_one_vs_rest(dicct):
+    def create_one_vs_rest(dict):
         return widgets.HBox()

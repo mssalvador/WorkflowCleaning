@@ -1,7 +1,8 @@
 #Python related imports
 from pyspark.context import SparkContext
 from ipywidgets import widgets
-from pyspark.sql import functions as F, types, Window
+from pyspark.sql import functions as F
+from pyspark.sql import types
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
 from shared.ComputeDistances import *
@@ -19,7 +20,7 @@ class ShowResults(object):
     def __init__(self, dict):
         self.data_dict = dict
         self.dimensions = len(self.data_dict["features"])
-        self.lables = [self.data_dict["label"]]# TODO Should be part of data dict!!!
+        self.lables = [*self.data_dict["label"]]# TODO Should be part of data dict!!!
         self.boundary = chi2.ppf(0.99, self.dimensions)
         self.selected_cluster = 1
 
@@ -124,9 +125,10 @@ class ShowResults(object):
             #         .count() > 0:
             if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
 
-                output_cols = list(self.lables)+list(self.data_dict['features'])+['distances', 'outliers']
-
-                display(cluster_dataframe.select(*output_cols)
+                output_cols = self.lables+list(self.data_dict['features'])+['distances', 'outliers']
+                print(output_cols)
+                cluster_dataframe.select(output_cols).show()
+                display(cluster_dataframe.select(output_cols)
                         .filter(F.col('outliers') == 1)
                         .orderBy(F.col('distances').desc())
                         .toPandas()
@@ -156,5 +158,5 @@ class ShowResults(object):
             disabled = False
         )
 
-        first_line = widgets.HBox((dropdown_outliers,button_outliers))
+        first_line = widgets.HBox((dropdown_outliers, button_outliers))
         display(first_line)

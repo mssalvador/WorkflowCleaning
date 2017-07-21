@@ -67,3 +67,29 @@ if __name__ == '__main__':
     #df.show()
     df_outliers.write.parquet(PARQUET_PATH+'outlier_df.parquet', mode='overwrite')
 
+
+    from classification.ExecuteClassificationWorkflow import ExecuteWorkflowClassification
+    from pyspark.sql import types as T
+    Test = {'algorithm': 'LogisticRegression',
+            'elasticNetParam': (0.0, 0.5),
+            'fitIntercept': True,
+            'labelCol': 'label',
+            'maxIter': (100, 150),
+            'predictionCol': 'prediction',
+            'probabilityCol': 'probability',
+            'rawPredictionCol': 'rawPrediction'}
+
+    feat = T.StructType([T.StructField("f1",T.FloatType(),True)
+                            ,T.StructField("f2",T.FloatType(),True)
+                           ,T.StructField("f3",T.FloatType(),True)
+                           ,T.StructField("f4",T.FloatType(),True)])
+
+    lab = T.StructType([T.StructField("h1",T.StringType(),True)
+                           ,T.StructField("h2",T.StringType(),True)
+                           ,T.StructField("h3",T.StringType(),True)])
+
+    exclass = ExecuteWorkflowClassification(Test, True, feat, lab)
+
+    from pyspark.ml.evaluation import BinaryClassificationEvaluator
+
+    exclass.run_cross_val(df, BinaryClassificationEvaluator(), 3)

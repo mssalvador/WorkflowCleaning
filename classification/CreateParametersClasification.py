@@ -74,7 +74,7 @@ class ParamsClassification(object):
                                                              value=ParamsClassification.algorithm_classification[0],
                                                              description="Algorithms",
                                                              disabled=False,
-                                                             name="algortihm")
+                                                             name="algorithm")
 
         all_widgets = widgets.VBox([widget_dropdown_algorithms])
 
@@ -407,7 +407,7 @@ class ParamsClassification(object):
                                                   description="Raw prediction",
                                                   name="rawPredictionCol")
 
-        widget_numTrees = OwnIntSlider.OwnIntSlider(value=(5, dict.get("numTrees", 20)),
+        widget_numTrees = OwnIntSlider.OwnIntSlider(value=(5, dict.get("numTrees", 20), 40),
                                                     min=1,
                                                     max=100,
                                                     step=1,
@@ -515,4 +515,13 @@ class ParamsClassification(object):
 
     @staticmethod
     def create_one_vs_rest(dict):
-        return widgets.HBox()
+
+        widget_labelCol = OwnText.OwnText(value=dict.get("labelCol", "label"),
+                                          description="Label Column",
+                                          name="labelCol")
+
+        widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
+                                               description="Prediction Column",
+                                               name="predictionCol")
+
+        return [widgets.HBox([widget_labelCol]), widgets.HBox([widget_predictionCol])]

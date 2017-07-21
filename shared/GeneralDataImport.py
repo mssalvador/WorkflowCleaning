@@ -68,8 +68,6 @@ class GeneralDataImport(object):
         label_types = [F.col(label.name).cast('string').alias(label.name) for label in self._list_label]
 
         # Log the selected features and labels
-
-
         logger_data_import.info("Data frame exported with columns: {}, missing: {}"
                                 .format(self._list_label+self._list_features,
                                         set(self._all_columns)-set(self._list_label+self._list_features)))
@@ -132,7 +130,7 @@ class GeneralDataImport(object):
             GeneralDataImport.counter += 1
             self._data_frame = GeneralDataImport.import_data(self._path_to_data, **kwargs)
 
-            #set up for all columns and cleanup for labels and features
+            # set up for all columns and cleanup for labels and features
             self._all_columns = self._data_frame.schema
             self._list_label = []
             self._list_features = []

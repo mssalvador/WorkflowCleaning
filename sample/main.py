@@ -50,46 +50,25 @@ if __name__ == '__main__':
     #
     # ddy = dd.df["label", "x"]
     # ddy.show(5)
-    labels = ['header_1', 'header_2', 'header_3']
-    features = ['feature_1', 'feature_2', 'feature_3', 'feature_4']
-    df_outliers = create_dummy_data(number_of_samples=1000000,
-                                    labels=labels,
-                                    features=features,
-                                    outlier_factor=50,
-                                    outlier_number=0.5
-                                    )
-    df_outliers.show()
-    print(df_outliers.count())
+    # labels = ['header_1', 'header_2', 'header_3']
+    # features = ['feature_1', 'feature_2', 'feature_3', 'feature_4']
+    # df_outliers = create_dummy_data(number_of_samples=1000000,
+    #                                 labels=labels,
+    #                                 features=features,
+    #                                 outlier_factor=50,
+    #                                 outlier_number=0.5
+    #                                 )
+    # df_outliers.show()
+    # print(df_outliers.count())
 
     # df = make_outliers(df_outliers, 0.5, 100)
-    features_of_list = map(lambda f: '(' + str(f) + ' > 1)', [i[0] for i in df_outliers.dtypes if i[1] == 'double'])
-    print('Number of outliers = ' + str(df_outliers.where(' or '.join(features_of_list)).count()))
-    #df.show()
-    df_outliers.write.parquet(PARQUET_PATH+'outlier_df.parquet', mode='overwrite')
-
+    # features_of_list = map(lambda f: '(' + str(f) + ' > 1)', [i[0] for i in df_outliers.dtypes if i[1] == 'double'])
+    # print('Number of outliers = ' + str(df_outliers.where(' or '.join(features_of_list)).count()))
+    # #df.show()
+    # df_outliers.write.parquet(PARQUET_PATH+'outlier_df.parquet', mode='overwrite')
 
     from classification.ExecuteClassificationWorkflow import ExecuteWorkflowClassification
-    from pyspark.sql import types as T
-    Test = {'algorithm': 'LogisticRegression',
-            'elasticNetParam': (0.0, 0.5),
-            'fitIntercept': True,
-            'labelCol': 'label',
-            'maxIter': (100, 150),
-            'predictionCol': 'prediction',
-            'probabilityCol': 'probability',
-            'rawPredictionCol': 'rawPrediction'}
 
-    feat = T.StructType([T.StructField("f1",T.FloatType(),True)
-                            ,T.StructField("f2",T.FloatType(),True)
-                           ,T.StructField("f3",T.FloatType(),True)
-                           ,T.StructField("f4",T.FloatType(),True)])
+    ex = ExecuteWorkflowClassification()
 
-    lab = T.StructType([T.StructField("h1",T.StringType(),True)
-                           ,T.StructField("h2",T.StringType(),True)
-                           ,T.StructField("h3",T.StringType(),True)])
-
-    exclass = ExecuteWorkflowClassification(Test, True, feat, lab)
-
-    from pyspark.ml.evaluation import BinaryClassificationEvaluator
-
-    exclass.run_cross_val(df, BinaryClassificationEvaluator(), 3)
+    ex.create_custom_pipeline()

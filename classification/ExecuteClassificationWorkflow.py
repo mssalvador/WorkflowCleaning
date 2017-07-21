@@ -71,7 +71,14 @@ class ExecuteWorkflowClassification(object):
         TODO: create a method that can create a custom transformation... This could be a good opportunity
         :return:
         '''
-        pass
+
+        # import statements
+        from pyspark.ml import feature
+        from ipywidgets import widgets
+
+        # show-off
+        all_transformation = filter(lambda x: "Model" not in x, feature.__all__)
+        print("\n".join(all_transformation))
 
     def create_standard_pipeline(self):
         '''

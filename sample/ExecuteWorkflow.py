@@ -24,7 +24,7 @@ class ExecuteWorkflow(object):
     # print(models.__all__)
 
     def __init__(self):
-        # , data=None, model="kmeans", params={}
+        # , data=None, model="kmeans", _params={}
         self._params = None  # dict of parameters including model, mode and so on
         # self._data = None #Perhaps it is needed
 

@@ -15,8 +15,8 @@ class TestCreateOutliers(TestCase):
         '''test if the DF is the same size as we asked'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=TestCreateOutliers.label_list,
-                                           features=TestCreateOutliers.feature_list,
+                                           label_names=TestCreateOutliers.label_list,
+                                           feature_names=TestCreateOutliers.feature_list,
                                            outlier_factor=TestCreateOutliers.factor,
                                            outlier_number=TestCreateOutliers.number_of_outliers)
 
@@ -28,8 +28,8 @@ class TestCreateOutliers(TestCase):
         '''test if the outliers in the DF is the same size as we asked - both for procentage and integers'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=TestCreateOutliers.label_list,
-                                           features=TestCreateOutliers.feature_list,
+                                           label_names=TestCreateOutliers.label_list,
+                                           feature_names=TestCreateOutliers.feature_list,
                                            outlier_factor=TestCreateOutliers.factor,
                                            outlier_number=TestCreateOutliers.number_of_outliers)
 
@@ -44,8 +44,8 @@ class TestCreateOutliers(TestCase):
         '''test if the DF is the same size as we asked, when there's no labels'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           #labels=estCreateOutliers.label_list,
-                                           features=TestCreateOutliers.feature_list,
+                                           label_names=TestCreateOutliers.label_list,
+                                           feature_names=TestCreateOutliers.feature_list,
                                            outlier_factor=TestCreateOutliers.factor,
                                            outlier_number=TestCreateOutliers.number_of_outliers)
 
@@ -56,8 +56,8 @@ class TestCreateOutliers(TestCase):
         '''test if the DF is the same size as we asked, when there's no features'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=TestCreateOutliers.label_list,
-                                           #features=TestCreateOutliers.feature_list,
+                                           label_names=TestCreateOutliers.label_list,
+                                           feature_names=TestCreateOutliers.feature_list,
                                            outlier_factor=TestCreateOutliers.factor,
                                            outlier_number=TestCreateOutliers.number_of_outliers)
 
@@ -67,22 +67,23 @@ class TestCreateOutliers(TestCase):
     def test_type_wo_features(self):
         '''test if the DF only consists of StringTypes, if we remove features'''
 
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=['label'],
-                                           #features=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
+        with self.assertRaises(TypeError) as cm:
+            df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
+                                               label_names=['label'],
+                                               #feature_names=TestCreateOutliers.feature_list,
+                                               outlier_factor=TestCreateOutliers.factor,
+                                               outlier_number=TestCreateOutliers.number_of_outliers)
 
-        res = [f.dataType for f in df_outliers.schema.fields]
+        error_string = "create_dummy_data() missing 1 required positional argument: 'feature_names'"
 
-        self.assertEqual(str(res), '[StringType]')
+        self.assertEqual(str(cm.exception), error_string, str(cm.exception)+" is not equal to: "+error_string)
 
     def test_type_wo_outlierfactor(self):
         '''test if the DF only consists of StringTypes, if we remove features'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=['label'],
-                                           features=TestCreateOutliers.feature_list,
+                                           label_names=['label'],
+                                           feature_names=TestCreateOutliers.feature_list,
                                            #outlier_factor=TestCreateOutliers.factor,
                                            outlier_number=TestCreateOutliers.number_of_outliers)
 
@@ -93,8 +94,8 @@ class TestCreateOutliers(TestCase):
         '''test if the DF only consists of StringTypes, if we remove features'''
 
         df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           labels=['label'],
-                                           features=TestCreateOutliers.feature_list,
+                                           label_names=['label'],
+                                           feature_names=TestCreateOutliers.feature_list,
                                            outlier_factor=TestCreateOutliers.factor,
                                            #outlier_number=TestCreateOutliers.number_of_outliers)
                                            )
@@ -105,34 +106,47 @@ class TestCreateOutliers(TestCase):
     def test_size_wo_labels_features(self):
         '''test for an error when there's no features or labels'''
 
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(TypeError) as cm:
             dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           #labels=estCreateOutliers.label_list,
-                                           #features=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
+                                 # label_names=estCreateOutliers.label_list,
+                                 # feature_names=TestCreateOutliers.feature_list,
+                                 # outlier_factor=TestCreateOutliers.factor,
+                                 # outlier_number=TestCreateOutliers.number_of_outliers)
+                                 )
 
-        self.assertEqual(cm.exception.code, "You must provide at least labels or features as a dictionary")
+        error_string = "create_dummy_data() missing 2 required positional arguments: 'feature_names' and 'label_names'"
+        self.assertEqual(str(cm.exception), error_string, str(cm.exception)+" is not equal to: "+error_string)
 
     def test_size_more_outliers(self):
         '''test for an error when total size is less than outliers'''
 
         with self.assertRaises(SystemExit) as cm:
             dd.create_dummy_data(number_of_samples=10,
-                                           labels=TestCreateOutliers.label_list,
-                                           features=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=20)
+                                 label_names=TestCreateOutliers.label_list,
+                                 feature_names=TestCreateOutliers.feature_list,
+                                 outlier_factor=TestCreateOutliers.factor,
+                                 outlier_number=20)
 
         self.assertEqual(cm.exception.code, "Your total size needs to be bigger then your outlier size")
 
     def test_make_outliers(self):
         '''test if number of outliers is as expected'''
         df = dd.create_dummy_data(number_of_samples=100,
-                             labels=TestCreateOutliers.label_list,
-                             features=TestCreateOutliers.feature_list,
-                             )
+                                  label_names=TestCreateOutliers.label_list,
+                                  feature_names=TestCreateOutliers.feature_list,
+                                  )
         outlier_number = 40
         out_df = dd.make_outliers(df, outlier_number, 100, features=["feature_4"])
         res = out_df.where(F.col("feature_4") > 1).count()
-        self.assertTrue(outlier_number*0.90 <= res <= outlier_number*1.1)
+        self.assertTrue(outlier_number*0.90 <= res <= outlier_number*1.1, "Numer of outliers is: "+str(res))
+
+    def test_introduce_string_features(self):
+        """Test for string to list conversion in check_input_feature_label"""
+
+        df = dd.create_dummy_data(number_of_samples=10,
+                                  feature_names="x y z",
+                                  label_names="label newLabel")
+
+        columns = df.columns
+
+        self.assertListEqual(columns, ["label", "newLabel", "x", "y", "z"])

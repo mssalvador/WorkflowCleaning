@@ -57,4 +57,5 @@ if __name__ == '__main__':
                            label_names=["label"],
                            outlier_factor=10,
                            outlier_number=0.1)
+    df.write.parquet("/user/micsas/data/parquet/"+str(n)+"_samples.parquet", mode='overwrite')
     compute_size_of_dataframe(df)

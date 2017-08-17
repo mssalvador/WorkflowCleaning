@@ -56,3 +56,5 @@ def subtract_vectors(vector_a: np.ndarray, vector_b: np.ndarray):
     return vector_a - vector_b
 
 
+
+

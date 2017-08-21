@@ -3,7 +3,8 @@ Created on May 15, 2017
 
 @author: svanhmic
 '''
-import seaborn as sns, numpy as np
+import seaborn as sns
+import numpy as np
 import matplotlib.pyplot as plt
 import math
 from scipy.stats import chi2
@@ -55,6 +56,16 @@ def subtract_vectors(vector_a: np.ndarray, vector_b: np.ndarray):
     '''
     return vector_a - vector_b
 
+def make_components_histogram(agg_components, dimension):
+    """
+    Create a histogram of vector components for each cluster
+    :param agg_components: Aggregated components perhaps even normalized
+    :param dimension: labels containing name of each feature.
+    :return: None. Displays a graph
+    """
 
+
+
+    pass
 
 

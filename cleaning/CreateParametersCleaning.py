@@ -73,8 +73,8 @@ class ParamsCleaning(object):
         The main method for selecting parameters to each algorithm. Each algorithm has its own set of parameters.
         :return: None
         '''
-        widget_dropdown_algorithms = OwnDropdown.OwnDropdown(options=ParamsCleaning.algorithm_classification,
-                                                             value=ParamsCleaning.algorithm_classification[0],
+        widget_dropdown_algorithms = OwnDropdown.OwnDropdown(options=ParamsCleaning.algorithm_clustering,
+                                                             value=ParamsCleaning.algorithm_clustering[0],
                                                              description="Algorithms",
                                                              disabled=False,
                                                              name="algorithm")

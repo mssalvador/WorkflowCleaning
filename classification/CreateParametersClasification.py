@@ -12,7 +12,7 @@ from traitlets import dlink
 from pyspark.ml import classification
 import logging
 from pyspark import SparkContext
-from shared import OwnFloatSlider, OwnCheckBox, OwnIntSlider, OwnSelect, OwnText, OwnDropdown
+from shared import OwnFloatRangeSlider, OwnCheckBox, OwnIntRangeSlider, OwnSelect, OwnText, OwnDropdown
 
 # setup logging first, better than print!
 logger_parameter_select = logging.getLogger(__name__)
@@ -108,12 +108,12 @@ class ParamsClassification(object):
         :param dict: dictionary with parameters for logistic regression along with default values
         :return: list with HBox's of widgets
         '''
-        widget_elasticNetParam = OwnFloatSlider.OwnFloatSlider(value= (dict.get("elasticNetParam", 0.0), 0.5),
-                                                               min=0.0,
-                                                               max=1.0,
-                                                               step=0.01,
-                                                               description="Elastic Net",
-                                                               name="elasticNetParam")
+        widget_elasticNetParam = OwnFloatRangeSlider.OwnFloatRangeSlider(value= (dict.get("elasticNetParam", 0.0), 0.5),
+                                                                         min=0.0,
+                                                                         max=1.0,
+                                                                         step=0.01,
+                                                                         description="Elastic Net",
+                                                                         name="elasticNetParam")
 
         widget_fitIntercept = OwnCheckBox.OwnCheckBox(value=dict.get("fitIntercept", False),
                                                       description="Fit Intercept",
@@ -123,12 +123,12 @@ class ParamsClassification(object):
                                           description="Label Column",
                                           name="labelCol")
 
-        widget_maxIter = OwnIntSlider.OwnIntSlider(value=(dict.get("maxIter", 100), 150),
-                                                   min=10,
-                                                   max=200,
-                                                   step=1,
-                                                   description="Max iterations",
-                                                   name="maxIter")
+        widget_maxIter = OwnIntRangeSlider.OwnIntRangeSlider(value=(dict.get("maxIter", 100), 150),
+                                                             min=10,
+                                                             max=200,
+                                                             step=1,
+                                                             description="Max iterations",
+                                                             name="maxIter")
 
         widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
                                                description="Prediction Column",
@@ -142,26 +142,26 @@ class ParamsClassification(object):
                                                   description="Raw Prediction Column",
                                                   name="rawPredictionCol")
 
-        widget_regParam = OwnFloatSlider.OwnFloatSlider(value=(dict.get("regParam", 0.0), 0.5),
-                                                        min=0.0,
-                                                        max=1.0,
-                                                        step=0.01,
-                                                        description="Regularization",
-                                                        name="regParam")
+        widget_regParam = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("regParam", 0.0), 0.5),
+                                                                  min=0.0,
+                                                                  max=1.0,
+                                                                  step=0.01,
+                                                                  description="Regularization",
+                                                                  name="regParam")
 
-        widget_threshold = OwnFloatSlider.OwnFloatSlider(value=(0.0, dict.get("threshold", 0.5)),
-                                                         min=0.0,
-                                                         max=1.0,
-                                                         step=0.01,
-                                                         description="Threshold",
-                                                         name="threshold")
+        widget_threshold = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(0.0, dict.get("threshold", 0.5)),
+                                                                   min=0.0,
+                                                                   max=1.0,
+                                                                   step=0.01,
+                                                                   description="Threshold",
+                                                                   name="threshold")
 
-        widget_tol = OwnFloatSlider.OwnFloatSlider(value=(dict.get("tol", 0.001), 0.01),
-                                                   min=0.01,
-                                                   max=0.1,
-                                                   step=0.01,
-                                                   description="Tolerance",
-                                                   name="tol")
+        widget_tol = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("tol", 0.001), 0.01),
+                                                             min=0.01,
+                                                             max=0.1,
+                                                             step=0.01,
+                                                             description="Tolerance",
+                                                             name="tol")
 
         all_lists = [[widget_elasticNetParam, widget_regParam, widget_maxIter],
                      [widget_predictionCol, widget_probabilityCol],
@@ -182,12 +182,12 @@ class ParamsClassification(object):
                                                       description="Cache Node Id",
                                                       name="cacheNodeIds")
 
-        widget_checkpointInterval = OwnIntSlider.OwnIntSlider(value=(1, dict.get("checkpointInterval", 10)),
-                                                              min=1,
-                                                              max=100,
-                                                              step=5,
-                                                              description="Check point interval",
-                                                              name="checkpointInterval")
+        widget_checkpointInterval = OwnIntRangeSlider.OwnIntRangeSlider(value=(1, dict.get("checkpointInterval", 10)),
+                                                                        min=1,
+                                                                        max=100,
+                                                                        step=5,
+                                                                        description="Check point interval",
+                                                                        name="checkpointInterval")
 
         widget_impurity = OwnSelect.OwnSelect(value=dict.get("impurity", "gini"),
                                               options=["gini", "entropy"],
@@ -198,40 +198,40 @@ class ParamsClassification(object):
                                           description="Label Column",
                                           name="labelCol")
 
-        widget_maxBins = OwnIntSlider.OwnIntSlider(value=(16, dict.get("maxBins", 32)),
-                                                   min=2,
-                                                   max=256,
-                                                   step=2,
-                                                   description="Maximum bins",
-                                                   name="maxBins")
+        widget_maxBins = OwnIntRangeSlider.OwnIntRangeSlider(value=(16, dict.get("maxBins", 32)),
+                                                             min=2,
+                                                             max=256,
+                                                             step=2,
+                                                             description="Maximum bins",
+                                                             name="maxBins")
 
-        widget_maxDepth = OwnIntSlider.OwnIntSlider(value=(3, dict.get("maxDepth", 5)),
-                                                    min=1,
-                                                    max=50,
-                                                    step=1,
-                                                    description="Maximum Depth",
-                                                    name="maxDepth")
+        widget_maxDepth = OwnIntRangeSlider.OwnIntRangeSlider(value=(3, dict.get("maxDepth", 5)),
+                                                              min=1,
+                                                              max=50,
+                                                              step=1,
+                                                              description="Maximum Depth",
+                                                              name="maxDepth")
 
-        widget_maxMemoryInMB = OwnIntSlider.OwnIntSlider(value=(128, dict.get("maxMemoryInMB", 256)),
-                                                         min=8,
-                                                         max=1024,
-                                                         step=8,
-                                                         description="Maximum Memory MB",
-                                                         name="maxMemoryInMB")
+        widget_maxMemoryInMB = OwnIntRangeSlider.OwnIntRangeSlider(value=(128, dict.get("maxMemoryInMB", 256)),
+                                                                   min=8,
+                                                                   max=1024,
+                                                                   step=8,
+                                                                   description="Maximum Memory MB",
+                                                                   name="maxMemoryInMB")
 
-        widget_minInfoGain = OwnFloatSlider.OwnFloatSlider(value=(dict.get("minInfoGain", 0.0), 0.5),
-                                                           min=0.0,
-                                                           max=1.0,
-                                                           step=0.01,
-                                                           description="Minimum Information Gain",
-                                                           name="minInfoGain")
+        widget_minInfoGain = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("minInfoGain", 0.0), 0.5),
+                                                                     min=0.0,
+                                                                     max=1.0,
+                                                                     step=0.01,
+                                                                     description="Minimum Information Gain",
+                                                                     name="minInfoGain")
 
-        widget_minInstancesPerNode = OwnIntSlider.OwnIntSlider(value=(dict.get("minInstancesPerNode", 1), 2),
-                                                               min=1,
-                                                               max=10,
-                                                               step=1,
-                                                               description="Minimum number of instances pr node",
-                                                               name="minInstancesPerNode")
+        widget_minInstancesPerNode = OwnIntRangeSlider.OwnIntRangeSlider(value=(dict.get("minInstancesPerNode", 1), 2),
+                                                                         min=1,
+                                                                         max=10,
+                                                                         step=1,
+                                                                         description="Minimum number of instances pr node",
+                                                                         name="minInstancesPerNode")
 
         widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
                                                description="Prediction Column",
@@ -261,12 +261,12 @@ class ParamsClassification(object):
                                                       description="Cache node id",
                                                       name="cacheNodeIds")
 
-        widget_checkpointInterval = OwnIntSlider.OwnIntSlider(value=(5, dict.get("checkpointInterval", 10)),
-                                                              min=1,
-                                                              max=100,
-                                                              step=5,
-                                                              description="Check point interval",
-                                                              name="checkpointInterval")
+        widget_checkpointInterval = OwnIntRangeSlider.OwnIntRangeSlider(value=(5, dict.get("checkpointInterval", 10)),
+                                                                        min=1,
+                                                                        max=100,
+                                                                        step=5,
+                                                                        description="Check point interval",
+                                                                        name="checkpointInterval")
 
         widget_labelCol = OwnText.OwnText(value=dict.get("labelCol", "label"),
                                           description="Label Column",
@@ -277,51 +277,51 @@ class ParamsClassification(object):
                                               description="Loss type",
                                               name="lossType")
 
-        widget_maxBins = OwnIntSlider.OwnIntSlider(value=(16, dict.get("maxBins", 32)),
-                                                   min=2,
-                                                   max=256,
-                                                   step=2,
-                                                   description="Maximum bins",
-                                                   name="maxBins")
+        widget_maxBins = OwnIntRangeSlider.OwnIntRangeSlider(value=(16, dict.get("maxBins", 32)),
+                                                             min=2,
+                                                             max=256,
+                                                             step=2,
+                                                             description="Maximum bins",
+                                                             name="maxBins")
 
-        widget_maxDepth = OwnIntSlider.OwnIntSlider(value=(3, dict.get("maxDepth", 5)),
-                                                    min=1,
-                                                    max=50,
-                                                    step=1,
-                                                    description="Maximum Depth",
-                                                    name="maxDepth")
+        widget_maxDepth = OwnIntRangeSlider.OwnIntRangeSlider(value=(3, dict.get("maxDepth", 5)),
+                                                              min=1,
+                                                              max=50,
+                                                              step=1,
+                                                              description="Maximum Depth",
+                                                              name="maxDepth")
 
-        widget_maxMemoryInMB = OwnIntSlider.OwnIntSlider(value=(128, dict.get("maxMemoryInMB", 256)),
-                                                         min=8,
-                                                         max=1024,
-                                                         step=8,
-                                                         description="Maximum Memory MB:",
-                                                         name="maxMemoryInMB")
+        widget_maxMemoryInMB = OwnIntRangeSlider.OwnIntRangeSlider(value=(128, dict.get("maxMemoryInMB", 256)),
+                                                                   min=8,
+                                                                   max=1024,
+                                                                   step=8,
+                                                                   description="Maximum Memory MB:",
+                                                                   name="maxMemoryInMB")
 
-        widget_minInfoGain = OwnFloatSlider.OwnFloatSlider(value=(dict.get("minInfoGain", 0.0), 0.3),
-                                                           min=0.0,
-                                                           max=1.0,
-                                                           step=0.01,
-                                                           description="Minimum Information Gain",
-                                                           name="minInfoGain")
+        widget_minInfoGain = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("minInfoGain", 0.0), 0.3),
+                                                                     min=0.0,
+                                                                     max=1.0,
+                                                                     step=0.01,
+                                                                     description="Minimum Information Gain",
+                                                                     name="minInfoGain")
 
-        widget_minInstancesPerNode = OwnIntSlider.OwnIntSlider(value=(dict.get("minInstancesPerNode", 1), 2),
-                                                               min=1,
-                                                               max=10,
-                                                               step=1,
-                                                               description="Minimum number of instances pr. node",
-                                                               name="minInstancesPerNode")
+        widget_minInstancesPerNode = OwnIntRangeSlider.OwnIntRangeSlider(value=(dict.get("minInstancesPerNode", 1), 2),
+                                                                         min=1,
+                                                                         max=10,
+                                                                         step=1,
+                                                                         description="Minimum number of instances pr. node",
+                                                                         name="minInstancesPerNode")
 
         widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
                                                description="Prediction Column",
                                                name="predictionCol")
 
-        widget_stepSize = OwnFloatSlider.OwnFloatSlider(value=(0.0, dict.get("stepSize", 0.1)),
-                                                        min=0.0,
-                                                        max=1.0,
-                                                        step=0.01,
-                                                        description="Step size",
-                                                        name="stepSize")
+        widget_stepSize = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(0.0, dict.get("stepSize", 0.1)),
+                                                                  min=0.0,
+                                                                  max=1.0,
+                                                                  step=0.01,
+                                                                  description="Step size",
+                                                                  name="stepSize")
 
         return [widgets.HBox([widget_stepSize, widget_minInfoGain, widget_cacheNodeIds]),
                 widgets.HBox([widget_checkpointInterval, widget_maxBins, widget_maxDepth]),
@@ -339,12 +339,12 @@ class ParamsClassification(object):
                                                       description="Cache Node Id",
                                                       name="cacheNodeIds")
 
-        widget_checkpointInterval = OwnIntSlider.OwnIntSlider(value=(5, dict.get("checkpointInterval", 10)),
-                                                              min=1,
-                                                              max=100,
-                                                              step=5,
-                                                              description="Check point interval",
-                                                              name="checkpointInterval")
+        widget_checkpointInterval = OwnIntRangeSlider.OwnIntRangeSlider(value=(5, dict.get("checkpointInterval", 10)),
+                                                                        min=1,
+                                                                        max=100,
+                                                                        step=5,
+                                                                        description="Check point interval",
+                                                                        name="checkpointInterval")
 
         widget_featureSubsetStrategy = OwnSelect.OwnSelect(value=dict.get("featureSubsetStrategy", 'auto'),
                                                            options=['auto', "onethird", "sqrt", "log2", "(0.0-1.0]", "[1-n]", "all"],
@@ -360,40 +360,40 @@ class ParamsClassification(object):
                                           description="Label Column",
                                           name="labelCol")
 
-        widget_maxBins = OwnIntSlider.OwnIntSlider(value=(16, dict.get("maxBins", 32)),
-                                                   min=2,
-                                                   max=256,
-                                                   step=2,
-                                                   description="Maximum bins",
-                                                   name="maxBins")
+        widget_maxBins = OwnIntRangeSlider.OwnIntRangeSlider(value=(16, dict.get("maxBins", 32)),
+                                                             min=2,
+                                                             max=256,
+                                                             step=2,
+                                                             description="Maximum bins",
+                                                             name="maxBins")
 
-        widget_maxDepth = OwnIntSlider.OwnIntSlider(value=(3, dict.get("maxDepth", 5)),
-                                                    min=1,
-                                                    max=50,
-                                                    step=1,
-                                                    description="Maximum Depth",
-                                                    name="maxDepth")
+        widget_maxDepth = OwnIntRangeSlider.OwnIntRangeSlider(value=(3, dict.get("maxDepth", 5)),
+                                                              min=1,
+                                                              max=50,
+                                                              step=1,
+                                                              description="Maximum Depth",
+                                                              name="maxDepth")
 
-        widget_maxMemoryInMB = OwnIntSlider.OwnIntSlider(value=(128, dict.get("maxMemoryInMB", 256)),
-                                                         min=8,
-                                                         max=1024,
-                                                         step=8,
-                                                         description="Maximum Memory MB:",
-                                                         name="maxMemoryInMB")
+        widget_maxMemoryInMB = OwnIntRangeSlider.OwnIntRangeSlider(value=(128, dict.get("maxMemoryInMB", 256)),
+                                                                   min=8,
+                                                                   max=1024,
+                                                                   step=8,
+                                                                   description="Maximum Memory MB:",
+                                                                   name="maxMemoryInMB")
 
-        widget_minInfoGain = OwnFloatSlider.OwnFloatSlider(value=(dict.get("minInfoGain", 0.0), 0.2),
-                                                           min=0.0,
-                                                           max=1.0,
-                                                           step=0.01,
-                                                           description="Minimum Information Gain",
-                                                           name="minInfoGain")
+        widget_minInfoGain = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("minInfoGain", 0.0), 0.2),
+                                                                     min=0.0,
+                                                                     max=1.0,
+                                                                     step=0.01,
+                                                                     description="Minimum Information Gain",
+                                                                     name="minInfoGain")
 
-        widget_minInstancesPerNode = OwnIntSlider.OwnIntSlider(value=(dict.get("minInstancesPerNode", 1), 3),
-                                                               min=1,
-                                                               max=10,
-                                                               step=1,
-                                                               description="Minimum number of instances pr. node",
-                                                               name="minInstancesPerNode")
+        widget_minInstancesPerNode = OwnIntRangeSlider.OwnIntRangeSlider(value=(dict.get("minInstancesPerNode", 1), 3),
+                                                                         min=1,
+                                                                         max=10,
+                                                                         step=1,
+                                                                         description="Minimum number of instances pr. node",
+                                                                         name="minInstancesPerNode")
 
         widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
                                                description="Prediction Column",
@@ -407,12 +407,12 @@ class ParamsClassification(object):
                                                   description="Raw prediction",
                                                   name="rawPredictionCol")
 
-        widget_numTrees = OwnIntSlider.OwnIntSlider(value=(5, dict.get("numTrees", 20), 40),
-                                                    min=1,
-                                                    max=100,
-                                                    step=1,
-                                                    description="Number of trees",
-                                                    name="numTrees")
+        widget_numTrees = OwnIntRangeSlider.OwnIntRangeSlider(value=(5, dict.get("numTrees", 20), 40),
+                                                              min=1,
+                                                              max=100,
+                                                              step=1,
+                                                              description="Number of trees",
+                                                              name="numTrees")
 
         return [widgets.HBox([widget_featureSubsetStrategy, widget_impurity, widget_cacheNodeIds]),
                 widgets.HBox([widget_checkpointInterval, widget_maxBins, widget_maxDepth]),
@@ -449,12 +449,12 @@ class ParamsClassification(object):
                                                   description="Raw prediction",
                                                   name="rawPredictionCol")
 
-        widget_smoothing = OwnFloatSlider.OwnFloatSlider(value=(0.5, dict.get("smoothing", 1.0)),
-                                                         min=0.0,
-                                                         max=2.0,
-                                                         step=0.01,
-                                                         description="Smoothing",
-                                                         name="smoothing")
+        widget_smoothing = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(0.5, dict.get("smoothing", 1.0)),
+                                                                   min=0.0,
+                                                                   max=2.0,
+                                                                   step=0.01,
+                                                                   description="Smoothing",
+                                                                   name="smoothing")
 
         return [widgets.HBox([widget_modelType, widget_smoothing]),
                 widgets.HBox([widget_labelCol, widget_predictionCol]),
@@ -472,12 +472,12 @@ class ParamsClassification(object):
                                           description="Label Column",
                                           name="labelCol")
 
-        widget_maxIter = OwnIntSlider.OwnIntSlider(value=(50, dict.get("maxIter", 100)),
-                                                   min=10,
-                                                   max=200,
-                                                   step=1,
-                                                   description="Max iterations",
-                                                   name="maxIter")
+        widget_maxIter = OwnIntRangeSlider.OwnIntRangeSlider(value=(50, dict.get("maxIter", 100)),
+                                                             min=10,
+                                                             max=200,
+                                                             step=1,
+                                                             description="Max iterations",
+                                                             name="maxIter")
 
         widget_predictionCol = OwnText.OwnText(value=dict.get("predictionCol", "prediction"),
                                                description="Prediction Column",
@@ -488,26 +488,26 @@ class ParamsClassification(object):
                                             description="sovler",
                                             name="solver")
 
-        widget_tol = OwnFloatSlider.OwnFloatSlider(value=(dict.get("tol", 1e-04), 1e-03),
-                                                   min=1e-04,
-                                                   max=1e-01,
-                                                   step=1e-01,
-                                                   description="Tolerance",
-                                                   name="tol")
+        widget_tol = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("tol", 1e-04), 1e-03),
+                                                             min=1e-04,
+                                                             max=1e-01,
+                                                             step=1e-01,
+                                                             description="Tolerance",
+                                                             name="tol")
 
-        widget_stepSize = OwnFloatSlider.OwnFloatSlider(value=(dict.get("stepSize", 0.1), 0.3),
-                                                        min=0.0,
-                                                        max=1.0,
-                                                        step=0.01,
-                                                        description="Step size",
-                                                        name="stepSize")
+        widget_stepSize = OwnFloatRangeSlider.OwnFloatRangeSlider(value=(dict.get("stepSize", 0.1), 0.3),
+                                                                  min=0.0,
+                                                                  max=1.0,
+                                                                  step=0.01,
+                                                                  description="Step size",
+                                                                  name="stepSize")
 
-        widget_blockSize = OwnIntSlider.OwnIntSlider(value=(64, dict.get("blockSize", 128)),
-                                                     min=10,
-                                                     max=1000,
-                                                     step=1,
-                                                     description="Block size",
-                                                     name="blockSize")
+        widget_blockSize = OwnIntRangeSlider.OwnIntRangeSlider(value=(64, dict.get("blockSize", 128)),
+                                                               min=10,
+                                                               max=1000,
+                                                               step=1,
+                                                               description="Block size",
+                                                               name="blockSize")
 
         return [widgets.HBox([widget_solver, widget_tol, widget_stepSize]),
                 widgets.HBox([widget_blockSize, widget_maxIter]),

@@ -23,9 +23,18 @@ class ExecuteWorkflow(object):
 
     # print(models.__all__)
 
-    def __init__(self):
-        # , data=None, model="kmeans", _params={}
-        self._params = None  # dict of parameters including model, mode and so on
+    def __init__(self, params=None, features=None, labels=None, standardize=False):
+        """
+        Constructor of ExecuteWorkflow
+        :param params:
+        :param features:
+        :param labels:
+        :param standardize:
+        """
+        self._params = params  # dict of _parameters including model, mode and so on
+        self._features = features
+        self._labels = labels
+        self._standardize = standardize
         # self._data = None #Perhaps it is needed
 
     @property
@@ -36,6 +45,7 @@ class ExecuteWorkflow(object):
     def params(self, dic):
         assert isinstance(dic, dict)
         self._params = dic
+
 
     def construct_pipeline(self):
 
@@ -102,7 +112,7 @@ class ExecuteWorkflow(object):
 
         return Pipeline(stages=stages)
 
-    def run(self, data):
+    def run_pipeline(self, data):
         '''
         A pyspark.ml.clustering model the method inserts the cluster centers to each data point
         :param self: 

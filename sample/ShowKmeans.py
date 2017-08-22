@@ -121,7 +121,7 @@ class ShowResults(object):
             self.selected_cluster = dropdown_prototypes.value
 
             # if updated_dataframe\
-            #         .filter((F.col(self._parameters['prediction']) == self.selected_cluster) & (F.col('outliers') == 1))\
+            #         .filter((F.col(self._parameters['prediction']) == self._selected_cluster) & (F.col('outliers') == 1))\
             #         .count() > 0:
             if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
 

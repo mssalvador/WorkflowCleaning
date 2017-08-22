@@ -1,4 +1,4 @@
-# This class should execute the kmeans model on the recived data.
+# This class should execute the clustering model on the recived data.
 
 from pyspark.ml import clustering
 import pyspark.ml.feature as features
@@ -9,8 +9,9 @@ from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.ml.linalg import VectorUDT, Vectors
 from pyspark.sql import functions as F
+
+
 import numpy as np
-from pyspark.sql.functions import monotonically_increasing_id
 import logging
 import sys
 
@@ -129,10 +130,16 @@ class ExecuteWorkflow(object):
         :param data_frame: spark data frame that can be used for the algorithm
         :return: model and cluster centers with id
         """
+
+        from pyspark.ml.linalg import Vectors,VectorUDT
+
         assert isinstance(data_frame, DataFrame), " data_frame is not of type dataframe but: "+type(data_frame)
         sql_ctx = SQLContext.getOrCreate(sc)
         model = self._pipeline.fit(data_frame)
         transformed_data = model.transform(data_frame)
+
+        #udf's
+        udf_cast_vector = F.udf(lambda x: Vectors.dense(x),VectorUDT())
 
         if self._algorithm == 'GaussianMixture':
             # convert gaussian mean/covariance dataframe to pandas dataframe
@@ -140,6 +147,7 @@ class ExecuteWorkflow(object):
             centers = sql_ctx.createDataFrame(self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(centers, self._params_labels['prediction'], 'inner')
+            merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
             centers = self.gen_cluster_center(self._params_labels['k'], np_centers)

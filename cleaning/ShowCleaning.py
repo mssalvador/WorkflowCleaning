@@ -28,6 +28,7 @@ class ShowResults(object):
     def __init__(self, dict_parameters, list_features, list_labels):
         self._data_dict = dict_parameters
         self._dimensions = len(list_features)
+        self._features = list_features
         self._lables = list_labels  # TODO Should be part of data dict!!!
         self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
@@ -72,8 +73,8 @@ class ShowResults(object):
         :param df: Spark data frame
         :return:
         '''
-
-        list_distances = [i["distances"] for i in df.collect()]
+        from shared.ComputeDistances import make_histogram
+        list_distances = [i["distance"] for i in df.collect()]
 
         make_histogram(list_distances, self._dimensions)
 
@@ -85,7 +86,8 @@ class ShowResults(object):
         """
         from pyspark.sql import Window
         from pyspark.sql import functions as F
-        from shared.ComputeDistances import compute_distance
+        import numpy as np
+        import math
 
         # Window function
         win_percentage_dist = (Window
@@ -94,14 +96,36 @@ class ShowResults(object):
 
         # Udf's
         percentage_dist = 100-(F.max(F.col('distance')).over(win_percentage_dist)-F.col('distance'))/100
-        udf_distance = F.udf(lambda center, point: compute_distance(center.toArray(), point.toArray()), types.DoubleType())
+        udf_real_dist = F.udf(lambda c, p: float(math.sqrt(np.dot((c.toArray()-p.toArray()), (c.toArray()-p.toArray())))), types.DoubleType())
 
         return (dataframe
                 .withColumn(self._data_dict['prediction'], F.col(self._data_dict['prediction']) + 1)
-                .withColumn('distance', udf_distance(dataframe.centers, dataframe.scaled_features))
+                .withColumn('distance', udf_real_dist(dataframe.centers, dataframe.scaled_features))
                 .withColumn('Percentage distance', percentage_dist)
                 .withColumn('outliers', F.when(F.col('distance') > self._boundary, 1).otherwise(0))
                 )
+
+    def compute_summary(self, dataframe):
+        df_stats = (dataframe.select(self._data_dict['prediction'], 'outliers', 'distance', 'centers')).persist()
+
+        (df_stats.groupBy(self._data_dict['prediction'])
+         .agg(F.count(self._data_dict['prediction']).alias("Count"),
+              F.sum(F.col("outliers")).alias("Outlier Count"))
+         .orderBy(self._data_dict['prediction'])
+         .filter(F.col("Count") >= 1)
+         .show()
+         )
+
+        df_outliers = (df_stats.select(self._data_dict['prediction'], "distance")
+                       .distinct()
+                       .groupBy(F.col(self._data_dict['prediction']))
+                       .count()
+                       .filter(F.col("count") >= 2)
+                       )
+
+        df_outliers.show()
+        list_clusters_with_outliers = df_outliers.select('prediction').collect()
+        return list_clusters_with_outliers
 
     def select_prototypes(self, dataframe, **kwargs):
         '''
@@ -116,43 +140,16 @@ class ShowResults(object):
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
         dataframe_updated = self.compute_shift(dataframe)
-        # dataframe_updated.show()
-
-        # broadcast clusters and their center points to each node
-        # b = sc.broadcast(dict(list(map(lambda x: (x[0], x[1]), updated_dataframe
-        #                               .select(F.col('prediction'), F.col('centers')).distinct().collect()))))
 
         # create summary for the clusters along with number in each cluster and number of outliers
-        list_stats_cols = [self._data_dict['prediction'], "outliers", "distance"]
+        # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
+        list_unique_values = self.compute_summary(dataframe_updated)
 
-        dataframe_for_stats = dataframe_updated.select(*list_stats_cols)
-
-        dataframe_counter = (dataframe_for_stats
-                             .groupBy(self._data_dict['prediction'])
-                             .agg(F.count(self._data_dict['prediction']).alias("Count"),
-                                  F.sum(F.col("outliers")).alias("Outlier Count"))
-                             .orderBy(self._data_dict['prediction'])
-                             .filter(F.col("Count") >= 1)
-                             )
-        dataframe_counter.show()
-
-        # find out how many unique data points we got
-        dataframe_unique_values = (dataframe_for_stats
-                                   .select("prediction", "distance")
-                                   .distinct()
-                                   .groupBy(F.col("prediction"))
-                                   .count()
-                                   .filter(F.col("count") >= 2)
-                                   )
-
-        list_clusters_with_outliers = sorted(
-            map(lambda x: x[self._data_dict['prediction']], dataframe_unique_values.collect()))
+        list_clusters_with_outliers = sorted(map(lambda x: x[self._data_dict['prediction']], list_unique_values))
         # print(list_clusters_with_outliers)
 
         dropdown_prototypes = widgets.Dropdown(
             options=list_clusters_with_outliers,
-            # options=list(map(lambda x: str(x), list([int(i.prediction) for i in counter.collect()]))),
-            # value=1,
             description="Select Cluster",
             disabled=False
         )
@@ -166,12 +163,9 @@ class ShowResults(object):
             self.show_cluster(cluster_dataframe)
             self._selected_cluster = dropdown_prototypes.value
 
-            # if updated_dataframe\
-            #         .filter((F.col(self._parameters['prediction']) == self._selected_cluster) & (F.col('outliers') == 1))\
-            #         .count() > 0:
             if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
 
-                output_cols = self._lables + list(self._data_dict['features']) + ['distance', 'outliers']
+                output_cols = self._lables + list(self._features) + ['distance', 'outliers']
                 print(output_cols)
                 cluster_dataframe.select(output_cols).show()
                 display(cluster_dataframe.select(output_cols)
@@ -185,24 +179,4 @@ class ShowResults(object):
         button_prototypes.on_click(selected_cluster_number)
 
         first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
-        display(first_line)
-
-    def select_outliers(self, dataframe):
-        '''
-        This method should contain a widget that handles the selection of outliers.
-        The method call show_outliers.
-        :param:
-        :return:
-        '''
-        button_outliers = widgets.Button(description="Show prototypes")
-        button_outliers.on_click(self.show_prototypes(dataframe))
-
-        dropdown_outliers = widgets.Dropdown(
-            options=[1, 2, 3],
-            value=1,
-            description="Select Cluster",
-            disabled=False
-        )
-
-        first_line = widgets.HBox((dropdown_outliers, button_outliers))
         display(first_line)

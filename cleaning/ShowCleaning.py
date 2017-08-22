@@ -8,7 +8,7 @@ from pyspark.context import SparkContext
 from ipywidgets import widgets
 from pyspark.sql import functions as F
 from pyspark.sql import types
-import scipy as sb
+from scipy.stats import chi2
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
 from pyspark.ml.linalg import VectorUDT
@@ -29,7 +29,7 @@ class ShowResults(object):
         self._data_dict = dict_parameters
         self._dimensions = len(list_features)
         self._lables = list_labels  # TODO Should be part of data dict!!!
-        self._boundary = sb.stats.chi2.ppf(0.99, self._dimensions)
+        self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
 
     def select_cluster(self):

@@ -8,6 +8,7 @@ from pyspark.context import SparkContext
 from ipywidgets import widgets
 from pyspark.sql import functions as F
 from pyspark.sql import types
+import scipy as sb
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
 from pyspark.ml.linalg import VectorUDT
@@ -17,7 +18,6 @@ from pyspark.ml.linalg import VectorUDT
 # TODO: Hvad skal vi lægge ind i ShowResults klassen?
 
 sc = SparkContext.getOrCreate()
-
 
 class ShowResults(object):
     """
@@ -29,7 +29,7 @@ class ShowResults(object):
         self._data_dict = dict_parameters
         self._dimensions = len(list_features)
         self._lables = list_labels  # TODO Should be part of data dict!!!
-        self._boundary = chi2.ppf(0.99, self._dimensions)
+        self._boundary = sb.stats.chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
 
     def select_cluster(self):
@@ -78,7 +78,11 @@ class ShowResults(object):
         make_histogram(list_distances, self._dimensions)
 
     def compute_shift(self, dataframe):
-
+        """
+        Compute distance, percentage distance to cluster center, and if outlier.
+        :param dataframe:
+        :return: dataframe
+        """
         from pyspark.sql import Window
         from pyspark.sql import functions as F
         from shared.ComputeDistances import compute_distance
@@ -88,16 +92,14 @@ class ShowResults(object):
                                .orderBy(F.col('distance').desc())
                                .partitionBy(F.col(self._data_dict['prediction'])))
 
-
         # Udf's
-        #udf_percentage = F.udf(lambda dist: float((dist-F.max(dist).over(win_percentage_dist))/100), types.DoubleType())
+        percentage_dist = 100-(F.max(F.col('distance')).over(win_percentage_dist)-F.col('distance'))/100
         udf_distance = F.udf(lambda center, point: compute_distance(center.toArray(), point.toArray()), types.DoubleType())
-
 
         return (dataframe
                 .withColumn(self._data_dict['prediction'], F.col(self._data_dict['prediction']) + 1)
                 .withColumn('distance', udf_distance(dataframe.centers, dataframe.scaled_features))
-                #.withColumn('Percentage distance', udf_percentage())
+                .withColumn('Percentage distance', percentage_dist)
                 .withColumn('outliers', F.when(F.col('distance') > self._boundary, 1).otherwise(0))
                 )
 
@@ -111,17 +113,9 @@ class ShowResults(object):
 
         button_prototypes = widgets.Button(description="Show prototypes")
 
-
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
-
-        dataframe_updated = (dataframe
-                             .withColumn(self._data_dict['prediction'], F.col(self._data_dict['prediction']) + 1)
-                             .withColumn('distances',
-                                         udf_distance(dataframe.centers, dataframe.scaled_features))
-                             .withColumn('outliers', F.when(F.col('distance') > self._boundary, 1).otherwise(0))
-                             .persist()
-                             )
+        dataframe_updated = self.compute_shift(dataframe)
         # dataframe_updated.show()
 
         # broadcast clusters and their center points to each node

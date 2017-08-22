@@ -24,15 +24,13 @@ if user == "sidsel":
 elif user == "svanhmic":
     PARQUET_PATH = "/home/" + user + "/workspace/data/DABAI/sparkdata/parquet/"
 
-TEST_DICT = {'features': ('AarsVaerk_1','AarsVaerk_2','AarsVaerk_3'),
-             'initialstep': 10,
-             'standardize': False,
-             'clusters': 50,
-             'model': 'KMeans',
-             'initialmode': 'random',
-             'prediction': 'Prediction',
-             'iterations': 20
-             }
+TEST_DICT = {'featuresCol': 'scaled_features',
+ 'k': 2,
+ 'maxIter': 100,
+ 'prediction': 'prediction',
+ 'probability': 'probability',
+ 'seed': 0,
+ 'tol': 0.001}
 
 
 if __name__ == '__main__':
@@ -62,15 +60,16 @@ if __name__ == '__main__':
     #                       outlier_number=0.1)
     #df.write.parquet("/user/micsas/data/parquet/"+str(n)+"_samples.parquet", mode='overwrite')
     #compute_size_of_dataframe(df)
-
+    sc = SparkContext().getOrCreate()
+    sql_ctx = SQLContext.getOrCreate(sc)
     import numpy as np
     from shared.ComputeDistances import compute_distance
     from pyspark.ml.linalg import VectorUDT, Vectors
+    from cleaning.ShowCleaning import ShowResults
     import pandas as pd
 
-    x = np.array([2,35,243])
-    y = np.array([22,15,143])
 
+    df = sql_ctx.read.parquet('/home/svanhmic/workspace/data/DABAI/sparkdata/parquet/merged_df_parquet')
 
-    sc = SparkContext().getOrCreate()
-    sql_ctx = SQLContext.getOrCreate(sc)
+    shows = ShowResults(TEST_DICT, ['x', 'y', 'z'], ['label'])
+    shows.compute_shift(df).show()

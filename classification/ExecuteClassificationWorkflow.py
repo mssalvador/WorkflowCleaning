@@ -88,7 +88,8 @@ class ExecuteWorkflowClassification(object):
 
         # Import statements
         from pyspark.ml import classification
-        from pyspark.ml import Pipeline, feature as Feat, tuning
+        from pyspark.ml import Pipeline, tuning
+        from pyspark.ml import feature as Feat
 
         # Feature columns are created from instance variables
         feature_columns = [i.name for i in self._featureCols]

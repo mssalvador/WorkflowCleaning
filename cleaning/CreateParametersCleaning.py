@@ -31,7 +31,7 @@ class ParamsCleaning(object):
 
     """
     algorithm_clustering = [str(i) for i in clustering.__all__
-                            if ("Model" not in i) if ("Summary" not in i)]
+                            if ("Model" not in i) if ("Summary" not in i) if ("BisectingKMeans" not in i)]
 
     def __init__(self):
         logger_parameter_select.info(" Create_Cleaning_Parameters created")
@@ -52,7 +52,7 @@ class ParamsCleaning(object):
     @classmethod
     def create_parameters(cls):
         '''
-        Initial method for creating all parameters for all algorithms along with default vals
+        Initial method for creating all _parameters for all algorithms along with default vals
         :return:
         '''
 
@@ -64,13 +64,13 @@ class ParamsCleaning(object):
 
             algo_and_params[i] = dict(zip(map(lambda x: x.name, maps.keys()), maps.values()))
             logger_parameter_select.debug(
-                " Parameters selected for algorithm {} with parameters {}".format(i, algo_and_params[i]))
+                " Parameters selected for algorithm {} with _parameters {}".format(i, algo_and_params[i]))
         return algo_and_params
 
     def select_parameters(self):
 
         '''
-        The main method for selecting parameters to each algorithm. Each algorithm has its own set of parameters.
+        The main method for selecting _parameters to each algorithm. Each algorithm has its own set of _parameters.
         :return: None
         '''
         widget_dropdown_algorithms = OwnDropdown.OwnDropdown(options=ParamsCleaning.algorithm_clustering,
@@ -105,7 +105,7 @@ class ParamsCleaning(object):
         """
         instiantate the widgets for kmeans clustering algortihm
 
-        :param dict: name of parameters and its default value
+        :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
         widget_k = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("k", 10),
@@ -156,7 +156,7 @@ class ParamsCleaning(object):
         """
         instiantate the widgets for Gausian mixture models algortihm
 
-        :param dict: name of parameters and its default value
+        :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
 
@@ -196,7 +196,7 @@ class ParamsCleaning(object):
         """
         instiantate the widgets for LDA clustering algortihm
 
-        :param dict: name of parameters and its default value
+        :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
         pass

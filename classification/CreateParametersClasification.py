@@ -50,7 +50,7 @@ class ParamsClassification(object):
     @classmethod
     def create_parameters(cls):
         '''
-        Initial method for creating all parameters for all algorithms along with default vals
+        Initial method for creating all _parameters for all algorithms along with default vals
         :return:
         '''
 
@@ -61,13 +61,13 @@ class ParamsClassification(object):
             maps = model.extractParamMap()
 
             algo_and_params[i] = dict(zip(map(lambda x: x.name, maps.keys()), maps.values()))
-            logger_parameter_select.debug(" Parameters selected for algorithm {} with parameters {}".format(i, algo_and_params[i]))
+            logger_parameter_select.debug(" Parameters selected for algorithm {} with _parameters {}".format(i, algo_and_params[i]))
         return algo_and_params
 
     def select_parameters(self):
 
         '''
-        The main method for selecting parameters to each algorithm. Each algorithm has its own set of parameters.
+        The main method for selecting _parameters to each algorithm. Each algorithm has its own set of _parameters.
         :return: None
         '''
         widget_dropdown_algorithms = OwnDropdown.OwnDropdown(options=ParamsClassification.algorithm_classification,
@@ -105,7 +105,7 @@ class ParamsClassification(object):
     def create_logistic_regression_widgets(dict):
         '''
         initiate the logistic regression widgets
-        :param dict: dictionary with parameters for logistic regression along with default values
+        :param dict: dictionary with _parameters for logistic regression along with default values
         :return: list with HBox's of widgets
         '''
         widget_elasticNetParam = OwnFloatRangeSlider.OwnFloatRangeSlider(value= (dict.get("elasticNetParam", 0.0), 0.5),
@@ -174,7 +174,7 @@ class ParamsClassification(object):
     def create_decision_tree_classifier_widgets(dict):
         '''
         instiantate the widgets for decision tree classifier
-        :param dict: name of parameters and its default value
+        :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         '''
 
@@ -332,7 +332,7 @@ class ParamsClassification(object):
     def create_random_forrest_classifier_widgets(dict):
         '''
         Initiate the widgets for random forest classifier
-        :param dict: dictionary with parameters and values
+        :param dict: dictionary with _parameters and values
         :return: list with HBox's of widgets
         '''
         widget_cacheNodeIds = OwnCheckBox.OwnCheckBox(value=dict.get("cacheNodeIds", False),
@@ -464,7 +464,7 @@ class ParamsClassification(object):
     def create_multi_layer_perception_widget(dict):
 
         '''
-        Initiate widgets for multi layer perception parameters.
+        Initiate widgets for multi layer perception _parameters.
         :param dict: dictionary with parameter names and default values
         :return: list with Hbox's with widgets
         '''

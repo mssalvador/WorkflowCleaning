@@ -9,7 +9,7 @@ CLUSTER_METHODS = [i for i in clusters.__all__ if "Model" not in i if "Bisecting
 
 class CreateParameters(object):
     '''
-    Description: This class contains the user interface for selecting parameters
+    Description: This class contains the user interface for selecting _parameters
     '''
 
     def __init__(self, feature_cols=[]):

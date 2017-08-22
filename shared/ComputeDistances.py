@@ -30,7 +30,7 @@ def make_histogram(dist: list, dim):
 
     '''
     :param dist: Spark data frame  TODO: make this a list input instead
-    :param dim: number of dimensions that needs to be plotted
+    :param dim: number of _dimensions that needs to be plotted
     :return:
     '''
 

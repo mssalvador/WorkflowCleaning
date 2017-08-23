@@ -131,20 +131,30 @@ class ExecuteWorkflow(object):
         :return: model and cluster centers with id
         """
 
-        from pyspark.ml.linalg import Vectors,VectorUDT
-
         assert isinstance(data_frame, DataFrame), " data_frame is not of type dataframe but: "+type(data_frame)
-        sql_ctx = SQLContext.getOrCreate(sc)
         model = self._pipeline.fit(data_frame)
+        return model
+
+    def apply_model(self, model, data_frame):
+        """
+        Runs the model on a data frame
+        :param model: PipelineModel from pyspark
+        :param data_frame: Pyspark data frame
+        :return: transformed pyspark data frame
+        """
+        from pyspark.ml.linalg import Vectors, VectorUDT
+        sql_ctx = SQLContext.getOrCreate(sc)
         transformed_data = model.transform(data_frame)
 
-        #udf's
-        udf_cast_vector = F.udf(lambda x: Vectors.dense(x),VectorUDT())
+        # udf's
+        udf_cast_vector = F.udf(lambda x: Vectors.dense(x), VectorUDT())
 
+        # Depending on the algorithm, different methods will extract the cluster centers
         if self._algorithm == 'GaussianMixture':
             # convert gaussian mean/covariance dataframe to pandas dataframe
             pandas_cluster_centers = model.stages[-1].gaussiansDF.toPandas()
-            centers = sql_ctx.createDataFrame(self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
+            centers = sql_ctx.createDataFrame(
+                self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(centers, self._params_labels['prediction'], 'inner')
             merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
@@ -160,6 +170,7 @@ class ExecuteWorkflow(object):
 
         # return the result
         return merged_df
+
 
     @staticmethod
     def gen_gaussians_center(k, gaussians, prediction_label='prediction'):

@@ -56,8 +56,7 @@ class ParamsCleaning(object):
         :return:
         '''
 
-        algo_and_params = dict()
-
+        algo_and_params = {}
         for i in cls.algorithm_clustering:
             model = getattr(clustering, i)()
             maps = model.extractParamMap()
@@ -143,7 +142,7 @@ class ParamsCleaning(object):
 
         widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("seed", random.randint(0, sys.maxsize)),
                                                      min=0,
-                                                     max=random.randint(0, sys.maxsize),
+                                                     max=sys.maxsize,
                                                      step=1000,
                                                      description="Seed",
                                                      name="seed")
@@ -183,7 +182,7 @@ class ParamsCleaning(object):
 
         widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("seed", random.randint(0, sys.maxsize)),
                                                      min=0,
-                                                     max=random.randint(0, sys.maxsize),
+                                                     max=sys.maxsize,
                                                      step=1000,
                                                      description="Seed",
                                                      name="seed")

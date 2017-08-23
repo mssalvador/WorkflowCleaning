@@ -51,22 +51,6 @@ class ShowResults(object):
 
         display(drop_down_clusters)
 
-    def show_outliers(self, dataframe):
-        '''
-        This method should take all outliers from a specific cluster
-        :param dataframe: Spark data frame containing data from a cluster or all clusters?
-        :return:
-        '''
-        print("Nothing has been made, yet!")
-
-    def show_prototypes(self):
-        '''
-        This method should take all prototypes from a specific cluster
-        :param dataframe: Spark data frame containing data from a cluster or all clusters?
-        :return:
-        '''
-        pass
-
     def show_cluster(self, df):
         '''
 
@@ -108,13 +92,13 @@ class ShowResults(object):
     def compute_summary(self, dataframe):
         df_stats = (dataframe.select(self._data_dict['prediction'], 'outliers', 'distance', 'centers')).persist()
 
-        (df_stats.groupBy(self._data_dict['prediction'])
-         .agg(F.count(self._data_dict['prediction']).alias("Count"),
-              F.sum(F.col("outliers")).alias("Outlier Count"))
-         .orderBy(self._data_dict['prediction'])
-         .filter(F.col("Count") >= 1)
-         .show()
-         )
+        display(df_stats.groupBy(self._data_dict['prediction'])
+                .agg(F.count(self._data_dict['prediction']).alias("Count"),
+                     F.sum(F.col("outliers")).alias("Outlier Count"))
+                .orderBy(self._data_dict['prediction'])
+                .filter(F.col("Count") >= 1)
+                .toPandas()
+                )
 
         df_outliers = (df_stats.select(self._data_dict['prediction'], "distance")
                        .distinct()
@@ -123,7 +107,7 @@ class ShowResults(object):
                        .filter(F.col("count") >= 2)
                        )
 
-        df_outliers.show()
+        display(df_outliers.toPandas())
         list_clusters_with_outliers = df_outliers.select('prediction').collect()
         return list_clusters_with_outliers
 
@@ -157,22 +141,24 @@ class ShowResults(object):
         def selected_cluster_number(b):
             clear_output()
             cluster_dataframe = (dataframe_updated
-                                 .filter(F.col(self._data_dict['prediction']) == dropdown_prototypes.value)
+                                 .filter((F.col(self._data_dict['prediction']) == dropdown_prototypes.value))
                                  )
 
             self.show_cluster(cluster_dataframe)
             self._selected_cluster = dropdown_prototypes.value
 
-            if cluster_dataframe.filter(F.col('outliers') == 1).count() > 0:
+            #Show only a table containing outliers: This is bad but better than converting to pandas all the time
+            output_cols = self._lables + list(self._features) + ['distance', 'Percentage distance', 'outliers']
+            print(output_cols)
+            #cluster_dataframe.select(output_cols).show()
+            pdf = (cluster_dataframe.select(output_cols)
+                   .filter(F.col('outliers') == 1)
+                   .orderBy(F.col('distance').desc())
+                   .toPandas()
+                   )
 
-                output_cols = self._lables + list(self._features) + ['distance', 'outliers']
-                print(output_cols)
-                cluster_dataframe.select(output_cols).show()
-                display(cluster_dataframe.select(output_cols)
-                        .filter(F.col('outliers') == 1)
-                        .orderBy(F.col('distance').desc())
-                        .toPandas()
-                        )
+            if len(pdf) != 0:
+                display(pdf)
             else:
                 print("There seems to be no outliers in this cluster")
 
@@ -180,3 +166,5 @@ class ShowResults(object):
 
         first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
         display(first_line)
+
+        return dataframe_updated

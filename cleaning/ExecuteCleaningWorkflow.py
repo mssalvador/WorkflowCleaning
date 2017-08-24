@@ -181,9 +181,9 @@ class ExecuteWorkflow(object):
         :param prediction_label: optional variable only if we customize the prediction label
         :return: pandas data frame with id, mean and covariance
         """
+        # create dummy id pandas dataframe
         import pandas as pd
 
-        # create dummy id pandas dataframe
         pandas_id = pd.DataFrame({prediction_label: (range(k))}, columns=[prediction_label])
         return pd.concat([gaussians, pandas_id], axis=1)
 

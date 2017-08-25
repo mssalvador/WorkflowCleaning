@@ -51,7 +51,11 @@ def print_human_readable_time(timespan, precision=3):
 
 def pretty_time_result(timer):
     assert isinstance(timer, TimeitResult), "timer is wrong"
+
     pm = '+-'
+    timings = [dt / timer.loops for dt in timer.all_runs]
+
+
     if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding:
         try:
             u'\xb1'.encode(sys.stdout.encoding)
@@ -65,7 +69,7 @@ def pretty_time_result(timer):
                     loops=timer.loops,
                     loop_plural="" if timer.loops == 1 else "s",
                     run_plural="" if timer.repeat == 1 else "s",
-                    mean=print_human_readable_time(timer.average, timer._precision),
-                    std=print_human_readable_time(timer.stdev, timer._precision)
+                    mean=print_human_readable_time(average(timings), timer._precision),
+                    std=print_human_readable_time(stdev(timings), timer._precision)
                 )
             )

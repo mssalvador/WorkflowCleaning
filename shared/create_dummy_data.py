@@ -14,8 +14,8 @@ from random import choice
 import sys
 import itertools
 
-sqlCont = SQLContext.getOrCreate(sc=SparkContext.getOrCreate())
-
+sc = SparkContext.getOrCreate()
+sqlCont = SQLContext.getOrCreate(sc=sc)
 
 def create_dummy_data(number_of_samples, feature_names, label_names, **kwargs):
     r"""
@@ -167,3 +167,82 @@ def data_row(number_of_labels, number_of_features, factor=1):
 
 def make_row_outlier(outlier_size, label_size, feature_size, factor=10):
     return [data_row(label_size, feature_size, factor) for _ in range(outlier_size)]
+
+
+def create_normal_cluster_data_pandas(amounts, means, std=None, labels=None):
+    """
+    Creates a dataframe with normal data
+    @input: means: a k-long list containing dim-dimensional points acting as means
+    @input: std: a k-long list containgin dim-dimensional standard deviation for the normal distribution
+    @input: labels: list containing names for each column
+    @return: clusters: pandas dataframe with k clusters and amounts_k number of data points pr cluster
+    """
+
+    import pandas as pd
+    import numpy as np
+
+    result = pd.DataFrame(columns=labels)
+
+    assert len(means) == len(amounts), "number of means is different from number of clusters"
+
+    dim = len(amounts[0])
+    if std is None:
+        k = len(amounts)
+        std = np.ones((k, dim))
+
+    if labels is None:
+        labels = list(map(chr, range(ord('a'), ord('a') + dim, 1)))
+
+    for k, n in enumerate(amounts):
+        x = np.random.normal(means[k], std[k], size=n)
+        result = result.append(pd.DataFrame(x, columns=labels))
+    return result
+
+
+def create_normal_cluster_data_spark(dim, n_samples, means, std):
+    """
+    Create a Spark dataframe that with clusters
+    :param dim: dimension in data
+    :param n_samples: list containing number of samples pr cluster
+    :param means: list with cluster mean, dimension must fit
+    :param std: list with cluster std, dimension must fit
+    :return: spark dataframe with clusters
+    """
+
+    import numpy as np
+
+    # create the fixed schema labels
+    schema_fixed = [T.StructField('id', T.IntegerType())
+        , T.StructField('k', T.IntegerType())
+        , T.StructField('dimension', T.IntegerType())]
+
+    # create the moving schema labels
+    label_names = list(map(chr, range(ord('a'), ord('a') + dim, 1)))
+    schema_dimension = [T.StructField(i, T.DoubleType()) for i in label_names]
+    schema = T.StructType(schema_fixed + schema_dimension)
+
+    # broadcasts
+    broadcast_mean = sc.broadcast(dict(enumerate(means)))
+    broadcast_std = sc.broadcast(dict(enumerate(std)))
+
+    # create the normal distributed data point.
+    def create_arr(k, dim):
+        return [float(i) for i in np.random.normal(broadcast_mean.value[k], broadcast_std.value[k], (1, dim))[0]]
+
+    # make it into an udf
+    udf_rand = F.udf(lambda k, d: create_arr(k, d), T.ArrayType(T.DoubleType()))
+
+    # create the dataframe in steps
+    result_df = sqlCont.createDataFrame(sc.emptyRDD(), schema)
+    for k, n in enumerate(n_samples):
+        # print(k)
+        # print(n)
+        df = (sqlCont
+              .range(0, n, 1)
+              .withColumn('dimension', F.lit(dim))
+              .withColumn('k', F.lit(k))
+              .withColumn('vec', udf_rand('k', 'dimension'))
+              .select(['id', 'k', 'dimension'] + [F.col('vec')[i].alias(str(i)) for i in range(dim)])
+              )
+        result_df = result_df.union(df)
+    return result_df

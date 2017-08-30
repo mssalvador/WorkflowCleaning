@@ -3,10 +3,7 @@
 from pyspark import SparkContext
 from pyspark import SQLContext
 
-#from sample.DataIO import DataIO
-#from sample.CreateParameters import CreateParameters
-#from sample.ExecuteWorkflow import ExecuteWorkflow
-#from shared.create_dummy_data import *
+from shared.create_dummy_data import create_normal_cluster_data_spark
 
 import argparse
 import os
@@ -34,42 +31,9 @@ TEST_DICT = {'featuresCol': 'scaled_features',
 
 
 if __name__ == '__main__':
-
-    if os.path.exists('shared.zip'):
-        sys.path.insert(0, 'shared.zip')
-    else:
-        sys.path.insert(0, './shared')
-
-    if os.path.exists('sample.zip'):
-        sys.path.insert(0,'sample.zip')
-    else:
-        sys.path.insert(0, './sample')
-
-    #from shared.create_dummy_data import create_dummy_data
-    #from shared.ComputeDataFrameSize import compute_size_of_dataframe
-
-    #n = int(sys.argv[1])
-    #if not sys.argv[1]:
-    #    n = 100000
-
-    #help(create_dummy_data)
-    #df = create_dummy_data(number_of_samples=n,
-    #                       feature_names=["x", "y", "z"],
-    #                       label_names=["label"],
-    #                       outlier_factor=10,
-    #                       outlier_number=0.1)
-    #df.write.parquet("/user/micsas/data/parquet/"+str(n)+"_samples.parquet", mode='overwrite')
-    #compute_size_of_dataframe(df)
-    sc = SparkContext().getOrCreate()
-    sql_ctx = SQLContext.getOrCreate(sc)
-    import numpy as np
-    from shared.ComputeDistances import compute_distance
-    from pyspark.ml.linalg import VectorUDT, Vectors
-    from cleaning.ShowCleaning import ShowResults
-    import pandas as pd
-
-
-    df = sql_ctx.read.parquet('/home/svanhmic/workspace/data/DABAI/sparkdata/parquet/merged_df_parquet')
-
-    shows = ShowResults(TEST_DICT, ['x', 'y', 'z'], ['label'])
-    shows.compute_shift(df).show()
+    means = [[0, 0, 0], [3, 3, 3], [-3, 3, -3], [5, -5, 5]]
+    stds = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    n_samples = [1000, 10000, 4000, 50]
+    df = create_normal_cluster_data_spark(3, n_samples, means, stds)
+    # df.show()
+    df.write.parquet(PARQUET_PATH+'normal_cluster_data.parquet', mode='overwrite')

@@ -76,39 +76,39 @@ class ShowResults(object):
         # Window function
         win_percentage_dist = (Window
                                .orderBy(F.col('distance').desc())
-                               .partitionBy(F.col(self._data_dict['prediction'])))
+                               .partitionBy(F.col(self._data_dict['predictionCol'])))
 
         # Udf's
         percentage_dist = 100-(F.max(F.col('distance')).over(win_percentage_dist)-F.col('distance'))/100
         udf_real_dist = F.udf(lambda c, p: float(math.sqrt(np.dot((c.toArray()-p.toArray()), (c.toArray()-p.toArray())))), types.DoubleType())
 
         return (dataframe
-                .withColumn(self._data_dict['prediction'], F.col(self._data_dict['prediction']) + 1)
+                .withColumn(self._data_dict['predictionCol'], F.col(self._data_dict['predictionCol']) + 1)
                 .withColumn('distance', udf_real_dist(dataframe.centers, dataframe.scaled_features))
                 .withColumn('Percentage distance', percentage_dist)
                 .withColumn('outliers', F.when(F.col('distance') > self._boundary, 1).otherwise(0))
                 )
 
     def compute_summary(self, dataframe):
-        df_stats = (dataframe.select(self._data_dict['prediction'], 'outliers', 'distance', 'centers')).persist()
+        df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
 
-        display(df_stats.groupBy(self._data_dict['prediction'])
-                .agg(F.count(self._data_dict['prediction']).alias("Count"),
+        display(df_stats.groupBy(self._data_dict['predictionCol'])
+                .agg(F.count(self._data_dict['predictionCol']).alias("Count"),
                      F.sum(F.col("outliers")).alias("Outlier Count"))
-                .orderBy(self._data_dict['prediction'])
+                .orderBy(self._data_dict['predictionCol'])
                 .filter(F.col("Count") >= 1)
                 .toPandas()
                 )
 
-        df_outliers = (df_stats.select(self._data_dict['prediction'], "distance")
+        df_outliers = (df_stats.select(self._data_dict['predictionCol'], "distance")
                        .distinct()
-                       .groupBy(F.col(self._data_dict['prediction']))
+                       .groupBy(F.col(self._data_dict['predictionCol']))
                        .count()
                        .filter(F.col("count") >= 2)
                        )
 
         display(df_outliers.toPandas())
-        list_clusters_with_outliers = df_outliers.select('prediction').collect()
+        list_clusters_with_outliers = df_outliers.select(self._data_dict['predictionCol']).collect()
         return list_clusters_with_outliers
 
     def select_prototypes(self, dataframe, **kwargs):
@@ -129,7 +129,7 @@ class ShowResults(object):
         # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
         list_unique_values = self.compute_summary(dataframe_updated)
 
-        list_clusters_with_outliers = sorted(map(lambda x: x[self._data_dict['prediction']], list_unique_values))
+        list_clusters_with_outliers = sorted(map(lambda x: x[self._data_dict['predictionCol']], list_unique_values))
         # print(list_clusters_with_outliers)
 
         dropdown_prototypes = widgets.Dropdown(
@@ -141,7 +141,7 @@ class ShowResults(object):
         def selected_cluster_number(b):
             clear_output()
             cluster_dataframe = (dataframe_updated
-                                 .filter((F.col(self._data_dict['prediction']) == dropdown_prototypes.value))
+                                 .filter((F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value))
                                  )
 
             self.show_cluster(cluster_dataframe)

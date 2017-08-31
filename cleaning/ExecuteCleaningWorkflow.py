@@ -105,21 +105,19 @@ class ExecuteWorkflow(object):
         caster_after_scale = ConvertAllToVecToMl(inputCol=scaling_model.getOutputCol(),
                                                  outputCol="scaled_features")  # does the double and ml.densevector cast
 
-        dict_params_labels = dict(filter(lambda x: not isinstance(x[1], tuple), self._params.items()))
+        model = getattr(clustering, self._algorithm)()
+        param_map = [i.name for i in model.params]
+
+        # Make sure that the params in self._params are the right for the algorithm
+        dict_params_labels = dict(filter(lambda x: x[0] in param_map, self._params.items()))
         dict_params_labels['featuresCol'] = caster_after_scale.getOutputCol()
 
         # Model is set
         model = eval("clustering." + self._algorithm)(**dict_params_labels)
+        dict_params_labels = dict(map(lambda i: (i.name, model.getOrDefault(i.name)), model.params))
 
-        # Set the prediction column
-        dict_params_labels['prediction'] = model.getPredictionCol()
-
-        # Adds also a probability column if the model is a gaussian mixture.
-        try:
-            dict_params_labels['probability'] = model.getProbabilityCol()
-        except AttributeError:
-            logger_execute.warning('Tried to add probability column. Model is not Gaussian Mixture')
-
+        # Add algorithm dict_params_labels
+        dict_params_labels['algorithm'] = self._algorithm
         stages = [vectorized_features, caster, scaling_model, model]
 
         return Pipeline(stages=stages), dict_params_labels
@@ -156,7 +154,7 @@ class ExecuteWorkflow(object):
             centers = sql_ctx.createDataFrame(
                 self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
 
-            merged_df = transformed_data.join(centers, self._params_labels['prediction'], 'inner')
+            merged_df = transformed_data.join(centers, self._params_labels['predictionCol'], 'inner')
             merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
@@ -166,7 +164,7 @@ class ExecuteWorkflow(object):
             # Create user defined function for added cluster centers to data frame
             udf_assign_cluster = F.udf(lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
 
-            merged_df = transformed_data.withColumn("centers", udf_assign_cluster(self._params_labels['prediction']))
+            merged_df = transformed_data.withColumn("centers", udf_assign_cluster(self._params_labels['predictionCol']))
 
         # return the result
         return merged_df

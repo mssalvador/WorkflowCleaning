@@ -82,10 +82,13 @@ class ExecuteWorkflow(object):
         :return: pipeline,  labels_features_and_parameters
         """
 
-        vectorized_features = features.VectorAssembler(inputCols=self._features, outputCol="features")  # vectorization
+        vectorized_features = features.VectorAssembler(
+            inputCols=self._features,
+            outputCol="features")  # vectorization
 
-        caster = ConvertAllToVecToMl(inputCol=vectorized_features.getOutputCol(),
-                                     outputCol="casted_features")  # does the double and ml.densevector cast
+        caster = ConvertAllToVecToMl(
+            inputCol=vectorized_features.getOutputCol(),
+            outputCol="casted_features")  # does the double and ml.densevector cast
 
         if self._standardize:
             scaling_model = features.StandardScaler(
@@ -102,8 +105,9 @@ class ExecuteWorkflow(object):
                 withStd=False
             )
 
-        caster_after_scale = ConvertAllToVecToMl(inputCol=scaling_model.getOutputCol(),
-                                                 outputCol="scaled_features")  # does the double and ml.densevector cast
+        caster_after_scale = ConvertAllToVecToMl(
+            inputCol=scaling_model.getOutputCol(),
+            outputCol="scaled_features")  # does the double and ml.densevector cast
 
         model = getattr(clustering, self._algorithm)()
         param_map = [i.name for i in model.params]
@@ -152,13 +156,13 @@ class ExecuteWorkflow(object):
             # convert gaussian mean/covariance dataframe to pandas dataframe
             pandas_cluster_centers = model.stages[-1].gaussiansDF.toPandas()
             centers = sql_ctx.createDataFrame(
-                self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
+                self.gen_gaussians_center(self._params_labels['n_clusters'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(centers, self._params_labels['predictionCol'], 'inner')
             merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
-            centers = self.gen_cluster_center(self._params_labels['k'], np_centers)
+            centers = self.gen_cluster_center(self._params_labels['n_clusters'], np_centers)
             broadcast_center = sc.broadcast(centers)
 
             # Create user defined function for added cluster centers to data frame
@@ -190,7 +194,7 @@ class ExecuteWorkflow(object):
         '''
         Create a
         :param k: number of clusters
-        :param centers: center of k
+        :param centers: center of n_clusters
         :return: dict with all clusters
         '''
         assert isinstance(k, int), str(k)+" is not integer"

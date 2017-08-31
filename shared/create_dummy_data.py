@@ -246,3 +246,22 @@ def create_normal_cluster_data_spark(dim, n_samples, means, std):
               )
         result_df = result_df.union(df)
     return result_df
+
+
+def create_partition_samples(n, k):
+    import math
+    import numpy as np
+    arr = np.array(list(map(lambda x: math.floor(x*n), np.random.dirichlet(np.ones(k)))))
+    if sum(arr) != n:
+        arr[np.random.randint(0, k, 1)[0]] += n-sum(arr)
+    return arr
+
+
+def create_means(dim, k, factor):
+    import numpy as np
+    return [np.random.uniform(low=-factor, high=factor, size=dim) for _ in range(k)]
+
+
+def create_stds(dim, k, factor=1):
+    import numpy as np
+    return [factor*np.ones(dim) for _ in range(k)]

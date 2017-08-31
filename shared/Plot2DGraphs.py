@@ -59,6 +59,7 @@ def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clu
     """
     assert len(featuresCol) == 2, 'This is a 2-D plot, number of features must be two, not ' + str(len(featuresCol))
 
+    gaussian_std = kwargs.get('gaussian_std', 2)
     feat_1 = featuresCol[0]
     feat_2 = featuresCol[1]
     pd_centers = data_frame.select(predictionCol, clusterCol, covarianceCol).distinct().toPandas()
@@ -69,16 +70,15 @@ def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clu
     pallet = sb.hls_palette(len(pd_centers), l=.4, s=.7)
     sb.set_palette(pallet)
 
-    sb.lmplot(x=feat_1, y=feat_2, data=pd_points, fit_reg=False, hue=predictionCol, size=8
+    sb.lmplot(x=feat_1, y=feat_2, data=pd_points, fit_reg=False, hue=predictionCol
               , scatter_kws={'alpha': 0.4, 's': 60})
 
-    for index in range(len(pd_centers)):
-        pd_cov_mean = pd_centers[pd_centers[predictionCol] == index][[clusterCol, covarianceCol]]
-        plot_cov_ellipse(pd_cov_mean[covarianceCol].tolist()[0].toArray()
-                         , pd_cov_mean[clusterCol].tolist()[0].toArray(),
-                         2,
+    for index, pd_cov_mean in pd_centers.iterrows():
+        plot_cov_ellipse(cov=pd_cov_mean[covarianceCol].toArray(),
+                         pos=pd_cov_mean[clusterCol],
+                         nstd=gaussian_std,
                          alpha=0.5,
-                         color=pallet[index])
+                         color=pallet[pd_cov_mean[predictionCol]])
 
     sb.regplot(x=feat_1,
                y=feat_2,

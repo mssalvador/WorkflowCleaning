@@ -1,0 +1,1 @@
+#Make this a class to use @ for logger so we can save alot of lines of code

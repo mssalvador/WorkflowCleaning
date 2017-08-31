@@ -5,7 +5,7 @@ import pyspark.ml.clustering as clusters
 import traitlets
 
 
-KMEANS_ALGORITHM = ["random","k-means||"]
+KMEANS_ALGORITHM = ["random","n_clusters-means||"]
 
 
 class CreateParameters(object):
@@ -70,7 +70,7 @@ class CreateParameters(object):
 
         dic = {}
 
-        dic["initial_mode"] = self.create_dropdown(opts=["random","k-means||"], desc='Methods:', disabled=False)
+        dic["initial_mode"] = self.create_dropdown(opts=["random","n_clusters-means||"], desc='Methods:', disabled=False)
         dic["select_features"] = self.create_multi_select(opts=self.featureCols,desc="Feature columns",disabled=False)
         dic["standardization_checkbox"] = widgets.Checkbox(value=False, description='Standardization', disabled=False)
 

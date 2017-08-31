@@ -172,10 +172,10 @@ def make_row_outlier(outlier_size, label_size, feature_size, factor=10):
 def create_normal_cluster_data_pandas(amounts, means, std=None, labels=None):
     """
     Creates a dataframe with normal data
-    @input: means: a k-long list containing dim-dimensional points acting as means
-    @input: std: a k-long list containgin dim-dimensional standard deviation for the normal distribution
+    @input: means: a n_clusters-long list containing n_dimension-dimensional points acting as means
+    @input: std: a n_clusters-long list containgin n_dimension-dimensional standard deviation for the normal distribution
     @input: labels: list containing names for each column
-    @return: clusters: pandas dataframe with k clusters and amounts_k number of data points pr cluster
+    @return: clusters: pandas dataframe with n_clusters clusters and amounts_k number of data points pr cluster
     """
 
     import pandas as pd
@@ -212,9 +212,9 @@ def create_normal_cluster_data_spark(dim, n_samples, means, std):
     import numpy as np
 
     # create the fixed schema labels
-    schema_fixed = [T.StructField('id', T.IntegerType())
-        , T.StructField('k', T.IntegerType())
-        , T.StructField('dimension', T.IntegerType())]
+    schema_fixed = [T.StructField('id', T.IntegerType()),
+                    T.StructField('n_clusters', T.IntegerType()),
+                    T.StructField('dimension', T.IntegerType())]
 
     # create the moving schema labels
     label_names = list(map(chr, range(ord('a'), ord('a') + dim, 1)))
@@ -227,22 +227,29 @@ def create_normal_cluster_data_spark(dim, n_samples, means, std):
 
     # create the normal distributed data point.
     def create_arr(k, dim):
-        return [float(i) for i in np.random.normal(broadcast_mean.value[k], broadcast_std.value[k], (1, dim))[0]]
+        return [float(i) for i in np.random.normal(
+            broadcast_mean.value[k],
+            broadcast_std.value[k],
+            (1, dim))[0]]
 
     # make it into an udf
     udf_rand = F.udf(lambda k, d: create_arr(k, d), T.ArrayType(T.DoubleType()))
 
     # create the dataframe in steps
     result_df = sqlCont.createDataFrame(sc.emptyRDD(), schema)
+
     for k, n in enumerate(n_samples):
-        # print(k)
+        # print(n_clusters)
         # print(n)
+        cols = ['id', 'n_clusters', 'dimension'] +\
+               [F.col('vec')[i].alias(str(i)) for i in range(dim)]
+
         df = (sqlCont
               .range(0, n, 1)
               .withColumn('dimension', F.lit(dim))
-              .withColumn('k', F.lit(k))
-              .withColumn('vec', udf_rand('k', 'dimension'))
-              .select(['id', 'k', 'dimension'] + [F.col('vec')[i].alias(str(i)) for i in range(dim)])
+              .withColumn('n_clusters', F.lit(k))
+              .withColumn('vec', udf_rand('n_clusters', 'dimension'))
+              .select(cols)
               )
         result_df = result_df.union(df)
     return result_df

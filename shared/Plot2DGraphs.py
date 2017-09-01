@@ -67,9 +67,21 @@ def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clu
     gaussian_std = kwargs.get('gaussian_std', 2)
     feat_1 = featuresCol[0]
     feat_2 = featuresCol[1]
-    pd_centers = data_frame.select(predictionCol, clusterCol, covarianceCol).distinct().toPandas()
+
+    if isinstance(data_frame, pd.DataFrame):
+        try:
+            pd_centers = kwargs.pop('pandasMeanCov')
+        except NameError as ne:
+            print(ne.with_traceback())
+            return
+
+        pd_points = data_frame[[feat_1, feat_2, predictionCol]]
+
+    else:
+        pd_centers = data_frame.select(predictionCol, clusterCol, covarianceCol).distinct().toPandas()
+        pd_points = data_frame.select(feat_1, feat_2, predictionCol).toPandas()
+
     pd_centers[[feat_1, feat_2]] = pd.DataFrame([x for x in pd_centers[clusterCol]])
-    pd_points = data_frame.select(feat_1, feat_2, predictionCol).toPandas()
 
     fig = plt.figure(figsize=(10, 6))
     pallet = sb.hls_palette(len(pd_centers), l=.4, s=.7)
@@ -97,7 +109,7 @@ def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clu
         data=pd_centers,
         fit_reg=False,
         marker='x',
-        color='n_clusters',
+        color='k',
         scatter_kws={"s": 100})
 
     plt.show()

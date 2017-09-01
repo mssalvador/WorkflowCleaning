@@ -156,13 +156,13 @@ class ExecuteWorkflow(object):
             # convert gaussian mean/covariance dataframe to pandas dataframe
             pandas_cluster_centers = model.stages[-1].gaussiansDF.toPandas()
             centers = sql_ctx.createDataFrame(
-                self.gen_gaussians_center(self._params_labels['n_clusters'], pandas_cluster_centers))
+                self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(centers, self._params_labels['predictionCol'], 'inner')
             merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
-            centers = self.gen_cluster_center(self._params_labels['n_clusters'], np_centers)
+            centers = self.gen_cluster_center(self._params_labels['k'], np_centers)
             broadcast_center = sc.broadcast(centers)
 
             # Create user defined function for added cluster centers to data frame

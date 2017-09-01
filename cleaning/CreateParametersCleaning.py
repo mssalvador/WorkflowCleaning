@@ -110,12 +110,12 @@ class ParamsCleaning(object):
         :return: list with HBox's of widgets
         """
         widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("n_clusters", 10),
+            value=dict.get("k", 10),
             min=2,
             max=200,
             step=1,
             description="Number of Clusters",
-            name="n_clusters")
+            name="k")
 
         widget_initMode = OwnDropdown.OwnDropdown(
             value=dict.get("initMode", "n_clusters-means||"),
@@ -168,33 +168,37 @@ class ParamsCleaning(object):
         :return: list with HBox's of widgets
         """
 
-        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("n_clusters", 10),
-                                                         min=2,
-                                                         max=200,
-                                                         step=1,
-                                                         description="Number of Clusters",
-                                                         name="n_clusters")
+        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
+            value=dict.get("k", 10),
+            min=2,
+            max=200,
+            step=1,
+            description="Number of Clusters",
+            name="k")
 
-        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(value=dict.get("tol", 1e-4),
-                                                               min=1e-4,
-                                                               max=1e-3,
-                                                               step=1e-4,
-                                                               description="Tolerance",
-                                                               name="tol")
+        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(
+            value=dict.get("tol", 1e-4),
+            min=1e-4,
+            max=1e-3,
+            step=1e-4,
+            description="Tolerance",
+            name="tol")
 
-        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("maxIter", 100),
-                                                               min=10,
-                                                               max=200,
-                                                               step=1,
-                                                               description="Max iterations",
-                                                               name="maxIter")
+        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
+            value=dict.get("maxIter", 100),
+            min=10,
+            max=200,
+            step=1,
+            description="Max iterations",
+            name="maxIter")
 
-        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(value=dict.get("seed", random.randint(0, sys.maxsize)),
-                                                            min=0,
-                                                            max=sys.maxsize,
-                                                            step=1000,
-                                                            description="Seed",
-                                                            name="seed")
+        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(
+            value=dict.get("seed", random.randint(0, sys.maxsize)),
+            min=0,
+            max=sys.maxsize,
+            step=1000,
+            description="Seed",
+            name="seed")
 
         all_lists = [[widget_k, widget_maxIter],
                      [widget_tol, widget_seed]]

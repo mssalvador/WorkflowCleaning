@@ -95,9 +95,9 @@ class ParamsCleaning(object):
             else:
                 raise NotImplementedError
 
-        dlink((widget_dropdown_algorithms, 'value'),
-              (all_widgets, "children"),
-              lambda val: [widgets.HBox([widget_dropdown_algorithms])] + update_algorithm_parameters(val))
+        (dlink((widget_dropdown_algorithms, 'value'),
+               (all_widgets, "children"),
+               lambda val: [widgets.HBox([widget_dropdown_algorithms])] + update_algorithm_parameters(val)))
 
         return all_widgets
 
@@ -118,8 +118,8 @@ class ParamsCleaning(object):
             name="k")
 
         widget_initMode = OwnDropdown.OwnDropdown(
-            value=dict.get("initMode", "n_clusters-means||"),
-            options=["n_clusters-means||",  "random"],
+            value=dict.get("initMode", "k-means||"),
+            options=["k-means||",  "random"],
             description="Initial mode",
             name="initMode")
 

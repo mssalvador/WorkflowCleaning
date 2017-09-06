@@ -35,7 +35,7 @@ def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
         ax = plt.gca()
 
     vals, vecs = eigsorted(cov)
-    theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+    theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
 
     # Width and height are "full" widths, not radius
     width, height = 2 * nstd * np.sqrt(vals)
@@ -78,7 +78,11 @@ def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clu
         pd_points = data_frame[[feat_1, feat_2, predictionCol]]
 
     else:
-        pd_centers = data_frame.select(predictionCol, clusterCol, covarianceCol).distinct().toPandas()
+        pd_centers = (data_frame
+                      .select(predictionCol, clusterCol, covarianceCol)
+                      .distinct()
+                      .toPandas())
+
         pd_points = data_frame.select(feat_1, feat_2, predictionCol).toPandas()
 
     pd_centers[[feat_1, feat_2]] = pd.DataFrame([x for x in pd_centers[clusterCol]])

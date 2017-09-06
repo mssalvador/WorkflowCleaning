@@ -4,7 +4,7 @@ from IPython.display import display, Javascript, HTML
 import pyspark.ml.clustering as clusters
 import traitlets
 
-KMEANS_ALGORITHM = ["random", "k-means||"]
+KMEANS_ALGORITHM = ["random", "n_clusters-means||"]
 CLUSTER_METHODS = [i for i in clusters.__all__ if "Model" not in i if "BisectingKMeans" not in i]
 
 class CreateParameters(object):

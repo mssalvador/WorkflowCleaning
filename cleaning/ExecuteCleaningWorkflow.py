@@ -33,7 +33,12 @@ class ExecuteWorkflow(object):
     Object execute workflow. Builds a spark pipeline based on previous data from other class' and executes the pipeline
     """
 
-    def __init__(self, dict_params=None, cols_features=None, cols_labels=None, standardize=False):
+    def __init__(
+            self,
+            dict_params=None,
+            cols_features=None,
+            cols_labels=None,
+            standardize=False):
         """
         Constructor for Executeworkflow
         :param dict_params:
@@ -82,10 +87,13 @@ class ExecuteWorkflow(object):
         :return: pipeline,  labels_features_and_parameters
         """
 
-        vectorized_features = features.VectorAssembler(inputCols=self._features, outputCol="features")  # vectorization
+        vectorized_features = features.VectorAssembler(
+            inputCols=self._features,
+            outputCol="features")  # vectorization
 
-        caster = ConvertAllToVecToMl(inputCol=vectorized_features.getOutputCol(),
-                                     outputCol="casted_features")  # does the double and ml.densevector cast
+        caster = ConvertAllToVecToMl(
+            inputCol=vectorized_features.getOutputCol(),
+            outputCol="casted_features")  # does the double and ml.densevector cast
 
         if self._standardize:
             scaling_model = features.StandardScaler(
@@ -102,8 +110,9 @@ class ExecuteWorkflow(object):
                 withStd=False
             )
 
-        caster_after_scale = ConvertAllToVecToMl(inputCol=scaling_model.getOutputCol(),
-                                                 outputCol="scaled_features")  # does the double and ml.densevector cast
+        caster_after_scale = ConvertAllToVecToMl(
+            inputCol=scaling_model.getOutputCol(),
+            outputCol="scaled_features")  # does the double and ml.densevector cast
 
         model = getattr(clustering, self._algorithm)()
         param_map = [i.name for i in model.params]
@@ -118,7 +127,10 @@ class ExecuteWorkflow(object):
 
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        stages = [vectorized_features, caster, scaling_model, model]
+        stages = [vectorized_features,
+                  caster,
+                  scaling_model,
+                  model]
 
         return Pipeline(stages=stages), dict_params_labels
 
@@ -154,7 +166,11 @@ class ExecuteWorkflow(object):
             centers = sql_ctx.createDataFrame(
                 self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
 
-            merged_df = transformed_data.join(centers, self._params_labels['predictionCol'], 'inner')
+            merged_df = transformed_data.join(
+                centers,
+                self._params_labels['predictionCol'],
+                'inner')
+
             merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
@@ -171,7 +187,10 @@ class ExecuteWorkflow(object):
 
 
     @staticmethod
-    def gen_gaussians_center(k, gaussians, prediction_label='prediction'):
+    def gen_gaussians_center(
+            k,
+            gaussians,
+            prediction_label='prediction'):
         """
         Create a pandas dataframe containing cluster centers (mean) and covariances and adds an id
         :param k: number of clusters
@@ -190,7 +209,7 @@ class ExecuteWorkflow(object):
         '''
         Create a
         :param k: number of clusters
-        :param centers: center of k
+        :param centers: center of n_clusters
         :return: dict with all clusters
         '''
         assert isinstance(k, int), str(k)+" is not integer"

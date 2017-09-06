@@ -89,7 +89,7 @@ class ExecuteWorkflow(object):
             # cluster_object = cluster_model(
             #     featuresCol=caster_after_scale.getOutputCol(),
             #     predictionCol="prediction",#  self._params["prediction"],
-            #     k=self._params["clusters"],
+            #     n_clusters=self._params["clusters"],
             #     maxIter=self._params["iterations"],
             #     minDivisibleClusterSize=self._params["mindivisbleClusterSize"],
             #     seed=None
@@ -139,7 +139,7 @@ class ExecuteWorkflow(object):
     def gen_cluster_center(self, k, centers):
         '''
         :param k: number of clusters
-        :param centers: center of k
+        :param centers: center of n_clusters
         :return: dict with all clusters
         '''
         assert isinstance(k, int), str(k)+" is not integer"

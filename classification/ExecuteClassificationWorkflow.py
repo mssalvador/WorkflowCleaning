@@ -51,12 +51,14 @@ class ExecuteWorkflowClassification(object):
 
     @property
     def parameter_grid(self):
-        logger_execute.debug('Exported parameter_grid: {}'.format(self._parameter_grid))
+        logger_execute.debug('Exported parameter_grid: {}'
+                             .format(self._parameter_grid))
         return self._parameter_grid
 
     @property
     def pipeline(self):
-        logger_execute.debug('Exported pipeline: {}'.format(self._pipeline.getStages()))
+        logger_execute.debug('Exported pipeline: {}'
+                             .format(self._pipeline.getStages()))
         return self._pipeline
 
     def __str__(self):
@@ -95,19 +97,23 @@ class ExecuteWorkflowClassification(object):
         feature_columns = [i.name for i in self._featureCols]
 
         # Vectorized transformation
-        vectorizer = Feat.VectorAssembler(inputCols=feature_columns, outputCol="vectorized_features")
+        vectorizer = Feat.VectorAssembler(
+            inputCols=feature_columns,
+            outputCol="vectorized_features")
 
         # Standardize estimator
         if self._standardize:
-            standardizes = Feat.StandardScaler(withMean=True,
-                                               withStd=True,
-                                               inputCol=vectorizer.getOutputCol(),
-                                               outputCol="scaled")
+            standardizes = Feat.StandardScaler(
+                withMean=True,
+                withStd=True,
+                inputCol=vectorizer.getOutputCol(),
+                outputCol="scaled")
         else:
-            standardizes = Feat.StandardScaler(withMean=False,
-                                               withStd=False,
-                                               inputCol=vectorizer.getOutputCol(),
-                                               outputCol="scaled")
+            standardizes = Feat.StandardScaler(
+                withMean=False,
+                withStd=False,
+                inputCol=vectorizer.getOutputCol(),
+                outputCol="scaled")
 
         # Labels and strings are already set into the model, +
         label_dict = dict(filter(lambda x: not isinstance(x[1], tuple), self._params.items()))
@@ -143,10 +149,11 @@ class ExecuteWorkflowClassification(object):
             return
 
         #print(self._parameter_grid)
-        cv = CrossValidator(estimator=self._pipeline,
-                            estimatorParamMaps=self._parameter_grid,
-                            evaluator=evaluator,
-                            numFolds=n_folds)
+        cv = CrossValidator(
+            estimator=self._pipeline,
+            estimatorParamMaps=self._parameter_grid,
+            evaluator=evaluator,
+            numFolds=n_folds)
 
         return cv.fit(data)
 

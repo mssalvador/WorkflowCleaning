@@ -42,9 +42,10 @@ class ShowResults(object):
         from ipywidgets import widgets
         from IPython.display import display
 
-        list_options = ['cluster ' + str(i+1) for i in range(self._data_dict['k'])]
+        list_options = ['cluster ' + str(i+1) for i in range(self._data_dict['n_clusters'])]
 
-        drop_down_clusters = widgets.Dropdown(options=list_options,
+        drop_down_clusters = widgets.Dropdown(
+            options=list_options,
             value=1,
             description="Select a Cluster",
             disabled=False)

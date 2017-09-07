@@ -35,18 +35,18 @@ TEST_DICT = {'featuresCol': 'scaled_features',
 
 if __name__ == '__main__':
 
-    n_dimension = 2
-    n_clusters = 10
-    samples = 10000
-
-    for i in [10000000]:
-        means = create_dummy_data.create_means(n_dimension, n_clusters, 10)  # [[0, 0, 0], [3, 3, 3], [-3, 3, -3], [5, -5, 5]]
-        stds = create_dummy_data.create_stds(n_dimension, n_clusters)  # [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
-        n_samples = create_dummy_data.create_partition_samples(i, n_clusters)  # [1000, 10000, 4000, 50]
-        print(n_samples)
-        df = create_dummy_data.create_normal_cluster_data_spark(n_dimension, n_samples, means, stds)
-        #df.show(100)
-        df.write.parquet(PARQUET_PATH+'normal_cluster_n_'+str(i)+'.parquet', mode='overwrite')
+    # n_dimension = 2
+    # n_clusters = 10
+    # samples = 10000
+    #
+    # for i in [10000000]:
+    #     means = create_dummy_data.create_means(n_dimension, n_clusters, 10)  # [[0, 0, 0], [3, 3, 3], [-3, 3, -3], [5, -5, 5]]
+    #     stds = create_dummy_data.create_stds(n_dimension, n_clusters)  # [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    #     n_samples = create_dummy_data.create_partition_samples(i, n_clusters)  # [1000, 10000, 4000, 50]
+    #     print(n_samples)
+    #     df = create_dummy_data.create_normal_cluster_data_spark(n_dimension, n_samples, means, stds)
+    #     #df.show(100)
+    #     df.write.parquet(PARQUET_PATH+'normal_cluster_n_'+str(i)+'.parquet', mode='overwrite')
 
     # test_params_1 = {'tol': 0.001, 'n_clusters': 8, 'maxIter': 10, 'algorithm': 'GaussianMixture', 'seed': 1080866016001745000}
 
@@ -59,4 +59,6 @@ if __name__ == '__main__':
     #transformed.show()
 
     #Plot2DGraphs.plot_gaussians(transformed, ['a', 'b'])
-    #plt.show()
+    #plt.show(
+    import shared.WorkflowLogger as w
+    w.display()

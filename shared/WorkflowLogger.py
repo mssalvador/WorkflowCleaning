@@ -3,14 +3,7 @@
 from functools import partial
 
 
-def decorator_func(orig_function):
-    def wrapper_func():
-        print('wrapper executed before {}'.format(orig_function.__name__))
-        return orig_function
-    return wrapper_func()
-
-
-def _pseudo_log_decorator(orig_function, argument):
+def _pseudo_def_log_info_decorator(orig_function, argument='/tmp/workflow_test.log', logger_type='info'):
     import logging
 
     def wrapper_func(*args, **kwargs):
@@ -25,21 +18,27 @@ def _pseudo_log_decorator(orig_function, argument):
         logger.addHandler(logger_file_handler)
         logger_file_handler.setFormatter(
             logger_format)
+        if logger_type == 'info':
+            logger.info('Ran {} with args {} and kwargs {}'
+                        .format(orig_function.__name__, args, kwargs))
+        elif logger_type == 'warning':
+            logger.warning()
+        elif logger_type == 'debug':
+            logger.debug()
+        else:
+            logger.error()
 
-        logger.info('Ran {} with args {} and kwargs {}'
-                    .format(orig_function.__name__, args, kwargs))
-
-        print('wrapper ran before {}'
-              .format(orig_function.__name__))
+        # print('wrapper ran before {}'
+        #       .format(args))
 
         return orig_function(*args, **kwargs)
     return wrapper_func
 
-decorator_logger_info = partial(_pseudo_log_decorator, argument='/tmp/workflow_test.log')
+def_logger_info = partial(_pseudo_def_log_info_decorator)
+def_logger_warn = partial(_pseudo_def_log_info_decorator, logger_type='warning')
+def_logger_debug = partial(_pseudo_def_log_info_decorator, logger_type='debug')
+def_logger_err = partial(_pseudo_def_log_info_decorator, logger_type='error')
 
-@decorator_logger_info
-def display():
-    print('display ran')
 
 
 

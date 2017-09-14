@@ -32,6 +32,17 @@ TEST_DICT = {'featuresCol': 'scaled_features',
  'seed': 0,
  'tol': 0.001}
 
+from shared.WorkflowLogger import def_logger_info
+from functools import  partial
+
+
+#def_logger_info = partial(_pseudo_def_log_info_decorator, argument='/tmp/workflow_test.log')
+
+class Dummy(object):
+
+    @def_logger_info
+    def __init__(self):
+        print('foo')
 
 if __name__ == '__main__':
 
@@ -60,5 +71,7 @@ if __name__ == '__main__':
 
     #Plot2DGraphs.plot_gaussians(transformed, ['a', 'b'])
     #plt.show(
-    import shared.WorkflowLogger as w
-    w.display()
+
+
+
+    d = Dummy()

@@ -1,4 +1,4 @@
-#Make this a class to use @ for logger so we can save alot of lines of code
+# Make this a class to use @ for logger so we can save a lot of lines of code
 
 from functools import partial
 

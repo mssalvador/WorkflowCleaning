@@ -9,10 +9,10 @@ import pandas as pd
 
 
 def convert_time_to_second(duration):
-    time = list(map(lambda x: cast_to_val(x), filter(lambda x: x is not '',re.split("([0-9\.]+)",duration))))
+    time = list(map(lambda x: cast_to_val(x), filter(lambda x: x is not '', re.split("([0-9]\.+)", duration))))
     result = 0
     factor = 0
-    for idx,val in enumerate(time[::-1]):
+    for idx, val in enumerate(time[::-1]):
         if idx % 2 == 0:
             if val == 's':
                 factor = 1
@@ -23,7 +23,7 @@ def convert_time_to_second(duration):
             elif val == 'ms':
                 factor = 0.001
         else:
-            result+=factor*val
+            result += factor*val
     return result
 
 
@@ -43,15 +43,15 @@ def divide_string(array):
             'iteration',
             'data-size',
             'method',
-            'avg-training-durration',
-            'std-training-durration',
+            'avg-training-duration',
+            'std-training-duration',
             'runs',
             'loops']
 
     # del data
 
     # print(ts_split)
-    for_split = list(map(lambda line: line[:3] + re.split('\sfor\s', line[3]) + line[4:], ts_split[:-1]))
+    for_split = list(map(lambda l: l[:3] + re.split('\s for\s', l[3]) + l[4:], ts_split[:-1]))
     result_split = []
     size = None
     for idx, line in enumerate(for_split):

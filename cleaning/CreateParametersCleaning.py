@@ -36,10 +36,10 @@ class ParamsCleaning(object):
 
     @def_logger_info
     def __init__(self):
-        #logger_parameter_select.info(" Create_Cleaning_Parameters created")
+        # logger_parameter_select.info(" Create_Cleaning_Parameters created")
 
         self._selected_parameters = {"algorithm": self.algorithm_clustering[0]}
-        self._algorithms_and_paramters = ParamsCleaning.create_parameters()
+        self._algorithms_and_parameters = ParamsCleaning.create_parameters()
 
     def __repr__(self):
         return "ParamsClustering()"
@@ -53,10 +53,10 @@ class ParamsCleaning(object):
 
     @classmethod
     def create_parameters(cls):
-        '''
+        """
         Initial method for creating all _parameters for all algorithms along with default vals
         :return:
-        '''
+        """
 
         algo_and_params = {}
         for i in cls.algorithm_clustering:
@@ -64,16 +64,16 @@ class ParamsCleaning(object):
             maps = model.extractParamMap()
 
             algo_and_params[i] = dict(zip(map(lambda x: x.name, maps.keys()), maps.values()))
-            #logger_parameter_select.debug(
+            # logger_parameter_select.debug(
             #    " Parameters selected for algorithm {} with _parameters {}".format(i, algo_and_params[i]))
         return algo_and_params
 
     def select_parameters(self):
-
-        '''
+        """
         The main method for selecting _parameters to each algorithm. Each algorithm has its own set of _parameters.
         :return: None
-        '''
+        """
+
         widget_dropdown_algorithms = OwnDropdown.OwnDropdown(
             options=ParamsCleaning.algorithm_clustering,
             value=ParamsCleaning.algorithm_clustering[0],
@@ -92,8 +92,8 @@ class ParamsCleaning(object):
         def update_algorithm_parameters(change):
 
             if change in widget_and_algorithms.keys():
-                #logger_parameter_select.debug(" Algorithm changed to: {}".format(change))
-                return widget_and_algorithms[change](self._algorithms_and_paramters[change])
+                # logger_parameter_select.debug(" Algorithm changed to: {}".format(change))
+                return widget_and_algorithms[change](self._algorithms_and_parameters[change])
             else:
                 raise NotImplementedError
 
@@ -106,7 +106,7 @@ class ParamsCleaning(object):
     @staticmethod
     def create_kmeans_clustering_widgets(dict):
         """
-        instiantate the widgets for kmeans clustering algortihm
+        instiantate the widgets for k-means clustering algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
@@ -164,7 +164,7 @@ class ParamsCleaning(object):
     @staticmethod
     def create_gaussian_mixture_widgets(dict):
         """
-        instiantate the widgets for Gausian mixture models algortihm
+        instiantate the widgets for Gaussian mixture models algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
@@ -209,7 +209,7 @@ class ParamsCleaning(object):
     @staticmethod
     def create_lda_clustering_widgets(dict):
         """
-        instiantate the widgets for LDA clustering algortihm
+        instiantate the widgets for LDA clustering algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets

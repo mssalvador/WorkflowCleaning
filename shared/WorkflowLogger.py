@@ -8,16 +8,26 @@ def _pseudo_def_log_info_decorator(orig_function, argument='/tmp/workflow_test.l
 
     def wrapper_func(*args, **kwargs):
 
+        # create logger
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
+
+        # create handler
         logger_file_handler = logging.FileHandler(
             filename=argument)
+
+        # create formatter
         logger_format = logging.Formatter(
             '%(asctime)s:%(levelname)s:%(name)s:%(message)s')
 
+        # add logger_file_handler to logger
         logger.addHandler(logger_file_handler)
+
+        # add logger_format to logger_file_handler
         logger_file_handler.setFormatter(
             logger_format)
+
+        # 'application' code
         if logger_type == 'info':
             logger.info('Ran {} with args {} and kwargs {}'
                         .format(orig_function.__name__, args, kwargs))

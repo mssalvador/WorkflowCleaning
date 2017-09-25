@@ -32,7 +32,7 @@ def compute_size_of_dataframe(df):
     :return:
     """
 
-    #First convert it to RDD
+    # First convert it to RDD
     java_obj = _to_java_object_rdd(df.rdd)
     bts = sc._jvm.org.apache.spark.util.SizeEstimator.estimate(java_obj)
     mb = bts/1000000

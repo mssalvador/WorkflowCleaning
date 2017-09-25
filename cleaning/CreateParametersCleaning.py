@@ -6,22 +6,13 @@
 
 from ipywidgets import widgets
 from traitlets import dlink
+
 from pyspark.ml import clustering
-import logging
 import sys
 from pyspark import SparkContext
 import random
 from shared import OwnFloatSingleSlider, OwnIntSingleSlider, OwnDropdown
-from shared.WorkflowLogger import def_logger_info
-
-# setup logging first, better than print!
-# logger_parameter_select = logging.getLogger(__name__)
-# logger_parameter_select.setLevel(logging.DEBUG)
-# logger_file_handler_parameter = logging.FileHandler('/tmp/workflow_cleaning.log')
-# logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
-#
-# logger_parameter_select.addHandler(logger_file_handler_parameter)
-# logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
+from shared import WorkflowLogger
 
 sc = SparkContext.getOrCreate()
 
@@ -34,10 +25,8 @@ class ParamsCleaning(object):
     algorithm_clustering = [str(i) for i in clustering.__all__
                             if ("Model" not in i) if ("Summary" not in i) if ("BisectingKMeans" not in i)]
 
-    @def_logger_info
+    @WorkflowLogger.def_logger_info
     def __init__(self):
-        # logger_parameter_select.info(" Create_Cleaning_Parameters created")
-
         self._selected_parameters = {"algorithm": self.algorithm_clustering[0]}
         self._algorithms_and_parameters = ParamsCleaning.create_parameters()
 
@@ -52,6 +41,7 @@ class ParamsCleaning(object):
         return dict([(x.name, x.value) for l in params.children for x in l.children])
 
     @classmethod
+    @WorkflowLogger.def_logger_debug
     def create_parameters(cls):
         """
         Initial method for creating all _parameters for all algorithms along with default vals
@@ -62,10 +52,7 @@ class ParamsCleaning(object):
         for i in cls.algorithm_clustering:
             model = getattr(clustering, i)()
             maps = model.extractParamMap()
-
             algo_and_params[i] = dict(zip(map(lambda x: x.name, maps.keys()), maps.values()))
-            # logger_parameter_select.debug(
-            #    " Parameters selected for algorithm {} with _parameters {}".format(i, algo_and_params[i]))
         return algo_and_params
 
     def select_parameters(self):
@@ -89,10 +76,10 @@ class ParamsCleaning(object):
 
         widget_and_algorithms = dict(zip(ParamsCleaning.algorithm_clustering, list_of_methods))
 
+        @WorkflowLogger.def_logger_debug
         def update_algorithm_parameters(change):
 
             if change in widget_and_algorithms.keys():
-                # logger_parameter_select.debug(" Algorithm changed to: {}".format(change))
                 return widget_and_algorithms[change](self._algorithms_and_parameters[change])
             else:
                 raise NotImplementedError

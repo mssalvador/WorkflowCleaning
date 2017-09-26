@@ -50,7 +50,11 @@ def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
     return ellip
 
 
-def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction', clusterCol='centers', covarianceCol='cov',
+def plot_gaussians(data_frame,
+                   featuresCol=None,
+                   predictionCol='prediction',
+                   clusterCol='centers',
+                   covarianceCol='cov',
                    **kwargs):
     """
     Creates a full plot with Gaussians mixtures, centers marked, elipsis' and data points

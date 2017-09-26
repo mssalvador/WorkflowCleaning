@@ -39,7 +39,7 @@ class ExecuteWorkflow(object):
         self._bool_standardize = standardize
         # self._data = None #Perhaps it is needed
         self._algorithm = self._check_algorithm()
-        self._pipeline, self._params_labels = self.construct_pipeline()
+        self._pipeline = self.construct_pipeline()
         # logger_execute.info('ExecuteWorkflow has been created')
 
     def __repr__(self):
@@ -144,7 +144,9 @@ class ExecuteWorkflow(object):
                   scaling_model,
                   model]
 
-        return Pipeline(stages=stages), dict_params_labels
+        self._dict_parameters.update(dict_params_labels) # dict gets updated
+
+        return Pipeline(stages=stages)
 
     @logger_info_decorator
     def execute_pipeline(self, data_frame):
@@ -183,11 +185,11 @@ class ExecuteWorkflow(object):
                                       .toPandas())
 
             centers = sql_ctx.createDataFrame(
-                self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
+                self.gen_gaussians_center(self._dict_parameters['k'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(
                 centers,
-                self._params_labels['predictionCol'],
+                self._dict_parameters['predictionCol'],
                 'inner')
 
             merged_df = merged_df.withColumn(
@@ -195,10 +197,12 @@ class ExecuteWorkflow(object):
         else:
             np_centers = (model
                           .stages[-1]
-                          .clusterCenters())
+                          .clusterCenters()
+                          )
 
             centers = self.gen_cluster_center(
-                self._params_labels['k'], np_centers)
+                self._dict_parameters['k'],
+                np_centers)
 
             broadcast_center = sc.broadcast(centers)
 
@@ -207,7 +211,7 @@ class ExecuteWorkflow(object):
                 lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
 
             merged_df = transformed_data.withColumn(
-                "centers", udf_assign_cluster(self._params_labels['predictionCol']))
+                "centers", udf_assign_cluster(self._dict_parameters['predictionCol']))
 
         # return the result
         return merged_df
@@ -228,7 +232,8 @@ class ExecuteWorkflow(object):
         # create dummy id pandas dataframe
         import pandas as pd
 
-        pandas_id = pd.DataFrame({prediction_label: (range(k))}, columns=[prediction_label])
+        pandas_id = pd.DataFrame({
+            prediction_label: (range(k))}, columns=[prediction_label])
         return pd.concat([gaussians, pandas_id], axis=1)
 
     @staticmethod

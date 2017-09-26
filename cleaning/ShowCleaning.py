@@ -25,13 +25,18 @@ class ShowResults(object):
 
     """
 
-    def __init__(self, dict_parameters, list_features, list_labels):
+    def __init__(self,
+                 dict_parameters,
+                 list_features,
+                 list_labels):
+
         self._data_dict = dict_parameters
         self._dimensions = len(list_features)
         self._features = list_features
         self._lables = list_labels
         self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
+        print(self._data_dict)
 
     def select_cluster(self):
         """
@@ -42,7 +47,7 @@ class ShowResults(object):
         from ipywidgets import widgets
         from IPython.display import display
 
-        list_options = ['cluster ' + str(i+1) for i in range(self._data_dict['n_clusters'])]
+        list_options = ['cluster ' + str(i+1) for i in range(self._data_dict['k'])]
 
         drop_down_clusters = widgets.Dropdown(
             options=list_options,
@@ -147,9 +152,8 @@ class ShowResults(object):
 
         def selected_cluster_number(b):
             clear_output()
-            cluster_dataframe = (dataframe_updated
-                                 .filter((F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value))
-                                 )
+            filter_expr = (F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value)
+            cluster_dataframe = dataframe_updated.filter(filter_expr)
 
             self.show_cluster(cluster_dataframe)
             self._selected_cluster = dropdown_prototypes.value

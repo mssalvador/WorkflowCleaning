@@ -101,7 +101,7 @@ class ParamsCleaning(object):
         widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
             value=dict.get("k", 10),
             min=2,
-            max=200,
+            max=100,
             step=1,
             description="Number of Clusters",
             name="k")
@@ -115,7 +115,7 @@ class ParamsCleaning(object):
         widget_initSteps = OwnIntSingleSlider.OwnIntSingleSlider(
             value=dict.get("initSteps", 10),
             min=1,
-            max=50,
+            max=100,
             step=1,
             description="Number of Initial steps",
             name="initSteps")
@@ -131,7 +131,7 @@ class ParamsCleaning(object):
         widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
             value=dict.get("maxIter", 100),
             min=10,
-            max=200,
+            max=2000,
             step=1,
             description="Max iterations",
             name="maxIter")
@@ -176,7 +176,7 @@ class ParamsCleaning(object):
         widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
             value=dict.get("maxIter", 100),
             min=10,
-            max=200,
+            max=1000,
             step=1,
             description="Max iterations",
             name="maxIter")

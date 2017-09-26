@@ -78,11 +78,11 @@ class ExecuteWorkflow(object):
         return self._pipeline
 
     @property
-    def parameters_dict(self):
+    def parameters(self):
         return self._dict_parameters
 
     @property
-    def feature_cols(self):
+    def features(self):
         return self._list_feature
 
     @logger_info_decorator

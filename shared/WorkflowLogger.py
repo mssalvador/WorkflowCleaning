@@ -30,30 +30,30 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     return logger
 
-logger = create_logger(argument='/tmp/workflow_test.log')
+logger = create_logger(
+    argument='/tmp/workflow_test.log')
 
 def _log_info(orig_function, logger=logger):
 
-
     @wraps(orig_function)
     def wrapper_func(*args, **kwargs):
-
-
         # 'application' code
         try:
-            print('Ran {} with args {} and kwargs {}'
-                  .format(orig_function.__name__, args, kwargs))
+            # print('Ran {} with args {} and kwargs {}'
+            #       .format(orig_function.__name__, args, kwargs))
 
             logger.info('Ran {} with args {} and kwargs {}'
-                        .format(orig_function.__name__, args, kwargs))
+                        .format(orig_function.__name__,
+                                args,
+                                kwargs
+                                )
+                        )
 
             return orig_function(*args, **kwargs)
         except Exception as e:
             tb = sys.exc_info()[2]
             logger.error(e.with_traceback(tb))
-
             raise
-
     return wrapper_func
 
 # Decorators to be used

@@ -10,7 +10,6 @@ from pyspark.sql.dataframe import DataFrame
 from pyspark.sql import functions as F
 from shared.WorkflowLogger import logger_info_decorator
 
-
 import numpy as np
 
 sc = SparkContext.getOrCreate()
@@ -84,6 +83,12 @@ class ExecuteWorkflow(object):
     @property
     def features(self):
         return self._list_feature
+
+    @property
+    def labels(self):
+        return self._list_labels
+
+
 
     @logger_info_decorator
     def construct_pipeline(self):

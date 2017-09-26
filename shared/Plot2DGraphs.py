@@ -69,6 +69,7 @@ def plot_gaussians(data_frame,
     assert len(featuresCol) == 2, 'This is a 2-D plot, number of features must be two, not ' + str(len(featuresCol))
 
     gaussian_std = kwargs.get('gaussian_std', 2)
+    fig_size = kwargs.get('fig_size',7)
     feat_1 = featuresCol[0]
     feat_2 = featuresCol[1]
 
@@ -91,7 +92,7 @@ def plot_gaussians(data_frame,
 
     pd_centers[[feat_1, feat_2]] = pd.DataFrame([x for x in pd_centers[clusterCol]])
 
-    fig = plt.figure(figsize=(10, 6))
+    #fig = plt.figure(figsize=(10, 6))
     pallet = sb.hls_palette(len(pd_centers), l=.4, s=.7)
     sb.set_palette(pallet)
 
@@ -100,8 +101,9 @@ def plot_gaussians(data_frame,
         y=feat_2,
         data=pd_points,
         fit_reg=False,
-        hue=predictionCol
-        , scatter_kws={'alpha': 0.4, 's': 60})
+        size=fig_size,
+        hue=predictionCol,
+        scatter_kws={'alpha': 0.4, 's': 60})
 
     for index, pd_cov_mean in pd_centers.iterrows():
         plot_cov_ellipse(

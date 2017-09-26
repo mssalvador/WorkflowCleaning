@@ -12,7 +12,7 @@ import sys
 from pyspark import SparkContext
 import random
 from shared import OwnFloatSingleSlider, OwnIntSingleSlider, OwnDropdown
-from shared import WorkflowLogger
+from shared.WorkflowLogger import logger_info_decorator
 
 sc = SparkContext.getOrCreate()
 
@@ -25,7 +25,7 @@ class ParamsCleaning(object):
     algorithm_clustering = [str(i) for i in clustering.__all__
                             if ("Model" not in i) if ("Summary" not in i) if ("BisectingKMeans" not in i)]
 
-    @WorkflowLogger.def_logger_info
+    @logger_info_decorator
     def __init__(self):
         self._selected_parameters = {"algorithm": self.algorithm_clustering[0]}
         self._algorithms_and_parameters = ParamsCleaning.create_parameters()
@@ -41,7 +41,7 @@ class ParamsCleaning(object):
         return dict([(x.name, x.value) for l in params.children for x in l.children])
 
     @classmethod
-    @WorkflowLogger.def_logger_debug
+    @logger_info_decorator
     def create_parameters(cls):
         """
         Initial method for creating all _parameters for all algorithms along with default vals
@@ -76,7 +76,7 @@ class ParamsCleaning(object):
 
         widget_and_algorithms = dict(zip(ParamsCleaning.algorithm_clustering, list_of_methods))
 
-        @WorkflowLogger.def_logger_debug
+        @logger_info_decorator
         def update_algorithm_parameters(change):
 
             if change in widget_and_algorithms.keys():

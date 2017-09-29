@@ -37,7 +37,9 @@ class ParamsCleaning(object):
 
     @staticmethod
     def output_parameters(params):
-        return dict([(x.name, x.value) for l in params.children for x in l.children])
+
+        arr = [(x.name, x.value) for l in params.children for x in l.children]
+        return dict(arr)
 
     @classmethod
     @logger_info_decorator

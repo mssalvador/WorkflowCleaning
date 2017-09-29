@@ -228,7 +228,8 @@ class ParamsClassification(object):
 
         return widgets_decision_tree_classifier + widgets_naive_bayes
 
-    def create_GB_tree_classifier_widgets(self, dict):
+    @staticmethod
+    def create_GB_tree_classifier_widgets(dict):
         '''
         instiante the Gradient Boosted Tree classifier widgets
         :param dict: dictonary with widget names and default values

@@ -8,18 +8,11 @@ Created on Jul 10, 2017
 
 import logging
 import sys
-
-logger_execute = logging.getLogger(__name__)
-logger_execute.setLevel(logging.DEBUG)
-logger_file_handler_parameter = logging.FileHandler('/tmp/workflow_classification.log')
-logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
-
-logger_execute.addHandler(logger_file_handler_parameter)
-logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
-
+from shared.WorkflowLogger import logger_info_decorator
 
 class ExecuteWorkflowClassification(object):
 
+    @logger_info_decorator
     def __init__(self, dict_params=None, standardize=False, featureCols=None):
         '''
         Constructor for ExecuteWorkflowClassification.
@@ -33,7 +26,6 @@ class ExecuteWorkflowClassification(object):
             self._algorithm = dict_params.pop('algorithm', 'LogisticRegression')
         except AttributeError as ae:
             tb = sys.exc_info()[2]
-            logger_execute.warning(ae.with_traceback(tb))
             self._algorithm = 'LogisticRegression'
 
         self._params = dict_params
@@ -44,20 +36,15 @@ class ExecuteWorkflowClassification(object):
             self._pipeline, self._parameter_grid = self.create_standard_pipeline()
         except TypeError as te:
             tb = sys.exc_info()[2]
-            logger_execute.warning(te.with_traceback(tb))
-        logger_execute.info("ExecuteWorkflowClassification created with '{}'"
-                            .format(str(ExecuteWorkflowClassification)))
 
     @property
+    @logger_info_decorator
     def parameter_grid(self):
-        logger_execute.debug('Exported parameter_grid: {}'
-                             .format(self._parameter_grid))
         return self._parameter_grid
 
     @property
+    @logger_info_decorator
     def pipeline(self):
-        logger_execute.debug('Exported pipeline: {}'
-                             .format(self._pipeline.getStages()))
         return self._pipeline
 
     def __str__(self):
@@ -115,22 +102,23 @@ class ExecuteWorkflowClassification(object):
                 outputCol="scaled")
 
         # Labels and strings are already set into the model, +
-        label_dict = dict(filter(lambda x: not isinstance(x[1], tuple), self._params.items()))
-        feature_dict = dict(ExecuteWorkflowClassification.generate_equidistant_params(self._params))
-        label_dict['featuresCol'] = standardizes.getOutputCol()
+        dict_parameters = dict(filter(lambda x: not isinstance(x[1], tuple), self._params.items()))
+        dict_features = dict(ExecuteWorkflowClassification.generate_equidistant_params(self._params))
+        dict_parameters['featuresCol'] = standardizes.getOutputCol()
         #print(label_dict)
 
         # Model is set
-        model = eval("classification." + self._algorithm)(**label_dict)
+        model = eval("classification." + self._algorithm)(**dict_parameters)
 
         # Parameter is set
         param_grid = tuning.ParamGridBuilder()
-        for idx, val in feature_dict.items():
+        for idx, val in dict_features.items():
             param_grid.addGrid(eval('model.'+idx), val)
 
         pipe = Pipeline(stages=[vectorizer, standardizes, model])
         return pipe, param_grid.build()
 
+    @logger_info_decorator
     def run_cross_val(self, data, evaluator, n_folds):
         '''
         :param data:
@@ -144,7 +132,6 @@ class ExecuteWorkflowClassification(object):
 
         if not isinstance(evaluator, evaluation.Evaluator):
             print("this {} is not good. Should have been of type {}".format(evaluator, evaluation.Evaluator))
-            logger_execute.warning('evaluator invalid. Cannot use: {}'.format(evaluator))
             return
 
         #print(self._parameter_grid)
@@ -172,4 +159,15 @@ class ExecuteWorkflowClassification(object):
                 yield (key, np.linspace(val[0], val[1], number_of_spaces, True, dtype=int))
             else:
                 yield (key, np.linspace(val[0], val[1], number_of_spaces, True, dtype=float))
+
+    @logger_info_decorator
+    def run_pipeline(self, data):
+        """
+        This method should execute the pipeline.
+        :param data:
+        :return:
+        """
+
+        return self._pipeline(data)
+
 

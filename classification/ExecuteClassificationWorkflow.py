@@ -20,7 +20,7 @@ logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
 
 class ExecuteWorkflowClassification(object):
 
-    def __init__(self, dict_params=None, standardize=False, featureCols=None, labelCols=None):
+    def __init__(self, dict_params=None, standardize=False, featureCols=None):
         '''
         Constructor for ExecuteWorkflowClassification.
         :param dict_params:
@@ -39,7 +39,6 @@ class ExecuteWorkflowClassification(object):
         self._params = dict_params
         self._standardize = standardize
         self._featureCols = featureCols
-        self._labelCols = labelCols
 
         try:
             self._pipeline, self._parameter_grid = self.create_standard_pipeline()

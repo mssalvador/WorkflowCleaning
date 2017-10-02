@@ -12,7 +12,7 @@ from shared.WorkflowLogger import logger_info_decorator
 
 class ExecuteWorkflowClassification(object):
 
-    @logger_info_decorator
+    #@logger_info_decorator
     def __init__(self, dict_params=None, standardize=False, featureCols=None):
         '''
         Constructor for ExecuteWorkflowClassification.
@@ -112,8 +112,11 @@ class ExecuteWorkflowClassification(object):
 
         # Parameter is set
         param_grid = tuning.ParamGridBuilder()
-        for idx, val in dict_features.items():
-            param_grid.addGrid(eval('model.'+idx), val)
+        for model_parameter, grid_values in dict_features.items():
+            if isinstance(grid_values,int) or isinstance(grid_values,float):
+                param_grid.baseOn(eval('model.'+model_parameter), grid_values)
+            else:
+                param_grid.addGrid(eval('model.'+model_parameter), grid_values)
 
         pipe = Pipeline(stages=[vectorizer, standardizes, model])
         return pipe, param_grid.build()

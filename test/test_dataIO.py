@@ -1,5 +1,5 @@
 from unittest import TestCase
-from sample.DataIO import DataIO
+from sample.depDataIO import DataIO
 from pyspark.sql import SQLContext
 from pyspark import SparkContext
 

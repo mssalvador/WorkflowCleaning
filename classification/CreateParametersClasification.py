@@ -36,7 +36,17 @@ class ParamsClassification(object):
 
     @staticmethod
     def output_parameters(params):
-        return dict([(x.name, x.value) for l in params.children for x in l.children])
+
+        d = dict([(x.name, x.value) for l in params.children for x in l.children])
+        return ParamsClassification.filter_single_values_out(d)
+
+    @staticmethod
+    def filter_single_values_out(dict):
+        for name, parameters in dict.items():
+            if isinstance(parameters,tuple):
+                if parameters[0] == parameters[1]:
+                    dict[name] = parameters[0]
+        return dict
 
     @classmethod
     @logger_info_decorator

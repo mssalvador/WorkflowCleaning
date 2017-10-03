@@ -73,3 +73,42 @@ def fix_logfile_mess(pdf):
     del merged_df['data']
     del merged_df['Number of partions']
     return merged_df
+
+
+def split_logfile(log_file):
+    """
+    Splits the logfile into a list of list. Each child list contains the structured information
+    :param log_file: The log file imported
+    :return: list of lists.
+    """
+    # split of date from rest
+    tmp = list(map(lambda l: l[1:],
+                   map(lambda x: re.split(r'(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})', x),
+                       log_file)))
+    tmp_1 = list(map(
+        lambda line: (datetime.strptime(line[0], '%Y-%m-%d %H:%M:%S,%f'), line[1][1:])
+        , tmp))
+
+    # split on :
+    tmp_2 = list(map(
+        lambda line: (line[0], re.split(r':', line[1]))
+        , tmp_1))
+
+    labels = ('ts', 'type', 'function')
+
+    temp_3 = list(map(lambda x: [x[0]] + x[1].split(':'), tmp_1))
+    temp_4 = list(map(lambda x: list(zip(labels, x[:3])) + [':'.join(x[3:])], temp_3))
+    temp_5 = list(map(lambda x: x[:3] + x[3].split(' - '), temp_4))
+
+    raw_data = list(map(
+        lambda l: l[:3] + [tuple(re.split(':', l[3]))] + [tuple(re.split(':', l[4]))],
+        temp_5))
+
+    filtered_raw_data = []
+    for t in raw_data:
+        try:
+            filtered_raw_data.append(dict(t))
+        except ValueError as e:
+            continue
+
+    return filtered_raw_data

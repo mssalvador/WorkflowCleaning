@@ -2,9 +2,13 @@
 import re
 import sys
 import os
-import datetime
+from datetime import datetime
 import pandas as pd
 
+def pairwise(iterable):
+    "s -> (s0, s1), (s2, s3), (s4, s5), ..."
+    a = iter(iterable)
+    return zip(a, a)
 
 def convert(list_time):
     '''
@@ -13,23 +17,23 @@ def convert(list_time):
     :return:
     '''
     factor = 0.0
-    durration = 0.0
+    duration = 0.0
 
-    for idx, val in enumerate(list_time[::2]):
+    for value, time_unit in pairwise(list_time):
         try:
-            if list_time[idx+1] == 's':
+            if time_unit == 's':
                 factor = 1
-            elif list_time[idx+1] == 'min':
+            elif time_unit == 'min':
                 factor = 60
-            elif list_time[idx+1] == 'h':
+            elif time_unit == 'h':
                 factor = 60**2
-            elif list_time[idx+1] == 'ms':
+            elif time_unit == 'ms':
                 factor = 0.001
-            durration += factor*float(val)
+            duration += factor * float(value)
         except IndexError as e:
-            print(val+" "+list_time[idx+1])
+            print('Does not comupte got: value {} and time unit {}'.format(value, time_unit))
             break
-    return durration
+    return duration
 
 
 def fix_logfile_mess(pdf):

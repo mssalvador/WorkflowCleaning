@@ -1,75 +1,75 @@
-from functools import reduce
+
 import re
 import sys
 import os
-import getpass
 import datetime
-import logging
 import pandas as pd
 
 
-def convert_time_to_second(duration):
-    time = list(map(lambda x: cast_to_val(x), filter(lambda x: x is not '', re.split("([0-9]\.+)", duration))))
-    result = 0
-    factor = 0
-    for idx, val in enumerate(time[::-1]):
-        if idx % 2 == 0:
-            if val == 's':
+def convert(list_time):
+    '''
+    Converts a list of numbers and time symbols into seconds s
+    :param list_time: list of time e.g. [23, 'min', 33, 's', 321, 'ms']
+    :return:
+    '''
+    factor = 0.0
+    durration = 0.0
+
+    for idx, val in enumerate(list_time[::2]):
+        try:
+            if list_time[idx+1] == 's':
                 factor = 1
-            elif val == 'min':
+            elif list_time[idx+1] == 'min':
                 factor = 60
-            elif val == 'h':
+            elif list_time[idx+1] == 'h':
                 factor = 60**2
-            elif val == 'ms':
+            elif list_time[idx+1] == 'ms':
                 factor = 0.001
-        else:
-            result += factor*val
-    return result
+            durration += factor*float(val)
+        except IndexError as e:
+            print(val+" "+list_time[idx+1])
+            break
+    return durration
 
 
-def cast_to_val(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
+def fix_logfile_mess(pdf):
+    '''
+    Takes a raw pandas custom logfile and makes into a nice pandas dataframe
+    :param pdf:  raw pandas dataframe
+    :return: nice pandas dataframe
+    '''
+
+    make_partition_int = lambda x: re.search('[0-9]+',x).group()
+    split_to_mean_std = lambda x: re.split(r'±',x)
+    get_std = lambda x: re.search(r'([a-zA-Z0-9\.\s]+)+ per',x).group(1)
+    get_n = lambda x: int(re.search(r'\d+', x).group())
+
+    def split_to(x):
+        return re.split(r'±',x)[0], re.split(r'±',x)[1]
 
 
-def divide_string(array):
-    # dive between the timestamp from the string.
-    ts_split = [re.findall(r'(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})', i) + re.split(':', i)[3:] for i in array]
-    cols = ['ts',
-            'log-type',
-            'program',
-            'iteration',
-            'data-size',
-            'method',
-            'avg-training-duration',
-            'std-training-duration',
-            'runs',
-            'loops']
+    partitions_df = (pdf[['ts','type','function','Iteration','Number of partions']]
+                     .dropna())
+    partitions_df['Number of partions'] = partitions_df['Number of partions'].map(make_partition_int)
 
-    # del data
-
-    # print(ts_split)
-    for_split = list(map(lambda l: l[:3] + re.split('\s for\s', l[3]) + l[4:], ts_split[:-1]))
-    result_split = []
-    size = None
-    for idx, line in enumerate(for_split):
-        if idx % 3 == 0:
-            # first line in data point
-            size = re.findall(r'\d+', line[-1])
-            iteration = re.findall(r'\d+', line[-2])
-            # print(size)
-        else:
-            line.insert(4, int(*size))
-            line[3] = int(iteration[0])
-            elements = [i.replace(' ', '') for i in re.split(r'±|per', line[-1])]
-            # elements = [i.replace(' ','') for i in re.findall(r'(\d+\w+\s\d+\w+|\d+\s\w+)',line[-1])]
-            elements[0] = convert_time_to_second(elements[0])
-            elements[1] = convert_time_to_second(elements[1])
-            loop_runs = re.findall(r'(\d+)', string=elements[-1])
-            del elements[2:]
-            del line[-1]
-            line = line + elements + loop_runs
-            result_split.append(line)
-    return pd.DataFrame(data=result_split, columns=cols)
+    data_df = (pdf[['Iteration','data']]
+                     .dropna())
+    train_mod_df = (pdf[['Iteration','Training model time']]
+                     .dropna())
+    train_mod_df['mean'], train_mod_df['std']  = zip(*train_mod_df['Training model time'].map(split_to))
+    train_mod_df['std'] = train_mod_df['std'].map(get_std)
+    merged_df = partitions_df.merge(data_df,on=['Iteration'])
+    merged_df = merged_df.merge(train_mod_df[['Iteration','mean','std']],on=['Iteration'])
+    merged_df['mean'] = (merged_df['mean']
+                         .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
+                         .map(lambda x: convert(x))
+                        )
+    merged_df['std'] = (merged_df['std']
+                        .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
+                        .map(lambda x: convert(x))
+                       )
+    merged_df['n'] = merged_df['data'].map(get_n)
+    merged_df['partitions'] = merged_df['Number of partions']
+    del merged_df['data']
+    del merged_df['Number of partions']
+    return merged_df

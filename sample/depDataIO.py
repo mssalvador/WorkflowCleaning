@@ -16,6 +16,7 @@ logger_dataIO.addHandler(file_handler_dataIO)
 class DataIO:
     'This class contains the data-import class for Cleaning'
 
+
     def __init__(self, sc: SparkContext, feature_path, company_path):
         # some small assertations that cover if the files are there
         #assert os.path.exists(path=feature_path), "features data frame does not exist! Consider changing directory"

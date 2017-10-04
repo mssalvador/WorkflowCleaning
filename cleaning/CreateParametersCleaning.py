@@ -11,7 +11,6 @@ from pyspark.ml import clustering
 import sys
 from pyspark import SparkContext
 import random
-from shared import OwnFloatSingleSlider, OwnIntSingleSlider, OwnDropdown
 from shared.WorkflowLogger import logger_info_decorator
 
 sc = SparkContext.getOrCreate()
@@ -38,7 +37,9 @@ class ParamsCleaning(object):
 
     @staticmethod
     def output_parameters(params):
-        return dict([(x.name, x.value) for l in params.children for x in l.children])
+
+        arr = [(x.name, x.value) for l in params.children for x in l.children]
+        return dict(arr)
 
     @classmethod
     @logger_info_decorator
@@ -61,12 +62,12 @@ class ParamsCleaning(object):
         :return: None
         """
 
-        widget_dropdown_algorithms = OwnDropdown.OwnDropdown(
+        widget_dropdown_algorithms = widgets.Dropdown(
             options=ParamsCleaning.algorithm_clustering,
             value=ParamsCleaning.algorithm_clustering[0],
             description="Algorithms",
-            disabled=False,
-            name="algorithm")
+            disabled=False)
+        setattr(widget_dropdown_algorithms,'name','algorithm')
 
         all_widgets = widgets.VBox([widget_dropdown_algorithms])
 
@@ -98,55 +99,27 @@ class ParamsCleaning(object):
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
-        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("k", 10),
-            min=2,
-            max=100,
-            step=1,
-            description="Number of Clusters",
-            name="k")
 
-        widget_initMode = OwnDropdown.OwnDropdown(
+        widget_initMode = widgets.Dropdown(
             value=dict.get("initMode", "k-means||"),
             options=["k-means||",  "random"],
-            description="Initial mode",
-            name="initMode")
+            description="Initial mode")
+        setattr(widget_initMode, 'name', 'initMode')
 
-        widget_initSteps = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_initSteps = widgets.IntSlider(
             value=dict.get("initSteps", 10),
             min=1,
             max=100,
             step=1,
-            description="Number of Initial steps",
-            name="initSteps")
+            description="Number of Initial steps")
+        setattr(widget_initSteps, 'name', 'initSteps')
 
-        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(
-            value=dict.get("tol", 1e-4),
-            min=1e-4,
-            max=1e-3,
-            step=1e-4,
-            description="Tolerance",
-            name="tol")
+        widgets_gaussian_mix = ParamsCleaning.create_gaussian_mixture_widgets(dict)
 
-        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("maxIter", 100),
-            min=10,
-            max=2000,
-            step=1,
-            description="Max iterations",
-            name="maxIter")
+        widgets_kmeans = widgets.HBox(
+            [widget_initSteps, widget_initMode])
 
-        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("seed", random.randint(0, sys.maxsize)),
-            min=0,
-            max=sys.maxsize,
-            step=1000,
-            description="Seed",
-            name="seed")
-
-        all_lists = [[widget_k, widget_initSteps, widget_tol],
-                     [widget_maxIter, widget_seed, widget_initMode]]
-        return list(map(lambda x: widgets.HBox(x), all_lists))
+        return widgets_gaussian_mix + [widgets_kmeans]
 
     @staticmethod
     def create_gaussian_mixture_widgets(dict):
@@ -157,37 +130,38 @@ class ParamsCleaning(object):
         :return: list with HBox's of widgets
         """
 
-        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_k = widgets.IntSlider(
             value=dict.get("k", 10),
             min=2,
             max=200,
             step=1,
-            description="Number of Clusters",
-            name="k")
+            description="Number of Clusters")
+        setattr(widget_k, 'name', 'k')
 
-        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(
+        widget_tol = widgets.FloatSlider(
             value=dict.get("tol", 1e-4),
             min=1e-4,
             max=1e-3,
             step=1e-4,
-            description="Tolerance",
-            name="tol")
+            description="Tolerance")
+        setattr(widget_tol, 'name', 'tol')
 
-        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_maxIter = widgets.IntSlider(
             value=dict.get("maxIter", 100),
             min=10,
             max=1000,
             step=1,
-            description="Max iterations",
-            name="maxIter")
+            description="Max iterations")
+        setattr(widget_maxIter, 'name', 'maxIter')
 
-        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_seed = widgets.IntSlider(
             value=dict.get("seed", random.randint(0, sys.maxsize)),
             min=0,
             max=sys.maxsize,
             step=1000,
             description="Seed",
-            name="seed")
+            )
+        setattr(widget_seed, 'name', 'seed')
 
         all_lists = [[widget_k, widget_maxIter],
                      [widget_tol, widget_seed]]

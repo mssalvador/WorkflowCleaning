@@ -17,6 +17,7 @@ import itertools
 sc = SparkContext.getOrCreate()
 sqlCont = SQLContext.getOrCreate(sc=sc)
 
+
 def create_dummy_data(number_of_samples, feature_names, label_names, **kwargs):
     r"""
     Create a dataframe that contains outliers
@@ -172,10 +173,11 @@ def make_row_outlier(outlier_size, label_size, feature_size, factor=10):
 def create_normal_cluster_data_pandas(amounts, means, std=None, labels=None):
     """
     Creates a dataframe with normal data
-    @input: means: a n_clusters-long list containing n_dimension-dimensional points acting as means
-    @input: std: a n_clusters-long list containgin n_dimension-dimensional standard deviation for the normal distribution
+    @input: amounts: vector with number of elements of each cluster
+    @input: means: a k_clusters-long list containing m-dimensional points acting as means
+    @input: std: a k_clusters-long list containing m-dimensional standard deviation for the normal distribution
     @input: labels: list containing names for each column
-    @return: clusters: pandas dataframe with n_clusters clusters and amounts_k number of data points pr cluster
+    @return: clusters: pandas dataframe with k_clusters and n number of data points pr cluster
     """
 
     import pandas as pd
@@ -201,7 +203,7 @@ def create_normal_cluster_data_pandas(amounts, means, std=None, labels=None):
 
 def create_normal_cluster_data_spark(dim, n_samples, means, std):
     """
-    Create a Spark dataframe that with clusters
+    Create a Spark dataframe with clusters
     :param dim: dimension in data
     :param n_samples: list containing number of samples pr cluster
     :param means: list with cluster mean, dimension must fit

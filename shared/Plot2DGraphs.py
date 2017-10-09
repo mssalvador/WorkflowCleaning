@@ -26,7 +26,6 @@ def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
     -------
         A matplotlib ellipse artist
     """
-
     def eigsorted(cov):
         vals, vecs = np.linalg.eigh(cov)
         order = vals.argsort()[::-1]
@@ -70,7 +69,7 @@ def plot_gaussians(data_frame,
     assert len(featuresCol) == 2, 'This is a 2-D plot, number of features must be two, not ' + str(len(featuresCol))
 
     gaussian_std = kwargs.get('gaussian_std', 2)
-    fig_size = kwargs.get('fig_size', 7)
+    fig_size = kwargs.get('fig_size',7)
     feat_1 = featuresCol[0]
     feat_2 = featuresCol[1]
 

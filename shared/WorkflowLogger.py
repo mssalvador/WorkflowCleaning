@@ -4,7 +4,6 @@ from functools import partial, wraps
 import logging
 import sys
 
-
 def create_logger(argument='/tmp/workflow_test.log'):
     """
     creates a logging object that can be used later in different decorators
@@ -33,7 +32,6 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
 logger = create_logger(
     argument='/tmp/workflow_test.log')
-
 
 def _log_info(orig_function, logger=logger):
 

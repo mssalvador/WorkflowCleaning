@@ -3,7 +3,7 @@
 # omsæt .parquet/json/text (osv. datatyper) til dataframes
 # skal kunne bruges i alle WFs
 
-from pyspark import SparkContext, SQLContext
+
 import logging
 
 logger_data_import = logging.getLogger(__name__)
@@ -14,24 +14,26 @@ logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name
 logger_data_import.addHandler(logger_file_handler_parameter)
 logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
 
+from pyspark import SparkContext, SQLContext
+
 sc = SparkContext.getOrCreate()
 sql_context = SQLContext.getOrCreate(sc)
 
 
 class GeneralDataImport(object):
-    """
+    '''
     Data object to handle importation of various types of data
-    """
+    '''
 
     counter = 0
     file_ending = {'txt': 'text', 'csv': 'csv', 'parquet': 'parquet', 'jbdc': 'jbdc', 'json': 'json'}
 
     def __init__(self, path=None, **kwargs):
-        """
+        '''
         Constructor for GeneralDataImport
         :param path: path to data
         :param kwargs: if one has prior knowledge then it can be set into kwargs
-        """
+        '''
 
         # Can be set initially, but widget is runs no matter what.
         self._path_to_data = path
@@ -48,10 +50,10 @@ class GeneralDataImport(object):
 
     @property
     def data_frame(self):
-        """
+        '''
         Property for data_frame such that one can use object.data_frame instead of calling a function
         :return: Pyspark.dataframe
-        """
+        '''
 
         # Import pyspark functions
         import pyspark.sql.functions as F
@@ -103,11 +105,11 @@ class GeneralDataImport(object):
         return "Data from: {}".format(self._path_to_data)
 
     def select_file(self, **kwargs):
-        """
+        '''
         Write the path to file, should be an interactive kind of method...
         :param self:
         :return:
-        """
+        '''
 
         # import statements
         from IPython import display
@@ -139,11 +141,11 @@ class GeneralDataImport(object):
 
     @staticmethod
     def cast_to_right_type(name_and_type):
-        """
+        '''
         Method to check if the datatype is not string
         :param name_and_type: Pyspark StructType
         :return: Pyspark column that is either casted to a FloatType or is unchanged.
-        """
+        '''
 
         # Imports
         import pyspark.sql.functions as F
@@ -155,22 +157,22 @@ class GeneralDataImport(object):
 
     @staticmethod
     def extract_type(path_string):
-        """
+        '''
         Filters out the file type .csv, .parquet, etc.
         :param path_string: string with file path
         :return: ".csv", ".parquet, or other file type
-        """
+        '''
         import re
         return str(re.search('\.\w+$', path_string, re.IGNORECASE).group())
 
     @staticmethod
     def import_data(path, **kwargs):
-        """
+        '''
         Loads the data from a file and saves it to a Pyspark.dataframe
         :param path: path to data
         :param kwargs: key-value pair arguments for options
         :return: Pyspark.dataframe
-        """
+        '''
 
         # Checks if no kwarg have been submitted.
         if kwargs.__len__() == 0:
@@ -191,10 +193,11 @@ class GeneralDataImport(object):
                     .json(path))
 
     def select_columns(self):
-        """
+
+        '''
         A method for selecting which columns that should be labels and which that should be features
         :return: Nothing. instance method that sets instance variables _list_features and _list_label
-        """
+        '''
 
         # Little consistency check to see if a data frame has been uploaded yet.
         if self._all_columns is None:

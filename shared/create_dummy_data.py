@@ -13,6 +13,8 @@ from string import digits, ascii_uppercase
 from random import choice
 import sys
 import itertools
+import pandas as pd
+import numpy as np
 
 sc = SparkContext.getOrCreate()
 sqlCont = SQLContext.getOrCreate(sc=sc)
@@ -272,3 +274,57 @@ def create_means(dim, k, factor):
 def create_stds(dim, k, factor=1):
     import numpy as np
     return [factor*np.ones(dim) for _ in range(k)]
+
+
+def create_labeled_data_with_clusters(n, mean, std, frac_label=0.1):
+    """
+    Creates a dataset with k clusters surrounding k means in 2D
+    @param: n: int or list with k values for each cluster
+    @param: mean: int or list with k values of mean for each cluster
+    @param: std: int or list with k values of std for each cluster
+    @param: frac_label: fraction of labels  that are not deleted
+    @return: pandas dataset with clusters
+    """
+
+    cols = ['x', 'y', 'real_label', 'used_label']
+
+    if isinstance(n, int) and isinstance(mean[0], float):
+        x = np.random.normal(loc=mean,
+                             scale=std,
+                             size=[n, 2])
+        return pd.DataFrame({
+            cols[0]: x[:, 0],
+            cols[1]: x[:, 1],
+            cols[2]: np.zeros(n),
+            cols[3]: float(0) * np.ones(n_val)}
+        )
+    else:
+        matrix = pd.DataFrame(columns=cols)
+        for idx, n_val in enumerate(n):
+            x = np.random.normal(loc=mean[idx],
+                                 scale=std[idx],
+                                 size=[n_val, 2])
+            hidden_label_vec = float(idx) * np.ones((n_val, 1))
+            x = np.concatenate((x, hidden_label_vec), axis=1)
+
+            used_label_vec = create_vector_with_nan_vals(
+                hidden_label_vec,
+                fraction=frac_label)
+
+            x = np.concatenate(
+                (x, used_label_vec),
+                axis=1)
+
+            matrix = pd.concat(
+                [matrix, pd.DataFrame(x, columns=cols)])
+        return matrix
+
+
+def create_vector_with_nan_vals(vector, fraction):
+    nan_elements = int(len(vector) * (1.0 - fraction))
+    if nan_elements == 0:
+        nan_elements = 1
+    indicies = np.random.choice(len(vector), nan_elements, replace=False)
+    for i in indicies:
+        vector[i] = np.NaN
+    return vector

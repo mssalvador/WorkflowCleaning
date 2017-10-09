@@ -123,3 +123,41 @@ def plot_gaussians(data_frame,
         scatter_kws={"s": 100})
 
     plt.show()
+
+def plot_known_and_unknown_data(pdf, x='x', y='y', labelCol='used_label', **kwargs):
+    """
+    Used to plot semi supervised learning data, either a full dataset where all
+    lables are set or an incomplete dataset where a portion of the data is set.
+
+    @input: pdf: pandas dataframe with all data. Must contain a label column and feature
+    @input: x: first feature
+    @input: y: second feature
+    @input: labelCol: the name of the label column must be known!
+    @input: **kwargs: arguments like plot titel.
+    """
+    fig, ax = plt.subplots(1, figsize=(15, 15))
+    clusters = list(filter(lambda x: x != np.nan, pdf[labelCol].dropna().unique()))
+    pallet = sb.hls_palette(len(clusters) + 1, l=.4, s=.7)
+    sb.set_palette(pallet)
+    label = list(map(lambda x: 'Cluster {}'.format(int(x)), clusters))
+
+    unknown_pdf = pdf[pdf[labelCol].isnull() == True]
+    symbols = ['o', '<']
+
+    for idx, k in enumerate(clusters):
+        ax.plot(unknown_pdf[unknown_pdf['real_label'] == k][x],
+                unknown_pdf[unknown_pdf['real_label'] == k][y],
+                symbols[idx],
+                color=pallet[-1],
+                alpha=0.60,
+                label='Unlabled_data')
+
+        ax.plot(pdf[pdf[labelCol] == k][x],
+                pdf[pdf[labelCol] == k][y],
+                symbols[idx],
+                color=pallet[int(k)],
+                label=label[int(k)]
+                )
+    ax.set_title(kwargs.get('title', 'Plot of dataset with and without lables'), fontsize=30)
+    ax.legend(loc=0)
+    plt.show()

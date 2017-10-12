@@ -39,4 +39,3 @@ if __name__ == '__main__':
             data.append(line)
 
     pdf = ParseLogFiles.divide_string(data)
-    pdf

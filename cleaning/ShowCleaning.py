@@ -19,7 +19,6 @@ from pyspark.ml.linalg import VectorUDT
 
 sc = SparkContext.getOrCreate()
 
-
 class ShowResults(object):
     """
     Object for displaying results from the clustering
@@ -59,10 +58,11 @@ class ShowResults(object):
         display(drop_down_clusters)
 
     def show_cluster(self, df):
-        """
+        '''
+
         :param df: Spark data frame
         :return:
-        """
+        '''
         from shared.ComputeDistances import make_histogram
 
         list_distances = [i["distance"] for i in df.collect()]
@@ -123,12 +123,12 @@ class ShowResults(object):
         return list_clusters_with_outliers
 
     def select_prototypes(self, dataframe, **kwargs):
-        """
-        This method should contain a widget that handles the selection of prototypes.
-        The method call show_prototypes.
-        :param:
-        :return:
-        """
+        '''
+                This method should contain a widget that handles the selection of prototypes.
+                The method call show_prototypes.
+                :param:
+                :return:
+                '''
 
         button_prototypes = widgets.Button(description="Show prototypes")
 

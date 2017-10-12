@@ -7,32 +7,19 @@ from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 from pyspark import SparkContext
 from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
-from pyspark.ml.linalg import VectorUDT, Vectors
 from pyspark.sql import functions as F
-
+from shared.WorkflowLogger import logger_info_decorator
 
 import numpy as np
-import logging
-import sys
 
 sc = SparkContext.getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 
-
-logger_execute = logging.getLogger(__name__)
-logger_execute.setLevel(logging.DEBUG)
-logger_file_handler_parameter = logging.FileHandler('/tmp/workflow_cleaning.log')
-logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
-
-logger_execute.addHandler(logger_file_handler_parameter)
-logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
-
 class ExecuteWorkflow(object):
     """
     Object execute workflow. Builds a spark pipeline based on previous data from other class' and executes the pipeline
     """
-
     def __init__(
             self,
             dict_params=None,
@@ -46,41 +33,64 @@ class ExecuteWorkflow(object):
         :param cols_labels:
         :param standardize:
         """
-        # , data=None, model="kmeans", _params={}
-
-        try:
-            self._algorithm = dict_params.pop('algorithm', 'GaussianMixture')
-        except AttributeError as ae:
-            tb = sys.exc_info()[2]
-            logger_execute.warning(ae.with_traceback(tb))
-            self._algorithm = 'GaussianMixture'
-
-        self._params = dict_params  # dict of _parameters including model, mode and so on
-        self._features = cols_features
-        self._labels = cols_labels
-        self._standardize = standardize
+        self._dict_parameters = dict_params # dict of _parameters including model, mode and so on
+        self._list_feature = ExecuteWorkflow._check_features(cols_features)
+        self._list_labels = cols_labels
+        self._bool_standardize = standardize
         # self._data = None #Perhaps it is needed
+        self._algorithm = self._check_algorithm()
+        self._pipeline = self.construct_pipeline()
+        # logger_execute.info('ExecuteWorkflow has been created')
 
-        self._pipeline, self._params_labels = self.construct_pipeline()
-        logger_execute.info('ExecuteWorkflow has been created')
+    def __repr__(self):
+        return "ExecuteWorkflow('{}', '{}', '{}', '{}')".format(
+            self._dict_parameters,
+            self._list_feature,
+            self._list_labels,
+            self._bool_standardize)
+
+    def __str__(self):
+        return '{} - {}'.format(
+            self._algorithm,
+            self._dict_parameters,
+        )
+
+    @staticmethod
+    @logger_info_decorator
+    def _check_features(cols_features):
+        try:
+            assert isinstance(cols_features, list), 'cols_features is not of type list, but of type: ' + str(type(cols_features))
+            return cols_features
+        except AssertionError as e:
+            print(e.args[0])
+            return
+
+    @logger_info_decorator
+    def _check_algorithm(self):
+        try:
+             return self._dict_parameters.pop('algorithm', 'GaussianMixture')
+        except AttributeError as ae:
+            return 'GaussianMixture'
 
     @property
     def pipeline(self):
         return self._pipeline
 
     @property
-    def params_labs_feats(self):
-        return self._params_labels
+    def parameters(self):
+        return self._dict_parameters
 
     @property
-    def params(self):
-        return self._params
+    def features(self):
+        return self._list_feature
 
-    @params.setter
-    def params(self, dic):
-        assert isinstance(dic, dict)
-        self._params = dic
+    @property
+    def labels(self):
+        return self._list_labels
 
+
+
+    @logger_info_decorator
     def construct_pipeline(self):
         """
         Method that creates a spark pipeline.
@@ -88,14 +98,14 @@ class ExecuteWorkflow(object):
         """
 
         vectorized_features = features.VectorAssembler(
-            inputCols=self._features,
+            inputCols=self._list_feature,
             outputCol="features")  # vectorization
 
         caster = ConvertAllToVecToMl(
             inputCol=vectorized_features.getOutputCol(),
             outputCol="casted_features")  # does the double and ml.densevector cast
 
-        if self._standardize:
+        if self._bool_standardize:
             scaling_model = features.StandardScaler(
                 inputCol="casted_features",
                 outputCol="scaled_features",
@@ -118,12 +128,14 @@ class ExecuteWorkflow(object):
         param_map = [i.name for i in model.params]
 
         # Make sure that the params in self._params are the right for the algorithm
-        dict_params_labels = dict(filter(lambda x: x[0] in param_map, self._params.items()))
+        dict_params_labels = dict(filter(
+            lambda x: x[0] in param_map, self._dict_parameters.items()))
         dict_params_labels['featuresCol'] = caster_after_scale.getOutputCol()
 
         # Model is set
         model = eval("clustering." + self._algorithm)(**dict_params_labels)
-        dict_params_labels = dict(map(lambda i: (i.name, model.getOrDefault(i.name)), model.params))
+        dict_params_labels = dict(map(
+            lambda i: (i.name, model.getOrDefault(i.name)), model.params))
 
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
@@ -132,8 +144,11 @@ class ExecuteWorkflow(object):
                   scaling_model,
                   model]
 
-        return Pipeline(stages=stages), dict_params_labels
+        self._dict_parameters.update(dict_params_labels) # dict gets updated
 
+        return Pipeline(stages=stages)
+
+    @logger_info_decorator
     def execute_pipeline(self, data_frame):
         """
         Executes the pipeline with the dataframe
@@ -145,6 +160,7 @@ class ExecuteWorkflow(object):
         model = self._pipeline.fit(data_frame)
         return model
 
+    @logger_info_decorator
     def apply_model(self, model, data_frame):
         """
         Runs the model on a data frame
@@ -157,30 +173,45 @@ class ExecuteWorkflow(object):
         transformed_data = model.transform(data_frame)
 
         # udf's
-        udf_cast_vector = F.udf(lambda x: Vectors.dense(x), VectorUDT())
+        udf_cast_vector = F.udf(
+            lambda x: Vectors.dense(x), VectorUDT())
 
         # Depending on the algorithm, different methods will extract the cluster centers
         if self._algorithm == 'GaussianMixture':
             # convert gaussian mean/covariance dataframe to pandas dataframe
-            pandas_cluster_centers = model.stages[-1].gaussiansDF.toPandas()
+            pandas_cluster_centers = (model
+                                      .stages[-1]
+                                      .gaussiansDF
+                                      .toPandas())
+
             centers = sql_ctx.createDataFrame(
-                self.gen_gaussians_center(self._params_labels['k'], pandas_cluster_centers))
+                self.gen_gaussians_center(self._dict_parameters['k'], pandas_cluster_centers))
 
             merged_df = transformed_data.join(
                 centers,
-                self._params_labels['predictionCol'],
+                self._dict_parameters['predictionCol'],
                 'inner')
 
-            merged_df = merged_df.withColumn('centers', udf_cast_vector('mean'))  # this is stupidity from spark!
+            merged_df = merged_df.withColumn(
+                'centers', udf_cast_vector('mean'))  # this is stupidity from spark!
         else:
-            np_centers = model.stages[-1].clusterCenters()
-            centers = self.gen_cluster_center(self._params_labels['k'], np_centers)
+            np_centers = (model
+                          .stages[-1]
+                          .clusterCenters()
+                          )
+
+            centers = self.gen_cluster_center(
+                self._dict_parameters['k'],
+                np_centers)
+
             broadcast_center = sc.broadcast(centers)
 
             # Create user defined function for added cluster centers to data frame
-            udf_assign_cluster = F.udf(lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
+            udf_assign_cluster = F.udf(
+                lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
 
-            merged_df = transformed_data.withColumn("centers", udf_assign_cluster(self._params_labels['predictionCol']))
+            merged_df = transformed_data.withColumn(
+                "centers", udf_assign_cluster(self._dict_parameters['predictionCol']))
 
         # return the result
         return merged_df
@@ -201,7 +232,8 @@ class ExecuteWorkflow(object):
         # create dummy id pandas dataframe
         import pandas as pd
 
-        pandas_id = pd.DataFrame({prediction_label: (range(k))}, columns=[prediction_label])
+        pandas_id = pd.DataFrame({
+            prediction_label: (range(k))}, columns=[prediction_label])
         return pd.concat([gaussians, pandas_id], axis=1)
 
     @staticmethod

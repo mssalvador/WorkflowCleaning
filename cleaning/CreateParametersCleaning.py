@@ -6,21 +6,12 @@
 
 from ipywidgets import widgets
 from traitlets import dlink
+
 from pyspark.ml import clustering
-import logging
 import sys
 from pyspark import SparkContext
 import random
-from shared import OwnFloatSingleSlider, OwnCheckBox, OwnIntSingleSlider, OwnSelect, OwnText, OwnDropdown
-
-# setup logging first, better than print!
-logger_parameter_select = logging.getLogger(__name__)
-logger_parameter_select.setLevel(logging.DEBUG)
-logger_file_handler_parameter = logging.FileHandler('/tmp/workflow_cleaning.log')
-logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
-
-logger_parameter_select.addHandler(logger_file_handler_parameter)
-logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
+from shared.WorkflowLogger import logger_info_decorator
 
 sc = SparkContext.getOrCreate()
 
@@ -33,11 +24,10 @@ class ParamsCleaning(object):
     algorithm_clustering = [str(i) for i in clustering.__all__
                             if ("Model" not in i) if ("Summary" not in i) if ("BisectingKMeans" not in i)]
 
+    @logger_info_decorator
     def __init__(self):
-        logger_parameter_select.info(" Create_Cleaning_Parameters created")
-
         self._selected_parameters = {"algorithm": self.algorithm_clustering[0]}
-        self._algorithms_and_paramters = ParamsCleaning.create_parameters()
+        self._algorithms_and_parameters = ParamsCleaning.create_parameters()
 
     def __repr__(self):
         return "ParamsClustering()"
@@ -47,37 +37,37 @@ class ParamsCleaning(object):
 
     @staticmethod
     def output_parameters(params):
-        return dict([(x.name, x.value) for l in params.children for x in l.children])
+
+        arr = [(x.name, x.value) for l in params.children for x in l.children]
+        return dict(arr)
 
     @classmethod
+    @logger_info_decorator
     def create_parameters(cls):
-        '''
+        """
         Initial method for creating all _parameters for all algorithms along with default vals
         :return:
-        '''
+        """
 
         algo_and_params = {}
         for i in cls.algorithm_clustering:
             model = getattr(clustering, i)()
             maps = model.extractParamMap()
-
             algo_and_params[i] = dict(zip(map(lambda x: x.name, maps.keys()), maps.values()))
-            logger_parameter_select.debug(
-                " Parameters selected for algorithm {} with _parameters {}".format(i, algo_and_params[i]))
         return algo_and_params
 
     def select_parameters(self):
-
-        '''
+        """
         The main method for selecting _parameters to each algorithm. Each algorithm has its own set of _parameters.
         :return: None
-        '''
-        widget_dropdown_algorithms = OwnDropdown.OwnDropdown(
+        """
+
+        widget_dropdown_algorithms = widgets.Dropdown(
             options=ParamsCleaning.algorithm_clustering,
             value=ParamsCleaning.algorithm_clustering[0],
             description="Algorithms",
-            disabled=False,
-            name="algorithm")
+            disabled=False)
+        setattr(widget_dropdown_algorithms,'name','algorithm')
 
         all_widgets = widgets.VBox([widget_dropdown_algorithms])
 
@@ -87,11 +77,11 @@ class ParamsCleaning(object):
 
         widget_and_algorithms = dict(zip(ParamsCleaning.algorithm_clustering, list_of_methods))
 
+        @logger_info_decorator
         def update_algorithm_parameters(change):
 
             if change in widget_and_algorithms.keys():
-                logger_parameter_select.debug(" Algorithm changed to: {}".format(change))
-                return widget_and_algorithms[change](self._algorithms_and_paramters[change])
+                return widget_and_algorithms[change](self._algorithms_and_parameters[change])
             else:
                 raise NotImplementedError
 
@@ -104,101 +94,74 @@ class ParamsCleaning(object):
     @staticmethod
     def create_kmeans_clustering_widgets(dict):
         """
-        instiantate the widgets for kmeans clustering algortihm
+        instiantate the widgets for k-means clustering algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
-        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("k", 10),
-            min=2,
-            max=200,
-            step=1,
-            description="Number of Clusters",
-            name="k")
 
-        widget_initMode = OwnDropdown.OwnDropdown(
+        widget_initMode = widgets.Dropdown(
             value=dict.get("initMode", "k-means||"),
             options=["k-means||",  "random"],
-            description="Initial mode",
-            name="initMode")
+            description="Initial mode")
+        setattr(widget_initMode, 'name', 'initMode')
 
-        widget_initSteps = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_initSteps = widgets.IntSlider(
             value=dict.get("initSteps", 10),
             min=1,
-            max=50,
+            max=100,
             step=1,
-            description="Number of Initial steps",
-            name="initSteps")
+            description="Number of Initial steps")
+        setattr(widget_initSteps, 'name', 'initSteps')
 
-        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(
-            value=dict.get("tol", 1e-4),
-            min=1e-4,
-            max=1e-3,
-            step=1e-4,
-            description="Tolerance",
-            name="tol")
+        widgets_gaussian_mix = ParamsCleaning.create_gaussian_mixture_widgets(dict)
 
-        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("maxIter", 100),
-            min=10,
-            max=200,
-            step=1,
-            description="Max iterations",
-            name="maxIter")
+        widgets_kmeans = widgets.HBox(
+            [widget_initSteps, widget_initMode])
 
-        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(
-            value=dict.get("seed", random.randint(0, sys.maxsize)),
-            min=0,
-            max=sys.maxsize,
-            step=1000,
-            description="Seed",
-            name="seed")
-
-        all_lists = [[widget_k, widget_initSteps, widget_tol],
-                     [widget_maxIter, widget_seed, widget_initMode]]
-        return list(map(lambda x: widgets.HBox(x), all_lists))
+        return widgets_gaussian_mix + [widgets_kmeans]
 
     @staticmethod
     def create_gaussian_mixture_widgets(dict):
         """
-        instiantate the widgets for Gausian mixture models algortihm
+        instiantate the widgets for Gaussian mixture models algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets
         """
 
-        widget_k = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_k = widgets.IntSlider(
             value=dict.get("k", 10),
             min=2,
             max=200,
             step=1,
-            description="Number of Clusters",
-            name="k")
+            description="Number of Clusters")
+        setattr(widget_k, 'name', 'k')
 
-        widget_tol = OwnFloatSingleSlider.OwnFloatSingleSlider(
+        widget_tol = widgets.FloatSlider(
             value=dict.get("tol", 1e-4),
             min=1e-4,
             max=1e-3,
             step=1e-4,
-            description="Tolerance",
-            name="tol")
+            description="Tolerance")
+        setattr(widget_tol, 'name', 'tol')
 
-        widget_maxIter = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_maxIter = widgets.IntSlider(
             value=dict.get("maxIter", 100),
             min=10,
-            max=200,
+            max=1000,
             step=1,
-            description="Max iterations",
-            name="maxIter")
+            description="Max iterations")
+        setattr(widget_maxIter, 'name', 'maxIter')
 
-        widget_seed = OwnIntSingleSlider.OwnIntSingleSlider(
+        widget_seed = widgets.IntSlider(
             value=dict.get("seed", random.randint(0, sys.maxsize)),
             min=0,
             max=sys.maxsize,
             step=1000,
             description="Seed",
-            name="seed")
+            )
+        setattr(widget_seed, 'name', 'seed')
 
         all_lists = [[widget_k, widget_maxIter],
                      [widget_tol, widget_seed]]
@@ -207,7 +170,7 @@ class ParamsCleaning(object):
     @staticmethod
     def create_lda_clustering_widgets(dict):
         """
-        instiantate the widgets for LDA clustering algortihm
+        instiantate the widgets for LDA clustering algorithm
 
         :param dict: name of _parameters and its default value
         :return: list with HBox's of widgets

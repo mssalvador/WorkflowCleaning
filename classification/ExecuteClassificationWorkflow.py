@@ -21,13 +21,7 @@ class ExecuteWorkflowClassification(object):
         :param featureCols:
         :param labelCols:
         '''
-
-        try:
-            self._algorithm = dict_params.pop('algorithm', 'LogisticRegression')
-        except AttributeError as ae:
-            tb = sys.exc_info()[2]
-            self._algorithm = 'LogisticRegression'
-
+        self._algorithm = dict_params.pop('algorithm', 'LogisticRegression')
         self._params = dict_params
         self._standardize = standardize
         self._featureCols = featureCols
@@ -36,11 +30,15 @@ class ExecuteWorkflowClassification(object):
             self._pipeline, self._parameter_grid = self.create_standard_pipeline()
         except TypeError as te:
             tb = sys.exc_info()[2]
+            print(te)
+            print('something went wrong in pipeline')
+
 
     @property
     @logger_info_decorator
     def parameter_grid(self):
         return self._parameter_grid
+
 
     @property
     @logger_info_decorator
@@ -68,6 +66,7 @@ class ExecuteWorkflowClassification(object):
         all_transformation = filter(lambda x: "Model" not in x, feature.__all__)
         print("\n".join(all_transformation))
 
+
     def create_standard_pipeline(self):
         '''
         This method creates a standard pipeline, standard meaning: vectorize, standardize and model...
@@ -77,29 +76,38 @@ class ExecuteWorkflowClassification(object):
         # Import statements
         from pyspark.ml import classification
         from pyspark.ml import Pipeline, tuning
-        from pyspark.ml import feature as Feat
+        from pyspark.ml.feature import  VectorAssembler, StandardScaler
+        from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 
         # Feature columns are created from instance variables
         feature_columns = [i.name for i in self._featureCols]
 
         # Vectorized transformation
-        vectorizer = Feat.VectorAssembler(
+        vectorizer = VectorAssembler(
             inputCols=feature_columns,
-            outputCol="vectorized_features")
+            outputCol='v_features')
+
+        # Cast the vector from mllib to ml
+        converter = ConvertAllToVecToMl(
+            inputCol=vectorizer.getOutputCol(),
+            outputCol='casted'
+        )
 
         # Standardize estimator
         if self._standardize:
-            standardizes = Feat.StandardScaler(
+            standardizes = StandardScaler(
                 withMean=True,
                 withStd=True,
-                inputCol=vectorizer.getOutputCol(),
-                outputCol="scaled")
+                inputCol=converter.getOutputCol(),
+                outputCol="scaled"
+            )
         else:
-            standardizes = Feat.StandardScaler(
+            standardizes = StandardScaler(
                 withMean=False,
                 withStd=False,
-                inputCol=vectorizer.getOutputCol(),
-                outputCol="scaled")
+                inputCol=converter.getOutputCol(),
+                outputCol="scaled"
+            )
 
         # Labels and strings are already set into the model, +
         dict_parameters = dict(filter(lambda x: not isinstance(x[1], tuple), self._params.items()))
@@ -113,12 +121,12 @@ class ExecuteWorkflowClassification(object):
         # Parameter is set
         param_grid = tuning.ParamGridBuilder()
         for model_parameter, grid_values in dict_features.items():
-            if isinstance(grid_values,int) or isinstance(grid_values,float):
+            if isinstance(grid_values, int) or isinstance(grid_values, float):
                 param_grid.baseOn(eval('model.'+model_parameter), grid_values)
             else:
                 param_grid.addGrid(eval('model.'+model_parameter), grid_values)
 
-        pipe = Pipeline(stages=[vectorizer, standardizes, model])
+        pipe = Pipeline(stages=[vectorizer, converter, standardizes, model])
         return pipe, param_grid.build()
 
     @logger_info_decorator

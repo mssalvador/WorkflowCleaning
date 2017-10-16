@@ -3,6 +3,7 @@ from pyspark.sql import functions as F
 from pyspark.ml import Transformer
 from pyspark.ml.param.shared import HasInputCol, HasOutputCol
 from pyspark import keyword_only
+import numpy as np
 
 
 class DistanceTransformation(Transformer, HasInputCol, HasOutputCol):

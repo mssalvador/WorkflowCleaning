@@ -39,7 +39,8 @@ class GeneralDataImport(object):
         self._path_to_data = path
         self._standardize = kwargs.pop('standardize', False)
         self._all_columns = kwargs.pop('cols', [])
-        self._list_label = kwargs.pop('labelCols', [])
+        self._list_id = kwargs.pop('idCols', [])
+        self._list_label = kwargs.pop('labelCols',[])
         self._list_features = kwargs.pop('featureCols', [])
         self._data_frame = None
 
@@ -65,14 +66,18 @@ class GeneralDataImport(object):
 
         # Create casted features and labels
         feature_types = [GeneralDataImport.cast_to_right_type(feature) for feature in self._list_features]
-        label_types = [F.col(label.name).cast('string').alias(label.name) for label in self._list_label]
+        id_types = [F.col(label.name).cast('string').alias(label.name) for label in self._list_id]
+        label_types = list(map(lambda c: F.col(c.name).cast('double').alias(c.name), self._list_label))
 
         # Log the selected features and labels
-        logger_data_import.info("Data frame exported with columns: {}, missing: {}"
-                                .format(self._list_label+self._list_features,
-                                        set(self._all_columns)-set(self._list_label+self._list_features)))
+        logger_data_import.info(
+            "Data frame exported with columns: {}, missing: {}"
+                .format(self._list_id + self._list_label + self._list_features,
+                        set(self._all_columns) - set(self._list_id + self._list_label + self._list_features)
+                        )
+        )
 
-        return self._data_frame.select(label_types+feature_types)
+        return self._data_frame.select(id_types+label_types+feature_types)
 
     @property
     def all_columns(self):
@@ -81,6 +86,10 @@ class GeneralDataImport(object):
     @property
     def list_label(self):
         return self._list_label
+
+    @property
+    def list_id(self):
+        return self._list_id
 
     @property
     def list_features(self):
@@ -96,6 +105,7 @@ class GeneralDataImport(object):
         self._all_columns = None
         self._list_features = None
         self._list_label = None
+        self._list_id = None
         self._path_to_data = ''
 
     def __repr__(self):
@@ -132,8 +142,9 @@ class GeneralDataImport(object):
 
             # set up for all columns and cleanup for labels and features
             self._all_columns = self._data_frame.schema
-            self._list_label = []
+            self._list_id = []
             self._list_features = []
+            self._list_label = []
 
         # register button event and show widgets
         button_import_file.on_click(button_import_on_click)
@@ -196,7 +207,7 @@ class GeneralDataImport(object):
 
         '''
         A method for selecting which columns that should be labels and which that should be features
-        :return: Nothing. instance method that sets instance variables _list_features and _list_label
+        :return: Nothing. instance method that sets instance variables _list_features and _list_id
         '''
 
         # Little consistency check to see if a data frame has been uploaded yet.
@@ -213,30 +224,69 @@ class GeneralDataImport(object):
         list_all_columns = [col.name for col in self.all_columns]+['']
 
         # Widgets gets initialized here
-        widget_select_feature = widgets.SelectMultiple(value=[], options=list_all_columns, description="Select Features")
-        widget_select_label = widgets.SelectMultiple(value=[], options=list_all_columns, description="Select Labels")
+        widget_select_feature = widgets.SelectMultiple(
+            value=[],
+            options=list_all_columns,
+            description="Select Features"
+        )
 
-        # A link from feature to label is created
+        widget_select_id = widgets.SelectMultiple(
+            value=[],
+            options=list_all_columns,
+            description="Select Ids"
+        )
+
+        widget_select_label = widgets.Dropdown(
+            value=list_all_columns[0],
+            options=list_all_columns,
+            description='Select a Label'
+        )
+
+        # A link from feature to id is created
         dlink((widget_select_feature, 'value'), (widget_select_label, 'options'),
               lambda val: [i for i in list_all_columns if i not in val])
 
-        # A link from label to feature is created
+        # A link from id to feature is created
         dlink((widget_select_label, 'value'), (widget_select_feature, 'options'),
               lambda val: [i for i in list_all_columns if i not in val])
 
+        # A link from feature to id is created
+        dlink((widget_select_id, 'value'), (widget_select_label, 'options'),
+              lambda val: [i for i in list_all_columns if i not in val])
+
+        # A link from id to feature is created
+        dlink((widget_select_label, 'value'), (widget_select_id, 'options'),
+              lambda val: [i for i in list_all_columns if i not in val])
+
+
+        # A link from feature to id is created
+        dlink((widget_select_feature, 'value'), (widget_select_id, 'options'),
+              lambda val: [i for i in list_all_columns if i not in val])
+
+        # A link from id to feature is created
+        dlink((widget_select_id, 'value'), (widget_select_feature, 'options'),
+              lambda val: [i for i in list_all_columns if i not in val])
+
         # Both widgets are displayed
-        display.display(widgets.HBox([widget_select_label, widget_select_feature]))
+        display.display(widgets.HBox([widget_select_label ,widget_select_id, widget_select_feature]))
 
         # Inline functions for observing changes to feature list and label list
         def observe_feature(change):
             if change.new != change.old:
-                self._list_features = [i for i in self.all_columns if i.name in widget_select_feature.value] # list(widget_select_feature.value)
+                self._list_features = [i for i in self.all_columns if
+                                       i.name in widget_select_feature.value] # list(widget_select_feature.value)
+
+        def observe_id(change):
+            if change.new != change.old:
+                self._list_id = [i for i in self.all_columns if
+                                 i.name in widget_select_id.value]# list(widget_select_id.value)
 
         def observe_label(change):
             if change.new != change.old:
-
-                self._list_label = [i for i in self.all_columns if i.name in widget_select_label.value]# list(widget_select_label.value)
+                self._list_label = [i for i in self.all_columns if
+                                 i.name in widget_select_label.value]  # list(widget_select_id.value)
 
         # Both widgets are put under observations
-        widget_select_feature.observe(observe_feature, names='value')
         widget_select_label.observe(observe_label, names='value')
+        widget_select_feature.observe(observe_feature, names='value')
+        widget_select_id.observe(observe_id, names='value')

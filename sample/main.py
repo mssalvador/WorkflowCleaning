@@ -8,6 +8,8 @@ from shared import ParseLogFiles
 import getpass
 import os
 import re
+from shared.CastInPipeline import CastInPipeline
+
 
 user = getpass.getuser()
 
@@ -31,12 +33,23 @@ if __name__ == '__main__':
     #     #df.show(100)
     #     df.write.parquet(PARQUET_PATH+'normal_cluster_n_'+str(i)+'.parquet', mode='overwrite')
 
-    f = '/home/svanhmic/workspace/results/DABAI/performancetest'
-    files = list(map(lambda x: f+'/'+str(x), os.listdir(f)))
-    data = []
-    with open(files[0],'r') as file:
-        for line in file:
-            data.append(line)
+    # f = '/home/svanhmic/workspace/results/DABAI/performancetest'
+    # files = list(map(lambda x: f+'/'+str(x), os.listdir(f)))
+    # data = []
+    # with open(files[0],'r') as file:
+    #     for line in file:
+    #         data.append(line)
+    #
+    # pdf = ParseLogFiles.divide_string(data)
 
-    pdf = ParseLogFiles.divide_string(data)
-    pdf
+    sc = SparkContext.getOrCreate()
+    sql_context = SQLContext.getOrCreate(sc)
+
+    df = sql_context.read.parquet(PARQUET_PATH+'normal_cluster_n_1000.parquet')
+    df.printSchema()
+    df.show(5)
+    carsten = CastInPipeline(inputCol='k', castTo='double')
+
+    n_df = carsten.transform(df)
+    n_df.printSchema()
+    n_df.show(5)

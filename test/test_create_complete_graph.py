@@ -51,3 +51,20 @@ class TestCreate_complete_graph(PySparkTestCase):
         desired_output = dict(zip(range(3),[DenseVector(range(i*3, i*3+3)) for i in range(0, 3)]))
 
         self.assertEqual(dict_result, desired_output)
+
+    def test_generate_label_matrix(self):
+        """tests if the definition outputs the right elements"""
+
+        data = {'id': np.linspace(0,4,4,dtype='int'),
+                'label': [0.0, 1.0, None, None],
+                'a': np.random.normal(size=4),
+                'b': np.random.normal(size=4)
+                }
+
+        spark = SparkSession(self.sc)
+        pdf = pd.DataFrame(data, columns=['id', 'label', 'a', 'b'])
+        test_df = spark.createDataFrame(pdf)
+        y_c, y_u = LabelPropagation.generate_label_matrix(data_frame=test_df, id_col='id', label_col='label')
+        y_c.show()
+        y_u.show()
+

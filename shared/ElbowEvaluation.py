@@ -9,4 +9,5 @@ class ElbowEvaluation(Estimator):
     '''
 
     def _evaluate(self, dataset):
+        pass
 

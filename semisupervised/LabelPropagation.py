@@ -94,7 +94,8 @@ def compute_transition_values(data_frame, row=None, column=None, label=None, wei
     bcast_summed_edge_rows = sc.broadcast(summed_edge_rows)
 
     edge_normalization = F.udf(
-        lambda index, weight: weight / bcast_summed_edge_rows.value[index], T.DoubleType()
+        lambda index, weight: weight / bcast_summed_edge_rows.value[index],
+        T.DoubleType()
     )
 
     df_joined_weights = (
@@ -110,19 +111,62 @@ def compute_transition_values(data_frame, row=None, column=None, label=None, wei
 
     return df_joined_weights
 
-def generate_transition_matrix(data_frame, column_name = None, row_name = None, transition_name = None):
+def generate_transition_matrix(data_frame,
+                               column_name = None,
+                               row_name = None,
+                               transition_name = None,
+                               label_name = None):
 
+    temp_n = 4
+    temp_k = 2
+    sc = SparkContext.getOrCreate()
+    bcast = sc.broadcast({'k': temp_k, 'n': temp_n})
     def _sort_by_key(lis):
         return list(map(lambda x: x[1], sorted(lis, key=lambda x: x[0])))
 
+    def _label_by_row(label):
+        output = [0.0]*bcast.value['k']
+        try:
+            output[int(label)] = 1.0
+            return output
+        except ValueError as ve:
+            return output
+
+
     udf_sorts = F.udf(lambda x: DenseVector(_sort_by_key(x)), VectorUDT())
+    udf_generate_intial_label = F.udf(lambda x: _label_by_row(x), T.ArrayType(T.DoubleType()))
 
     return (data_frame
-            .groupBy(row_name)
+            .groupBy(row_name, label_name)
             .agg(F.collect_list(F.struct(column_name, transition_name)).alias('row_trans'))
             .withColumn('row_trans', udf_sorts('row_trans'))
+            .withColumn('initial_label', udf_generate_intial_label(label_name))
+            .withColumn(label_name, ~F.isnan(F.col(label_name)))
+            .withColumnRenamed(label_name, 'is_clamped')
+
             .cache()
             )
 
-def generate_label_matrix():
-    pass
+
+def label_propagation(data_frame, label_col, id_col, feature_cols, k=2, sigma=0.7, max_iters=5, tol=0.05):
+    """
+    The actual label propagation algorithm
+    """
+
+    df_with_weights = create_complete_graph(data_frame=data_frame, points=feature_cols, sigma=sigma)
+
+    ### TODO: perhaps make a truncator, such that we can use sparse vectors instead.
+    df_transition_values= compute_transition_values(
+        data_frame=df_with_weights,
+        row='a_'+id_col,
+        column='b_'+id_col,
+        label=label_col,
+        weight='transition_ab'
+    )
+    df_transition_matrix = generate_transition_matrix(
+        data_frame=df_transition_values,
+        column_name='column',
+        row_name='row',
+        transition_name='transition_ab'
+    )
+

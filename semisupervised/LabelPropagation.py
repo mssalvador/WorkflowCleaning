@@ -1,4 +1,3 @@
-from pyspark import graphframes as gf
 import numpy as np
 import pandas as pd
 import math
@@ -7,7 +6,6 @@ from pyspark.sql import types as T
 from pyspark.ml.feature import VectorAssembler
 from pyspark import SparkContext
 from pyspark.ml.linalg import Vector, VectorUDT, DenseVector, DenseMatrix, MatrixUDT
-from pyspark.sql import Window
 
 
 # class LabelPropagation(object):
@@ -25,7 +23,9 @@ from pyspark.sql import Window
 #
 #     def create_
 
-def create_complete_graph(data_frame, points=None, sigma=0.7):
+def create_complete_graph(
+        data_frame, points=None,
+        sigma=0.7):
     """
     Does a cross-product on the dataframe. And makes sure that the "points" are kept as a vector
     points: column names that should be the feature vector
@@ -36,7 +36,8 @@ def create_complete_graph(data_frame, points=None, sigma=0.7):
 
     feature_gen = VectorAssembler(inputCols=points, outputCol='features')
 
-    df_cleaned = (feature_gen.transform(data_frame)
+    df_cleaned = (feature_gen
+                  .transform(data_frame)
                   .select(new_cols + [feature_gen.getOutputCol()])
                   )
 
@@ -65,17 +66,10 @@ def create_complete_graph(data_frame, points=None, sigma=0.7):
     return df_crossed
 
 
-def compute_transition_values(data_frame, row=None, column=None, label=None, weight=None):
-    if row == None or row == ' ':
-        raise ValueError('row is not set')
-    if column == None or column == ' ':
-        raise ValueError('column is not set')
-    if label == None or label == ' ':
-        raise ValueError('label is not set')
-    if weight == None or weight == ' ':
-        raise ValueError('weight is not set')
-
-    sc = SparkContext.getOrCreate()
+def compute_transition_values(
+        data_frame, row=None,
+        column=None, label=None,
+        weight=None, sc=None):
 
     df_weights = (
         data_frame
@@ -108,19 +102,20 @@ def compute_transition_values(data_frame, row=None, column=None, label=None, wei
             .withColumnRenamed(existing=column, new='column')
             .withColumnRenamed(existing=row, new='row')
     )
-
+    bcast_summed_edge_rows
     return df_joined_weights
 
-def generate_transition_matrix(data_frame,
-                               column_name = None,
-                               row_name = None,
-                               transition_name = None,
-                               label_name = None):
+def generate_transition_matrix(
+        data_frame, column_name = None,
+        row_name = None, transition_name = None,
+        label_name = None):
 
     temp_n = 4
     temp_k = 2
     sc = SparkContext.getOrCreate()
     bcast = sc.broadcast({'k': temp_k, 'n': temp_n})
+
+
     def _sort_by_key(lis):
         return list(map(lambda x: x[1], sorted(lis, key=lambda x: x[0])))
 
@@ -141,32 +136,103 @@ def generate_transition_matrix(data_frame,
             .agg(F.collect_list(F.struct(column_name, transition_name)).alias('row_trans'))
             .withColumn('row_trans', udf_sorts('row_trans'))
             .withColumn('initial_label', udf_generate_intial_label(label_name))
-            .withColumn(label_name, ~F.isnan(F.col(label_name)))
-            .withColumnRenamed(label_name, 'is_clamped')
-
+            .withColumn('is_clamped', ~F.isnan(F.col(label_name)))
             .cache()
             )
 
 
-def label_propagation(data_frame, label_col, id_col, feature_cols, k=2, sigma=0.7, max_iters=5, tol=0.05):
+def generate_label(
+        data_frame=None, label_weights='initial_label',
+        bcast=None):
+    expression = [F.struct(
+        F.lit(i).alias('key'),
+        F.col(label_weights)[i].alias('val')
+    ) for i in range(bcast.value['k'])]
+
+    return (data_frame
+            .withColumn(
+        colName='exploded',
+        col=F.explode(F.array(expression))
+    )
+            .select(
+        F.col('exploded.key'),
+        F.col('exploded.val')
+    )
+            .groupBy('key')
+            .agg(F.collect_list('val').alias('label_vector'))
+            .rdd
+            .map(lambda x: (x['key'], x['label_vector']))
+            .collectAsMap()
+            )
+
+
+def label_propagation(
+        data_frame, label_col,
+        id_col, feature_cols,
+        k=2, sigma=0.7,
+        max_iters=5, tol=0.05):
     """
     The actual label propagation algorithm
     """
 
-    df_with_weights = create_complete_graph(data_frame=data_frame, points=feature_cols, sigma=sigma)
+    sc = SparkContext.getOrCreate()
+    n = data_frame.count()
+
+    bcast = sc.broadcast({'k': k, 'n': n})
+
+    df_with_weights = create_complete_graph(
+        data_frame=data_frame,
+        points=feature_cols,
+        sigma=sigma
+    )
 
     ### TODO: perhaps make a truncator, such that we can use sparse vectors instead.
-    df_transition_values= compute_transition_values(
-        data_frame=df_with_weights,
-        row='a_'+id_col,
-        column='b_'+id_col,
-        label=label_col,
-        weight='transition_ab'
-    )
-    df_transition_matrix = generate_transition_matrix(
-        data_frame=df_transition_values,
-        column_name='column',
-        row_name='row',
-        transition_name='transition_ab'
+    df_transition_values = compute_transition_values(
+        data_frame= df_with_weights,
+        row= 'a_'+id_col,
+        column=' b_'+id_col,
+        label= label_col,
+        weight= 'transition_ab',
+        sc= sc
     )
 
+    df_transition_matrix = generate_transition_matrix(
+        data_frame= df_transition_values,
+        column_name= 'column',
+        row_name= 'row',
+        transition_name= 'transition_ab',
+        label_name = 'label'
+    )
+
+    df_init_label = generate_label(
+        df_transition_matrix.orderBy('row'),
+        label_weights= 'initial_label', bcast= bcast
+    )
+    y_labels = sc.broadcast(df_init_label)
+
+    #Enter the for-loop
+    for iteration in range(max_iters):
+
+        udf_dot = F.udf(
+            lambda l: [float(l.dot(y_labels.value[i])) for i in range(bcast.value['k'])],
+            T.ArrayType(T.DoubleType())
+        )
+
+        df_new_label = (df_transition_matrix
+                 .withColumn('initial_label',
+                             F.when(F.col('is_clamped'), F.col('initial_label')).otherwise(udf_dot('row_trans'))
+                             )
+                 .orderBy('row')
+                 .cache()
+                 )
+
+        df_init_label = generate_label(
+            df_new_label, label_weights='initial_label',
+            bcast= bcast
+        )
+        y_labels.unpersist()
+        print("iteration {} label values \n{}\n{}\n".format(iteration, *y_labels.value.items()))
+        y_labels = sc.broadcast(df_init_label)
+
+
+    return df_new_label

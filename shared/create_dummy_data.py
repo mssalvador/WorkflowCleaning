@@ -7,6 +7,8 @@ Created on June, 2017
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from pyspark.sql import Row, SQLContext
+from pyspark.sql import SparkSession
+from pyspark.sql import Window
 from pyspark import SparkContext
 from random import random
 from string import digits, ascii_uppercase
@@ -328,3 +330,39 @@ def create_vector_with_nan_vals(vector, fraction):
     for i in indicies:
         vector[i] = np.NaN
     return vector
+
+
+def create_contious_id_data(sc, input_path = None, output_path = None):
+
+    spark_session = SparkSession(sc)
+    win_spec = Window().orderBy('k')
+    df_test_data = (spark_session
+                    .read
+                    .parquet(input_path)
+                    .drop('dimension')
+                    .withColumn(colName= 'label',
+                                col= F.when(F.col('id') % 2 == 0, 1.0).otherwise(0.0))
+                    .withColumn(colName= 'label',
+                                col= F.when(F.col('id') < 2, F.col('label')).otherwise(None))
+                    )
+
+    cummalative_sum = (df_test_data
+                       .groupBy('k')
+                       .count()
+                       .select(F.col('k'), F.sum('count').over(win_spec).alias('c_sum'))
+                       .rdd
+                       .map(lambda x: (x[0] + 1, x[1]))
+                       .collectAsMap()
+                       )
+
+    cummalative_sum[0] = 0
+    bcast_c_sum = sc.broadcast(cummalative_sum)
+    c_sum_udf = F.udf(lambda k: bcast_c_sum.value[k], T.IntegerType())
+
+    (df_test_data
+     .withColumn('id', F.col('id') + c_sum_udf(F.col('k')))
+     .orderBy('id')
+     .drop('k')
+     .write
+     .parquet(path=output_path, mode= 'overwrite')
+     )

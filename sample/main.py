@@ -1,18 +1,16 @@
 # the usual include statements
 
 from pyspark import SparkContext
-from pyspark import SQLContext
-from shared import create_dummy_data
-from shared import Plot2DGraphs
-from shared import ParseLogFiles
+import pyspark
+from semisupervised import LabelPropagation
 import getpass
-import os
-import re
-from shared.CastInPipeline import CastInPipeline
-
+import numpy as np
+import pandas as pd
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
+from pyspark.sql import Window
 
 user = getpass.getuser()
-
 if user == "sidsel":
     PARQUET_PATH = "/home/" + user + "/workspace/sparkdata/parquet/"
 
@@ -20,36 +18,34 @@ elif user == "svanhmic":
     PARQUET_PATH = "/home/" + user + "/workspace/data/DABAI/sparkdata/parquet/"
 
 if __name__ == '__main__':
-    # n_dimension = 2
-    # n_clusters = 10
-    # samples = 10000
-    #
-    # for i in [10000000]:
-    #     means = create_dummy_data.create_means(n_dimension, n_clusters, 10)  # [[0, 0, 0], [3, 3, 3], [-3, 3, -3], [5, -5, 5]]
-    #     stds = create_dummy_data.create_stds(n_dimension, n_clusters)  # [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
-    #     n_samples = create_dummy_data.create_partition_samples(i, n_clusters)  # [1000, 10000, 4000, 50]
-    #     print(n_samples)
-    #     df = create_dummy_data.create_normal_cluster_data_spark(n_dimension, n_samples, means, stds)
-    #     #df.show(100)
-    #     df.write.parquet(PARQUET_PATH+'normal_cluster_n_'+str(i)+'.parquet', mode='overwrite')
 
-    # f = '/home/svanhmic/workspace/results/DABAI/performancetest'
-    # files = list(map(lambda x: f+'/'+str(x), os.listdir(f)))
-    # data = []
-    # with open(files[0],'r') as file:
-    #     for line in file:
-    #         data.append(line)
-    #
-    # pdf = ParseLogFiles.divide_string(data)
 
     sc = SparkContext.getOrCreate()
-    sql_context = SQLContext.getOrCreate(sc)
+    spark_session = pyspark.sql.SparkSession(sc)
+    spark_session.conf.set("spark.sql.crossJoin.enabled", "true")
 
-    df = sql_context.read.parquet(PARQUET_PATH+'normal_cluster_n_1000.parquet')
-    df.printSchema()
-    df.show(5)
-    carsten = CastInPipeline(inputCol='k', castTo='double')
 
-    n_df = carsten.transform(df)
-    n_df.printSchema()
-    n_df.show(5)
+    data_1 = {'label': [0.0] + 3 * [None],
+              'x': np.random.normal(size=4),
+              'y': np.random.normal(size=4)
+              }
+    pdf_1 = pd.DataFrame(data_1, columns=['label', 'x', 'y'])
+
+    data_2 = data_1 = {'label': [1.0] + 3 * [None],
+                       'x': np.random.normal(4, .5, size=4),
+                       'y': np.random.normal(4, .5, size=4)
+                       }
+    pdf_2 = pd.DataFrame(data_2, columns=['label', 'x', 'y'])
+    pdf = pd.concat([pdf_1, pdf_2], ignore_index=True).reset_index()
+    df_input = spark_session.createDataFrame(pdf)
+    df_input.show()
+
+
+
+    summed_transition = LabelPropagation.label_propagation(
+        sc= sc, data_frame= df_input,
+        label_col= 'label', id_col= 'index',
+        feature_cols= ['x','y'], k= 2, tol=0.000001,
+        max_iters=25)
+
+    summed_transition.show()

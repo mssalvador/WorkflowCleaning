@@ -1,6 +1,9 @@
 from unittest import TestCase
 from pyspark.tests import ReusedPySparkTestCase, PySparkTestCase
 from pyspark.sql import SparkSession
+from shared.context import JobContext
+from functools import partial
+
 from pyspark.ml.linalg import DenseVector
 import pandas as pd
 import numpy as np
@@ -8,63 +11,72 @@ from semisupervised import LabelPropagation
 
 class TestCreate_complete_graph(PySparkTestCase):
 
+    def setUp(self):
+        super().setUp()
+        self.spark = SparkSession(self.sc)
+        self.spark.conf.set("spark.sql.crossJoin.enabled", "true")
+        self.label_context = JobContext(self.sc)
+        self.label_context_set = partial(self.label_context.set_constant, self.sc)
+        self.label_context_set('k', 2)
 
-    def test_complete_graph_no_points(self):
-
-        spark = SparkSession(self.sc)
-
-        data = {'id' : [1., 2.], 'a' : list(np.random.rand(2)), 'b' : list(np.random.rand(2))}
-        p_data_frame = pd.DataFrame(data, columns=['id', 'a', 'b'])
-
-        data_frame = spark.createDataFrame(data=p_data_frame)
-
-        self.assertRaises(AssertionError, LabelPropagation.create_complete_graph, data_frame, None)
-
-    def test_complete_graph_cross_join(self):
-        spark = SparkSession(self.sc)
-        spark.conf.set("spark.sql.crossJoin.enabled", "true")
-        data = {'id' : [1., 2.], 'a' : list(np.random.rand(2)), 'b' : list(np.random.rand(2))}
-        p_data_frame = pd.DataFrame(data, columns=['id', 'a', 'b'])
-
-        data_frame = spark.createDataFrame(data=p_data_frame)
-        df_result = LabelPropagation.create_complete_graph(data_frame=data_frame, points=['a', 'b'])
-        dict_result = df_result.select('a_id','b_id').rdd.map(lambda x: (x[0],x[1])).collectAsMap()
-
-        self.assertEqual(
-            dict_result,
-            {1:1, 1:2, 2:1, 2:2})
-
-
-    def test_proper_sorts(self):
-
-        spark = SparkSession(self.sc)
-        indexs = list(range(3))*3
-        weights = list(range(9))
-        data = {'row': sorted(indexs),
-                'column': indexs,
-                'transition_ab': weights}
-        p_data_frame = pd.DataFrame(data,columns=['row','column','transition_ab'])
-        data_frame = spark.createDataFrame(p_data_frame)
-        #print(p_data_frame)
-        result = LabelPropagation.generate_transition_matrix(data_frame,'column','row','transition_ab')
-        dict_result = result.rdd.map(lambda x: (x[0],x[1])).collectAsMap()
-        desired_output = dict(zip(range(3),[DenseVector(range(i*3, i*3+3)) for i in range(0, 3)]))
-
-        self.assertEqual(dict_result, desired_output)
-
-    def test_generate_label_matrix(self):
-        """tests if the definition outputs the right elements"""
-
-        data = {'id': np.linspace(0,4,4,dtype='int'),
-                'label': [0.0, 1.0, None, None],
-                'a': np.random.normal(size=4),
-                'b': np.random.normal(size=4)
+        data = {'id': np.array(range(6)),
+                'label': [0.0, 1.0] + 4 * [None],
+                'a': np.random.normal(size=6),
+                'b': np.random.normal(size=6)
                 }
-
-        spark = SparkSession(self.sc)
         pdf = pd.DataFrame(data, columns=['id', 'label', 'a', 'b'])
-        test_df = spark.createDataFrame(pdf)
-        y_c, y_u = LabelPropagation.generate_label_matrix(data_frame=test_df, id_col='id', label_col='label')
-        y_c.show()
-        y_u.show()
+        self.label_context_set('n',len(pdf['id']))
+        self.test_df = self.spark.createDataFrame(pdf)
 
+
+    def test_jobcontext(self):
+
+        self.assertEqual(self.label_context.constants['k'].value, 2)
+
+    def test_generate_transition_matrix_length(self):
+        """
+        Test transition matrix
+        :return:
+        """
+        df_crossed = LabelPropagation.create_complete_graph(
+            data_frame= self.test_df,
+            id_col= 'id',
+            points= ['a', 'b']
+        )
+        df_crossed.show()
+    
+    def test_cross_joining_length(self):
+
+        df_crossed = LabelPropagation.create_complete_graph(
+            data_frame= self.test_df,
+            id_col= 'id',
+            points= ['a', 'b']
+        )
+
+        self.assertEqual(df_crossed.count(), self.label_context.constants['n'].value**2)
+
+    def test_differenece(self):
+
+        dict_old_label = {}
+        n = 10
+        self.label_context_set('n', n)
+
+        for key in range(2):
+            dict_old_label[key] = np.random.randint(1, 10, n)
+
+        self.label_context_set('initial_label', dict_old_label)
+        self.label_context_set('tol', 0.01)
+
+
+        dict_new_label = {}
+        for key in range(2):
+            dict_new_label[key] = dict_old_label[key]+np.array([0.001, 0.3, 0.01 ]+[1.0]*7)
+
+
+        difference = LabelPropagation._delta_func(self.label_context, dict_new_label)
+        print(difference[0])
+        self.assertEqual(len(difference), 2)
+        self.assertEqual(len(difference[0]), 10)
+        self.assertListEqual(difference[0],
+                             list(zip(range(n), dict_old_label[0]+np.array([0.001, 0.3, 0.01 ]+[1.0]*7), [True, False, True]+[False]*7)),
+                             str(difference[0]))

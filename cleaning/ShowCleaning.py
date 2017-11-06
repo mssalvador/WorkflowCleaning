@@ -19,6 +19,7 @@ from pyspark.ml.linalg import VectorUDT
 
 sc = SparkContext.getOrCreate()
 
+
 class ShowResults(object):
     """
     Object for displaying results from the clustering
@@ -33,7 +34,7 @@ class ShowResults(object):
         self._data_dict = dict_parameters
         self._dimensions = len(list_features)
         self._features = list_features
-        self._lables = list_labels
+        self._labels = list_labels
         self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
         print(self._data_dict)
@@ -58,11 +59,10 @@ class ShowResults(object):
         display(drop_down_clusters)
 
     def show_cluster(self, df):
-        '''
-
+        """
         :param df: Spark data frame
         :return:
-        '''
+        """
         from shared.ComputeDistances import make_histogram
 
         list_distances = [i["distance"] for i in df.collect()]
@@ -123,12 +123,12 @@ class ShowResults(object):
         return list_clusters_with_outliers
 
     def select_prototypes(self, dataframe, **kwargs):
-        '''
-                This method should contain a widget that handles the selection of prototypes.
-                The method call show_prototypes.
-                :param:
-                :return:
-                '''
+        """
+        This method should contain a widget that handles the selection of prototypes.
+        The method call show_prototypes.
+        :param:
+        :return:
+        """
 
         button_prototypes = widgets.Button(description="Show prototypes")
 
@@ -158,8 +158,8 @@ class ShowResults(object):
             self.show_cluster(cluster_dataframe)
             self._selected_cluster = dropdown_prototypes.value
 
-            #Show only a table containing outliers: This is bad but better than converting to pandas all the time
-            output_cols = self._lables + list(self._features) + ['distance', 'Percentage distance', 'outliers']
+            # Show only a table containing outliers: This is bad but better than converting to pandas all the time
+            output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
             print(output_cols)
             #cluster_dataframe.select(output_cols).show()
             pdf = (cluster_dataframe

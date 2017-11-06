@@ -37,23 +37,24 @@ def make_histogram(dist: list, dim):
     set_of_distances = set(dist)
     fig = plt.figure()
     if len(set_of_distances) > 1:
-        ax = fig.add_subplot(1, 1, 1)
-        x = np.linspace(chi2.ppf(0.01, dim), chi2.ppf(0.99, dim), 100)
+        # ax = fig.add_subplot(1, 1, 1)
+        # x = np.linspace(chi2.ppf(0.01, dim), chi2.ppf(0.99, dim), 100)
 
-        ax.plot(
-            x,
-            chi2.pdf(x, dim),
-            'r-',
-            lw=5,
-            alpha=0.6,
-            label='chi2 pdf')
+        # ax.plot(
+        #     x,
+        #     chi2.pdf(x, dim),
+        #     'r-',
+        #     lw=5,
+        #     alpha=0.6,
+        #     label='chi2 pdf')
 
         sns.distplot(
             dist,
             rug=True,
             kde=True,
             norm_hist=False,
-            ax=ax)
+            # ax=ax)
+        )
 
         fig.canvas.draw()
         plt.show()

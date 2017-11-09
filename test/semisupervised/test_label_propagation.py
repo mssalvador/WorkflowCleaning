@@ -5,8 +5,9 @@ from shared.context import JobContext
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from functools import partial
+from itertools import product
 
-from pyspark.ml.linalg import DenseVector
+from pyspark.ml.linalg import DenseVector, SparseVector
 import pandas as pd
 import numpy as np
 from semisupervised import LabelPropagation
@@ -21,23 +22,28 @@ class TestCreate_complete_graph(PySparkTestCase):
         self.label_context = JobContext(self.sc)
         self.label_context_set = partial(self.label_context.set_constant, self.sc)
         self.label_context_set('k', 2)
-        self.label_context_set('sigma', np.sqrt(3)/3)
+        self.label_context_set('sigma', 0.5)
 
-        id_col = np.array([5, 3, 1, 2, 6,4])
+        id_col = np.array([0,1,2,3])
         # np.random.shuffle(id_col)
         data = {
-                'label': [0.0, 1.0] + 4 * [None],
-                'a': np.array([1.0, 2.0, 3.0, -1.0, -0.5, 4.0]),
-                'b': np.array([1.0, 2.0, 3.0, -1.0, -0.5, 4.0]),
-                'c': np.array([1.0, 2.0, 3.0, -1.0, -0.5, 4.0]),
+                'label': [0.0, 1.0] + 2 * [None],
+                'a': np.array([0., 0.9, 0.1, 0.85]),
+                'b': np.array([0., 0.9, 0.1, 0.85]),
+                'c': np.array([0., 0.9, 0.1, 0.85]),
                 }
         pdf = pd.DataFrame(data, columns=['label', 'a', 'b','c'])
         pdf['id'] = id_col
         self.label_context_set('n',len(pdf['id']))
         self.test_df = self.spark.createDataFrame(pdf)
 
-    def test_jobcontext(self):
+        x_r = [1, 0.00006007, 0.88692, 0.00017]
+        y_r = [0.00006007, 1, 0.00046, 0.97045]
+        z_r = [0.88692, 0.00046, 1, 0.00117]
+        v_r = [0.00017, 0.97045, 0.00117, 1]
+        self.results = [x_r, y_r, z_r, v_r]
 
+    def test_jobcontext(self):
         self.assertEqual(self.label_context.constants['k'].value, 2)
     
     def test_cross_joining_length(self):
@@ -45,7 +51,8 @@ class TestCreate_complete_graph(PySparkTestCase):
         df_crossed = LabelPropagation.create_complete_graph(
             data_frame= self.test_df,
             id_col= 'id',
-            points= ['a', 'b', 'c']
+            points= ['a', 'b', 'c'],
+            sigma= self.label_context.constants['sigma'].value
         )
         pdf_crossed = df_crossed.orderBy('a_id','b_id').toPandas()
 
@@ -53,64 +60,102 @@ class TestCreate_complete_graph(PySparkTestCase):
         #print(pdf_crossed)
 
     def test_all_dist_in_cross_join(self):
+        sigma = self.label_context.constants['sigma'].value
+        n = self.label_context.constants['n'].value
         df_crossed = LabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
-            points=['a', 'b', 'c']
+            points=['a', 'b', 'c'],
+            sigma= sigma
         )
-        sigma = self.label_context.constants['sigma'].value
-        compute_weights = F.udf(lambda x, y: LabelPropagation._compute_weights(
-            x, y, sigma), T.DoubleType())
-        pdf_computed_weights = (df_crossed
-                                .withColumn('weights_ab', compute_weights('a_features', 'b_features'))
-                                .toPandas())
-
-        pdf_computed_weights['actual_weights'] = pdf_computed_weights['a_features']-pdf_computed_weights['b_features']
-        pdf_computed_weights['actual_weights'] = pdf_computed_weights['actual_weights'].map(
-            lambda x: np.exp(-np.linalg.norm(x)**2/sigma**2))
-
-        # Lets check our distances
-        for i in (pdf_computed_weights['weights_ab'] == pdf_computed_weights['actual_weights']).tolist():
-            self.assertTrue(i)
+        for idx, val in enumerate(df_crossed.select('weights_ab').toPandas().values):
+            jdx = idx % n
+            self.assertAlmostEqual(val[0], self.results[int(jdx)][int(idx/4)], n)
 
     def test_compute_distributed_weights(self):
 
         df_crossed = LabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
-            points=['a', 'b', 'c']
+            points=['a', 'b', 'c'],
+            sigma= self.label_context.constants['sigma'].value
         )
-
-        pdf_crossed = df_crossed.toPandas().groupby('b_id', as_index=False)['weights_ab'].sum()
-        # print(pdf_crossed)
         dict_test_compute_distributed_weights = LabelPropagation.compute_distributed_weights(
-            columns= 'b_id', weight_col= 'weights_ab', df_weights= df_crossed)
+            columns= 'a_id', weight_col= 'weights_ab', df_weights= df_crossed)
+        print(dict_test_compute_distributed_weights)
+        list_actual_computed_weights = [1.88715007, 1.97097007, 1.88858, 1.97178]
 
-        pdf_crossed['comp_summed_weights'] = pdf_crossed['b_id'].map(dict_test_compute_distributed_weights)
+        self.assertEqual(len(dict_test_compute_distributed_weights), self.label_context.constants['n'].value)
 
-        for i in (pdf_crossed['comp_summed_weights'] == pdf_crossed['weights_ab']).tolist():
-            self.assertTrue(i)
+        for idx, val in dict_test_compute_distributed_weights.items() :
+            self.assertAlmostEqual(val, list_actual_computed_weights[idx], 4)
 
     def test_add_broadcasted_summed_weight(self):
         df_crossed = LabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
-            points=['a', 'b', 'c']
+            points=['a', 'b', 'c'],
+            sigma=self.label_context.constants['sigma'].value
         )
         LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
+        list_actual_computed_weights = [1.88715007, 1.97097007, 1.88858, 1.97178]
 
         weights_dict = self.label_context.constants['summed_row_weights'].value
         self.assertTrue(isinstance(weights_dict, dict))
         self.assertEqual(self.test_df.count(), len(weights_dict)) # summed by column should render the same length as the original df
+        for i,v in weights_dict.items():
+            self.assertAlmostEqual(v, list_actual_computed_weights[i], 4)
+
+    def test_generate_transition_mat(self):
+        actual_results = [[0.529900, 0.000030, 0.469622, 0.000086],
+                          [0.000032, 0.507366, 0.000245, 0.492164],
+                          [0.469979, 0.000234, 0.529498, 0.000593],
+                          [0.000090, 0.492369, 0.000635, 0.507156]]
+
+
+        df_crossed = LabelPropagation.create_complete_graph(
+            data_frame=self.test_df,
+            id_col='id',
+            points=['a', 'b', 'c'],
+            sigma=self.label_context.constants['sigma'].value
+        )
+        LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
+        # print(self.label_context.constants['summed_row_weights'].value)
+
+        initial_weights = df_crossed.select('a_id', 'b_id','weights_ab').toPandas()
+        for i in range(len(initial_weights)):
+            computed_value = LabelPropagation.compute_transition_values(
+                self.label_context,
+                initial_weights.loc[i]['weights_ab'],
+                initial_weights.loc[i]['b_id']
+            )
+            actual_value = actual_results[int(initial_weights.loc[i]['a_id'])][int(initial_weights.loc[i]['b_id'])]
+            self.assertAlmostEqual(computed_value, actual_value, 4)
+
+    def test_row_normed_transition(self):
+        self.fail()
 
     def test_distance_mesaure(self):
 
         # Dummy testing!
-        xd3 = np.array([1.0]*3)
-        yd3 = np.array([2.0]*3)
-        print('vector x: {} and vector y: {}'.format(xd3, yd3))
+        x = np.array([0., 0., 0.,])
+        y = np.array([0.9, 0.9, 0.9,])
+        z = np.array([0.1, 0.1, 0.1,])
+        v = np.array([0.85, 0.85, 0.85,])
+        data = [x,y,z,v]
+        sigma = self.label_context.constants['sigma'].value
 
-        acutual_weight = float(np.exp(-(np.linalg.norm(xd3-yd3, 2)**2)/(self.label_context.constants['sigma'].value**2)))
-        computed_weight = LabelPropagation._compute_weights(xd3, yd3, self.label_context.constants['sigma'].value)
-        self.assertEqual(acutual_weight,computed_weight)
+        for i,j in product(range(4),range(4)):
+            computed_weight = LabelPropagation._compute_weights(data[i], data[j], sigma)
+            self.assertAlmostEqual(self.results[i][j], computed_weight, 5)
 
+
+        # Check for sparse data
+        sparse_data = [SparseVector(3,[],[]),
+                       DenseVector(y),
+                       DenseVector(z),
+                       DenseVector(v)]
+
+        for i,j in product(range(4),range(4)):
+            computed_weight = LabelPropagation._compute_weights(sparse_data[i], sparse_data[j], sigma)
+            self.assertAlmostEqual(self.results[i][j], computed_weight, 5)

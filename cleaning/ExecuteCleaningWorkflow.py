@@ -69,7 +69,7 @@ class ExecuteWorkflow(object):
     @logger_info_decorator
     def _check_algorithm(self):
         try:
-             return self._dict_parameters.pop('algorithm', 'GaussianMixture')
+            return self._dict_parameters.pop('algorithm', 'GaussianMixture')
         except AttributeError as ae:
             return 'GaussianMixture'
 

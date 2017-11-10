@@ -32,12 +32,12 @@ class ShowResults(object):
                  list_labels):
 
         self._data_dict = dict_parameters
-        self._dimensions = len(list_features)
+        # self._dimensions = len(list_features)
         self._features = list_features
         self._labels = list_labels
-        self._boundary = chi2.ppf(0.99, self._dimensions)
+        # self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
-        print(self._data_dict)
+        # print(self._data_dict)
 
     def select_cluster(self):
         """
@@ -66,7 +66,7 @@ class ShowResults(object):
         from shared.ComputeDistances import make_histogram
 
         list_distances = [i["distance"] for i in df.collect()]
-        make_histogram(list_distances, self._dimensions)
+        make_histogram(list_distances)#, self._dimensions)
 
     def compute_shift(self, dataframe):
         """
@@ -87,26 +87,55 @@ class ShowResults(object):
         # Udf's
         percentage_dist = 100-(F.max(F.col('distance')).over(win_percentage_dist)-F.col('distance'))/100
         udf_real_dist = F.udf(
-            lambda c, p: float(math.sqrt(np.dot((c.toArray()-p.toArray()), (c.toArray()-p.toArray())))), types.DoubleType())
+            lambda c, p: float(math.sqrt(np.dot((c.toArray()-p.toArray()), (c.toArray()-p.toArray())))),
+            types.DoubleType())
 
-        return (dataframe
-                .withColumn(self._data_dict['predictionCol'], F.col(self._data_dict['predictionCol']) + 1)
-                .withColumn('distance', udf_real_dist(dataframe.centers, dataframe.scaled_features))
-                .withColumn('Percentage distance', percentage_dist)
-                .withColumn('outliers', F.when(F.col('distance') > self._boundary, 1).otherwise(0))
-                )
+        new_dataframe = dataframe\
+            .withColumn(self._data_dict['predictionCol'], F.col(self._data_dict['predictionCol']) + 1)\
+            .withColumn('distance', udf_real_dist(dataframe.centers, dataframe.scaled_features))\
+            .withColumn('Percentage distance', percentage_dist)
+
+        # boundary = new_dataframe.select(F.mean(F.round(F.col('distance')))).collect()[0][0]
+        # print('boundary: ', boundary)
+        # new_dataframe = new_dataframe.withColumn('outliers', F.when(F.col('distance') > boundary, 1).otherwise(0))
+
+        return new_dataframe
+
+    @staticmethod
+    def _check_outlier(distance_vector, mean):
+        outlier_vector = []
+        for ids, dist in distance_vector:
+            if dist > mean * 2:
+                outlier_vector.append((ids, True))
+            else:
+                outlier_vector.append((ids, False))
+        return outlier_vector
 
     def compute_summary(self, dataframe):
-        df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
+        # df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
+        df_stats = (dataframe.select(F.monotonically_increasing_id().alias("rowId"), self._data_dict['predictionCol'],
+                                     'distance', 'centers')).persist()
 
-        display(df_stats
-                .groupBy(self._data_dict['predictionCol'])
-                .agg(F.count(self._data_dict['predictionCol']).alias("Count"),
-                     F.sum(F.col("outliers")).alias("Outlier Count"))
-                .orderBy(self._data_dict['predictionCol'])
-                .filter(F.col("Count") >= 1)
-                .toPandas()
-                )
+        expr_type = types.ArrayType(types.StructType([types.StructField('idRow', types.IntegerType(), False),
+                                                      types.StructField('dist', types.FloatType(), False)]))
+
+        udf_outliers = F.udf(lambda distVec, mean: ShowResults._check_outlier(distVec, mean), expr_type)
+
+        df = df_stats \
+            .groupBy(self._data_dict['predictionCol']) \
+            .agg(F.count(self._data_dict['predictionCol']).alias("Count"), F.mean(F.col('distance')).alias('meanDist'),
+                 F.collect_list(F.struct(F.col('rowId'), F.col('distance'))).alias('vecDist'))\
+            .withColumn('outliers', udf_outliers(F.col('vecDist'), F.col('meanDist')))\
+            .orderBy(self._data_dict['predictionCol']) \
+            .filter(F.col("Count") >= 1) \
+            .toPandas()
+
+        display(df)
+        print(df.printSchema())
+
+        # .withColumn("Outlier Count", ),
+        # F.round(F.sum(F.col("outliers")) / F.count(self._data_dict['predictionCol']) * 100, 1)
+        # .alias("% Outlier")) \ \
 
         df_outliers = (df_stats
                        .select(self._data_dict['predictionCol'], "distance")
@@ -114,12 +143,14 @@ class ShowResults(object):
                        .groupBy(F.col(self._data_dict['predictionCol']))
                        .count()
                        .filter(F.col("count") >= 2)
+                       .orderBy(self._data_dict['predictionCol'])
                        )
 
-        display(df_outliers.toPandas())
+        # display(df_outliers.toPandas())
         list_clusters_with_outliers = (df_outliers
                                        .select(self._data_dict['predictionCol'])
                                        .collect())
+
         return list_clusters_with_outliers
 
     def select_prototypes(self, dataframe, **kwargs):
@@ -160,8 +191,8 @@ class ShowResults(object):
 
             # Show only a table containing outliers: This is bad but better than converting to pandas all the time
             output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
-            print(output_cols)
-            #cluster_dataframe.select(output_cols).show()
+            # print(output_cols)
+            # cluster_dataframe.select(output_cols).show()
             pdf = (cluster_dataframe
                    .select(output_cols)
                    .filter(F.col('outliers') == 1)

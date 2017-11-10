@@ -132,9 +132,6 @@ class TestCreate_complete_graph(PySparkTestCase):
             actual_value = actual_results[int(initial_weights.loc[i]['a_id'])][int(initial_weights.loc[i]['b_id'])]
             self.assertAlmostEqual(computed_value, actual_value, 4)
 
-    def test_row_normed_transition(self):
-        self.fail()
-
     def test_distance_mesaure(self):
 
         # Dummy testing!
@@ -159,3 +156,60 @@ class TestCreate_complete_graph(PySparkTestCase):
         for i,j in product(range(4),range(4)):
             computed_weight = LabelPropagation._compute_weights(sparse_data[i], sparse_data[j], sigma)
             self.assertAlmostEqual(self.results[i][j], computed_weight, 5)
+
+    # Test label generation
+
+    def test_label_by_row(self):
+        initial_labels = [0, 1, 2, 3, 0, None, None]
+        actual_labels = [[1.0, 0.0, 0.0, 0.0],
+                         [0.0, 1.0, 0.0, 0.0],
+                         [0.0, 0.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 1.0],
+                         [1.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0]]
+        k = 4
+        gen_label_row = partial(LabelPropagation._label_by_row, k)
+        computed_label_vec = map(gen_label_row, initial_labels)
+        for idx, vec in enumerate(list(computed_label_vec)):
+            self.assertListEqual(actual_labels[idx], vec)
+
+    def test_label_gen(self):
+
+        actual_labels = [[1.0, 0.0, 0.0, 0.0],
+                         [0.0, 1.0, 0.0, 0.0],
+                         [0.0, 0.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 1.0],
+                         [1.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0]]
+
+        pdf = pd.DataFrame(actual_labels, columns=['x', 'y', 'z', 'v'])
+        df = self.spark.createDataFrame(pdf).withColumn('initial_label', F.array('x','y','z','v'))
+
+        self.label_context_set('k', 4)
+        computed_label = LabelPropagation.generate_label(self.label_context, df)
+
+        t_pdf = pdf.transpose()
+        for idx, val in computed_label.items():
+            self.assertListEqual(val, list(t_pdf.iloc[idx,:]))
+
+    # Test one iteration
+
+    def test_one_iteration(self):
+        actual_new_label = [
+            [1.0, 0.0], [0.0, 1.0],
+            [0.46984, 0.00023], [0.00009, 0.49225]]
+
+        computed_labels = LabelPropagation.label_propagation(
+            self.sc, self.test_df, 'label', 'id',
+            ['a', 'b', 'c'], k=2, sigma=0.5, max_iters=1
+        )
+        pandas_comp_labels = computed_labels.toPandas()
+
+        for idx, vec in enumerate(actual_new_label):
+            computed_value = list(pandas_comp_labels['initial_label'][idx])
+            for jdx ,val in enumerate(vec):
+                self.assertAlmostEqual(val, computed_value[jdx], 4)
+
+        print(computed_labels.toPandas())

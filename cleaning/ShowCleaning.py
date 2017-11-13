@@ -8,6 +8,7 @@ from pyspark.context import SparkContext
 from ipywidgets import widgets
 from pyspark.sql import functions as F
 from pyspark.sql import types
+import numpy as np
 from scipy.stats import chi2
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
@@ -103,52 +104,27 @@ class ShowResults(object):
         )
 
     @staticmethod
-    def _check_outlier(distance_vector, mean):
-        outlier_vector = []
-        for ids, dist in distance_vector:
-            if dist > mean * 2:
-                outlier_vector.append((ids, True))
-            else:
-                outlier_vector.append((ids, False))
-        return outlier_vector
+    def compute_summary(dataframe, **kwargs):
+        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        outlier_col = kwargs.get('outlier_col','is_outlier')
 
-    def compute_summary(self, dataframe):
-        # df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
-        df_stats = ShowResults.add_row_index(dataframe)
+        count_outliers = F.udf(lambda col: int(np.sum(col)),types.IntegerType())
+        # percentage_outliers = F.udf(lambda count, outliers: out ,types.DoubleType())
 
-        expr_type = types.ArrayType(types.StructType([types.StructField('idRow', types.IntegerType(), False),
-                                                      types.StructField('dist', types.FloatType(), False)]))
-        udf_outliers = F.udf(lambda distVec, mean: ShowResults._check_outlier(distVec, mean), expr_type)
-
-        df = (df_stats
-              .groupBy(self._data_dict['predictionCol'])
-              .agg(F.count(self._data_dict['predictionCol']).alias("Count"),
-                   F.mean(F.col('distance')).alias('meanDist'),
-                   F.collect_list(F.struct(F.col('rowId'), F.col('distance'))).alias('vecDist')
-                   )
-              .withColumn(colName= 'outliers',
-                          col= udf_outliers(F.col('vecDist'), F.col('meanDist'))
-                          )
-              .orderBy(self._data_dict['predictionCol'])
-              .filter(F.col("Count") >= 1)
-              .toPandas()
-              )
-
-        df_outliers = (df_stats
-                       .select(self._data_dict['predictionCol'], "distance")
-                       .distinct()
-                       .groupBy(F.col(self._data_dict['predictionCol']))
-                       .count()
-                       .filter(F.col("count") >= 2)
-                       .orderBy(self._data_dict['predictionCol'])
-                       )
-
-        # display(df_outliers.toPandas())
-        list_clusters_with_outliers = (df_outliers
-                                       .select(self._data_dict['predictionCol'])
-                                       .collect())
-
-        return list_clusters_with_outliers
+        return (dataframe
+                .groupBy(prediction_col)
+                .agg(F.count(prediction_col).alias('count'), F.collect_list(F.col(outlier_col)).alias('outliers'))
+                .withColumn(colName= 'outlier_count',
+                            col= count_outliers('outliers')
+                            )
+                .withColumn(colName= 'outlier percentage',
+                            col= F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0)
+                            )
+                .withColumnRenamed(existing= prediction_col,
+                                   new= 'Prediction'
+                                   )
+                .drop('outliers')
+                )
 
     @staticmethod
     def add_row_index(dataframe, **kwargs):
@@ -176,61 +152,66 @@ class ShowResults(object):
             .withColumn(colName= 'is_outlier',
                         col= F.when(F.col(distance_col) > computed_boundary, True).otherwise(False)))
 
-    def select_prototypes(self, dataframe, **kwargs):
+    @staticmethod
+    def prepare_table_data(dataframe, **kwargs):
         """
         This method should contain a widget that handles the selection of prototypes.
         The method call show_prototypes.
         :param:
         :return:
         """
-        button_prototypes = widgets.Button(description="Show prototypes")
 
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
-        dataframe_updated = ShowResults.compute_shift(dataframe)
-        dataframe_updated = ShowResults.add_distances(dataframe_updated)
+        dataframe_updated = ShowResults.compute_shift(dataframe, **kwargs)
+        dataframe_updated = ShowResults.add_row_index(dataframe_updated, **kwargs)
+        dataframe_updated = ShowResults.add_distances(dataframe_updated, **kwargs)
+        return ShowResults.add_outliers(dataframe_updated, **kwargs)
 
-        # create summary for the clusters along with number in each cluster and number of outliers
-        # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
-        list_unique_values = self.compute_summary(dataframe_updated)
 
-        list_clusters_with_outliers = sorted(map(
-            lambda x: x[self._data_dict['predictionCol']], list_unique_values))
-        # print(list_clusters_with_outliers)
 
-        dropdown_prototypes = widgets.Dropdown(
-            options=list_clusters_with_outliers,
-            description="Select Cluster",
-            disabled=False
-        )
 
-        def selected_cluster_number(b):
-            clear_output()
-            filter_expr = (F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value)
-            cluster_dataframe = dataframe_updated.filter(filter_expr)
-
-            self.show_cluster(cluster_dataframe)
-            self._selected_cluster = dropdown_prototypes.value
-
-            # Show only a table containing outliers: This is bad but better than converting to pandas all the time
-            output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
-            # print(output_cols)
-            # cluster_dataframe.select(output_cols).show()
-            pdf = (cluster_dataframe
-                   .select(output_cols)
-                   .filter(F.col('outliers') == 1)
-                   .orderBy(F.col('distance').desc())
-                   .toPandas()
-                   )
-
-            if len(pdf) != 0:
-                display(pdf)
-            else:
-                print("There seems to be no outliers in this cluster")
-
-        button_prototypes.on_click(selected_cluster_number)
-
-        first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
-        display(first_line)
-
-        return dataframe_updated
+        # # create summary for the clusters along with number in each cluster and number of outliers
+        # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
+        # list_unique_values = self.compute_summary(dataframe_updated)
+        #
+        # list_clusters_with_outliers = sorted(map(
+        #     lambda x: x[self._data_dict['predictionCol']], list_unique_values))
+        # # print(list_clusters_with_outliers)
+        #
+        # dropdown_prototypes = widgets.Dropdown(
+        #     options=list_clusters_with_outliers,
+        #     description="Select Cluster",
+        #     disabled=False
+        # )
+        #
+        # def selected_cluster_number(b):
+        #     clear_output()
+        #     filter_expr = (F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value)
+        #     cluster_dataframe = dataframe_updated.filter(filter_expr)
+        #
+        #     self.show_cluster(cluster_dataframe)
+        #     self._selected_cluster = dropdown_prototypes.value
+        #
+        #     # Show only a table containing outliers: This is bad but better than converting to pandas all the time
+        #     output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
+        #     # print(output_cols)
+        #     # cluster_dataframe.select(output_cols).show()
+        #     pdf = (cluster_dataframe
+        #            .select(output_cols)
+        #            .filter(F.col('outliers') == 1)
+        #            .orderBy(F.col('distance').desc())
+        #            .toPandas()
+        #            )
+        #
+        #     if len(pdf) != 0:
+        #         display(pdf)
+        #     else:
+        #         print("There seems to be no outliers in this cluster")
+        #
+        # button_prototypes.on_click(selected_cluster_number)
+        #
+        # first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
+        # display(first_line)
+        #
+        # return dataframe_updated

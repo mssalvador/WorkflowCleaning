@@ -6,13 +6,12 @@ import math
 
 class TestCompute_distance(TestCase):
     def setUp(self):
-        self.distance = None
         self.dummy_point = np.array([1, 1, 2])
         self.dummy_center = np.array([0, 0, 0])
 
     def test_compute_distance(self):
 
-        self.distance = compute_dist.compute_distance(self.dummy_point, self.dummy_center)
-        self.assertIsInstance(self.distance, float, str(type(self.distance)))
-        self.assertEqual(self.distance, math.sqrt(6), str(self.distance)+" is not equal to: "+str(math.sqrt(3)))
+        computed_distance = compute_dist.compute_distance(self.dummy_point, self.dummy_center)
+        self.assertIsInstance(computed_distance, float, str(type(computed_distance)))
+        self.assertEqual(computed_distance, math.sqrt(6), str(computed_distance)+" is not equal to: "+str(math.sqrt(3)))
 

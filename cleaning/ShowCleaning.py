@@ -30,7 +30,12 @@ class ShowResults(object):
                  list_features,
                  list_labels):
 
+
+        assert dict_parameters['predictionCol'] != None, 'Prediction has not been made'
+        assert dict_parameters['k'] != None, 'Number of cluster has not been set'
         self.sc = sc.getOrCreate()
+        self._prediction_columns = dict_parameters['predictionCol']
+        self._k_clusters = dict_parameters['k']
 
         self._data_dict = dict_parameters
         # self._dimensions = len(list_features)
@@ -40,9 +45,11 @@ class ShowResults(object):
         self._selected_cluster = 1
         # print(self._data_dict)
 
+
     def select_cluster(self):
         """
         Method to decide which cluster to pick!
+        ### SKAL UNDERSØGES FOR BRUG ###
         :return:
         """
 
@@ -69,38 +76,31 @@ class ShowResults(object):
         list_distances = [i["distance"] for i in df.collect()]
         make_histogram(list_distances) # , self._dimensions)
 
-    def compute_shift(self, dataframe):
+    @staticmethod
+    def compute_shift(dataframe, **kwargs):
         """
         Compute distance, percentage distance to cluster center, and if outlier.
         :param dataframe:
         :return: dataframe
         """
-        from pyspark.sql import Window
+        prediction_col = kwargs.get('prediction_col','predictionCol')
+        return dataframe.withColumn(colName= prediction_col, col= F.col(prediction_col) + 1)
+
+    @staticmethod
+    def add_distances(dataframe, **kwargs):
+
         from pyspark.sql import functions as F
-        import numpy as np
-        import math
+        from pyspark.sql import types as T
+        from shared import ComputeDistances
 
-        # Window function
-        win_percentage_dist = (Window
-                               .orderBy(F.col('distance').desc())
-                               .partitionBy(F.col(self._data_dict['predictionCol'])))
+        centers_col = kwargs.get('center_col','centers')
+        features_col = kwargs.get('feature_col', 'scaled_features')
+        dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
 
-        # Udf's
-        percentage_dist = 100-(F.max(F.col('distance')).over(win_percentage_dist)-F.col('distance'))/100
-        udf_real_dist = F.udf(
-            lambda c, p: float(math.sqrt(np.dot((c.toArray()-p.toArray()), (c.toArray()-p.toArray())))),
-            types.DoubleType())
-
-        new_dataframe = dataframe\
-            .withColumn(self._data_dict['predictionCol'], F.col(self._data_dict['predictionCol']) + 1)\
-            .withColumn('distance', udf_real_dist(dataframe.centers, dataframe.scaled_features))\
-            .withColumn('Percentage distance', percentage_dist)
-
-        # boundary = new_dataframe.select(F.mean(F.round(F.col('distance')))).collect()[0][0]
-        # print('boundary: ', boundary)
-        # new_dataframe = new_dataframe.withColumn('outliers', F.when(F.col('distance') > boundary, 1).otherwise(0))
-
-        return new_dataframe
+        return dataframe.withColumn(
+            colName= 'distance',
+            col=dist_udf(F.col(features_col), F.col(centers_col))
+        )
 
     @staticmethod
     def _check_outlier(distance_vector, mean):
@@ -114,28 +114,25 @@ class ShowResults(object):
 
     def compute_summary(self, dataframe):
         # df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
-        df_stats = self.add_row_index(dataframe)
+        df_stats = ShowResults.add_row_index(dataframe)
 
         expr_type = types.ArrayType(types.StructType([types.StructField('idRow', types.IntegerType(), False),
                                                       types.StructField('dist', types.FloatType(), False)]))
-
         udf_outliers = F.udf(lambda distVec, mean: ShowResults._check_outlier(distVec, mean), expr_type)
 
-        df = df_stats \
-            .groupBy(self._data_dict['predictionCol']) \
-            .agg(F.count(self._data_dict['predictionCol']).alias("Count"), F.mean(F.col('distance')).alias('meanDist'),
-                 F.collect_list(F.struct(F.col('rowId'), F.col('distance'))).alias('vecDist'))\
-            .withColumn('outliers', udf_outliers(F.col('vecDist'), F.col('meanDist')))\
-            .orderBy(self._data_dict['predictionCol']) \
-            .filter(F.col("Count") >= 1) \
-            .toPandas()
-
-        display(df)
-        print(df.printSchema())
-
-        # .withColumn("Outlier Count", ),
-        # F.round(F.sum(F.col("outliers")) / F.count(self._data_dict['predictionCol']) * 100, 1)
-        # .alias("% Outlier")) \ \
+        df = (df_stats
+              .groupBy(self._data_dict['predictionCol'])
+              .agg(F.count(self._data_dict['predictionCol']).alias("Count"),
+                   F.mean(F.col('distance')).alias('meanDist'),
+                   F.collect_list(F.struct(F.col('rowId'), F.col('distance'))).alias('vecDist')
+                   )
+              .withColumn(colName= 'outliers',
+                          col= udf_outliers(F.col('vecDist'), F.col('meanDist'))
+                          )
+              .orderBy(self._data_dict['predictionCol'])
+              .filter(F.col("Count") >= 1)
+              .toPandas()
+              )
 
         df_outliers = (df_stats
                        .select(self._data_dict['predictionCol'], "distance")
@@ -161,6 +158,24 @@ class ShowResults(object):
             colName=row_id, col=F.monotonically_increasing_id())
         return df_stats
 
+    @staticmethod
+    def add_outliers(dataframe, **kwargs):
+
+        from pyspark.sql.window import Window
+        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        distance_col = kwargs.get('distance_col', 'distance')
+        stddev = kwargs.get('stddev', 2.0)
+        assert distance_col in dataframe.columns, 'Distances have not been computed!'
+
+        window_outlier = Window().partitionBy(F.col(prediction_col))
+        computed_boundary = F.mean(F.col(distance_col)).over(window_outlier) +\
+                            stddev*F.stddev_pop(F.col(distance_col)).over(window_outlier)
+
+        return (dataframe
+            .withColumn(colName='computed_boundary', col= computed_boundary)
+            .withColumn(colName= 'is_outlier',
+                        col= F.when(F.col(distance_col) > computed_boundary, True).otherwise(False)))
+
     def select_prototypes(self, dataframe, **kwargs):
         """
         This method should contain a widget that handles the selection of prototypes.
@@ -168,12 +183,12 @@ class ShowResults(object):
         :param:
         :return:
         """
-
         button_prototypes = widgets.Button(description="Show prototypes")
 
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
-        dataframe_updated = self.compute_shift(dataframe)
+        dataframe_updated = ShowResults.compute_shift(dataframe)
+        dataframe_updated = ShowResults.add_distances(dataframe_updated)
 
         # create summary for the clusters along with number in each cluster and number of outliers
         # find out how many unique data points we got, meaning that if the distance is equal then we won't display it

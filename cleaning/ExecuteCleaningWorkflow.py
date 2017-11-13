@@ -16,6 +16,7 @@ sc = SparkContext.getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 
+
 class ExecuteWorkflow(object):
     """
     Object execute workflow. Builds a spark pipeline based on previous data from other class' and executes the pipeline
@@ -68,7 +69,7 @@ class ExecuteWorkflow(object):
     @logger_info_decorator
     def _check_algorithm(self):
         try:
-             return self._dict_parameters.pop('algorithm', 'GaussianMixture')
+            return self._dict_parameters.pop('algorithm', 'GaussianMixture')
         except AttributeError as ae:
             return 'GaussianMixture'
 
@@ -87,8 +88,6 @@ class ExecuteWorkflow(object):
     @property
     def labels(self):
         return self._list_labels
-
-
 
     @logger_info_decorator
     def construct_pipeline(self):
@@ -216,7 +215,6 @@ class ExecuteWorkflow(object):
         # return the result
         return merged_df
 
-
     @staticmethod
     def gen_gaussians_center(
             k,
@@ -238,12 +236,12 @@ class ExecuteWorkflow(object):
 
     @staticmethod
     def gen_cluster_center(k, centers):
-        '''
+        """
         Create a
         :param k: number of clusters
         :param centers: center of n_clusters
         :return: dict with all clusters
-        '''
+        """
         assert isinstance(k, int), str(k)+" is not integer"
         assert isinstance(centers, list), " center is type: "+str(type(centers))
         return dict(zip(np.array(range(0, k, 1)), centers))

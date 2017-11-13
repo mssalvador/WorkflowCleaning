@@ -1,32 +1,45 @@
 import numpy as np
-import pandas as pd
-import math
 
 from pyspark.sql import types as T
-from pyspark.ml.feature import VectorAssembler
-from pyspark import SparkContext
-from pyspark.ml.linalg import Vector, VectorUDT, DenseVector,SparseVector
-from pyspark.sql.types import BooleanType
-
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import VectorAssembler, StandardScaler
+from pyspark.ml.linalg import VectorUDT, DenseVector, SparseVector
+from pyspark.sql import functions as F
 from shared import context
 from functools import partial, reduce
+from shared import ConvertAllToVecToMl
+from shared.WorkflowLogger import logger_info_decorator
 
+
+@logger_info_decorator
 def create_complete_graph(
         data_frame, id_col= None,
-        points= None, sigma= 0.7):
+        points= None, sigma= 0.7, standardize = True):
     """
     Does a cross-product on the dataframe. And makes sure that the "points" are kept as a vector
     points: column names that should be the feature vector
     """
-    from pyspark.sql import functions as F
 
     assert isinstance(points, list), 'this should be a list, not {}'.format(type(points))
     new_cols = list(set(data_frame.columns) - set(points))
 
     feature_gen = VectorAssembler(inputCols= points, outputCol= 'features')
-    df_cleaned = (feature_gen
+    vector_converter = ConvertAllToVecToMl.ConvertAllToVecToMl(
+        inputCol= feature_gen.getOutputCol(), outputCol= 'conv_feat')
+    standardizer = StandardScaler(
+        withMean= False, withStd= False,
+        inputCol= vector_converter.getOutputCol(), outputCol= 'standard_feat')
+
+    if standardize:
+        standardizer.setWithMean(True)
+        standardizer.setWithStd(True)
+
+    pipeline = Pipeline(stages=[feature_gen, vector_converter, standardizer])
+
+    model = pipeline.fit(data_frame)
+    df_cleaned = (model
                   .transform(data_frame)
-                  .select(new_cols + [feature_gen.getOutputCol()])
+                  .select(new_cols + [F.col(standardizer.getOutputCol()).alias('features')])
                   )
     a_names = [F.col(name).alias('a_' + name) for name in df_cleaned.columns]
     b_names = [F.col(name).alias('b_' + name) for name in df_cleaned.columns]
@@ -41,6 +54,10 @@ def create_complete_graph(
             .withColumn('weights_ab', distance)
             )
 
+def class_mass_normalization(data_frame, priors):
+    pass
+
+@logger_info_decorator
 def _compute_weights(vec_x, vec_y, sigma):
     if isinstance(vec_y,SparseVector) | isinstance(vec_x, SparseVector):
         x_d = vec_x.toArray()
@@ -66,13 +83,8 @@ def generate_summed_weights(context, weights, **kwargs):
     context(broadcast_name, summed_weights)
 
 def compute_distributed_weights(columns, weight_col, df_weights):
-    summed_weights = (df_weights
-                      .groupBy(columns)
-                      .sum(weight_col)
-                      .rdd
-                      .map(lambda x: (x[0], x[1]))
-                      .collectAsMap()
-                      )
+    summed_weights = (df_weights.groupBy(columns).sum(weight_col)
+                      .rdd.map(lambda x: (x[0], x[1])).collectAsMap())
     return summed_weights
 
 def compute_transition_values(context, weight, index):
@@ -103,13 +115,11 @@ def _compute_entropy(context, **kwargs):
     labels = kwargs.get('labels','initial_label')
     return -reduce(lambda a,b: a+b,
                    map(lambda vector: np.sum(np.multiply(vector, np.log(vector)))
-                       ,context.constants[labels].value
-                       )
+                       ,context.constants[labels].value)
                    )
 
 def generate_label(context, data_frame= None,
                    label_weights= 'initial_label'):
-    from pyspark.sql import functions as F
 
     expression = [F.struct(
         F.lit(i).alias('key'),
@@ -123,7 +133,6 @@ def generate_label(context, data_frame= None,
             )
 
 def explode_dataframe(data_frame, expression):
-    from pyspark.sql import functions as F
     df_exploded = (data_frame.withColumn(colName='exploded',
                                          col=F.explode(F.array(expression))
                                          )
@@ -139,11 +148,10 @@ def label_propagation(
         sc, data_frame, label_col= 'label',
         id_col= 'id', feature_cols = None,
         k= 2, sigma= 0.7, max_iters= 5,
-        tol= 0.05):
+        tol= 0.05, standardize = True):
     """
     The actual label propagation algorithm
     """
-    from pyspark.sql import functions as F
 
     # initial stuff sets up a jobcontext for shared values here.
     label_context = context.JobContext(sc)
@@ -157,7 +165,8 @@ def label_propagation(
         data_frame= data_frame,
         points= feature_cols,
         id_col= 'id',
-        sigma= sigma
+        sigma= sigma,
+        standardize= standardize
     )
 
     #renaming the columns
@@ -239,10 +248,8 @@ def label_propagation(
 
         # Check to see if some of the new labels can be clamped
         df_transition_matrix = (df_transition_matrix
-                                .withColumn(colName= 'is_clamped',
-                                            col= udf_select_lab(F.col('initial_label'), F.col('new_label')))
-                                .withColumn(colName= 'initial_label',
-                                            col= F.col('new_label'))
+                                .withColumn(colName='initial_label',
+                                            col=F.col('new_label'))
                                 .drop('new_label')
                                 )
 

@@ -1,9 +1,7 @@
-from unittest import TestCase
-from pyspark.tests import ReusedPySparkTestCase, PySparkTestCase
+from pyspark.tests import PySparkTestCase
 from pyspark.sql import SparkSession
 from shared.context import JobContext
 from pyspark.sql import functions as F
-from pyspark.sql import types as T
 from functools import partial
 from itertools import product
 
@@ -52,7 +50,8 @@ class TestCreate_complete_graph(PySparkTestCase):
             data_frame= self.test_df,
             id_col= 'id',
             points= ['a', 'b', 'c'],
-            sigma= self.label_context.constants['sigma'].value
+            sigma= self.label_context.constants['sigma'].value,
+            standardize= False
         )
         pdf_crossed = df_crossed.orderBy('a_id','b_id').toPandas()
 
@@ -66,7 +65,8 @@ class TestCreate_complete_graph(PySparkTestCase):
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
-            sigma= sigma
+            sigma= sigma,
+            standardize= False
         )
         for idx, val in enumerate(df_crossed.select('weights_ab').toPandas().values):
             jdx = idx % n
@@ -78,7 +78,8 @@ class TestCreate_complete_graph(PySparkTestCase):
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
-            sigma= self.label_context.constants['sigma'].value
+            sigma= self.label_context.constants['sigma'].value,
+            standardize= False
         )
         dict_test_compute_distributed_weights = LabelPropagation.compute_distributed_weights(
             columns= 'a_id', weight_col= 'weights_ab', df_weights= df_crossed)
@@ -95,7 +96,8 @@ class TestCreate_complete_graph(PySparkTestCase):
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
-            sigma=self.label_context.constants['sigma'].value
+            sigma=self.label_context.constants['sigma'].value,
+            standardize= False
         )
         LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
         list_actual_computed_weights = [1.88715007, 1.97097007, 1.88858, 1.97178]
@@ -117,7 +119,8 @@ class TestCreate_complete_graph(PySparkTestCase):
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
-            sigma=self.label_context.constants['sigma'].value
+            sigma=self.label_context.constants['sigma'].value,
+            standardize= False
         )
         LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
         # print(self.label_context.constants['summed_row_weights'].value)
@@ -203,7 +206,8 @@ class TestCreate_complete_graph(PySparkTestCase):
 
         computed_labels = LabelPropagation.label_propagation(
             self.sc, self.test_df, 'label', 'id',
-            ['a', 'b', 'c'], k=2, sigma=0.5, max_iters=1
+            ['a', 'b', 'c'], k= 2, sigma= 0.5, max_iters= 1,
+            standardize= False
         )
         pandas_comp_labels = computed_labels.toPandas()
 

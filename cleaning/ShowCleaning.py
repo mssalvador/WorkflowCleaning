@@ -153,10 +153,12 @@ class ShowResults(object):
 
         return list_clusters_with_outliers
 
-    def add_row_index(self, dataframe):
-        display(dataframe)
-        df_stats = (dataframe.select(F.monotonically_increasing_id().alias("rowId"), self._data_dict['predictionCol'],
-                                     'distance', 'centers')).persist()
+    @staticmethod
+    def add_row_index(dataframe, **kwargs):
+
+        row_id = kwargs.get('rowId','rowId')
+        df_stats = dataframe.withColumn(
+            colName=row_id, col=F.monotonically_increasing_id())
         return df_stats
 
     def select_prototypes(self, dataframe, **kwargs):

@@ -14,7 +14,10 @@ class TestShowResults(PySparkTestCase):
     def setUp(self):
         super().setUp()
         self.spark = SparkSession(self.sc)
-        self.result = ShowResults(self.sc, {'predictionCol': [1, 1], 'distance': [2, 2]}, ['feat1', 'feat2'], ['lab1', 'lab2'])
+        self.result = ShowResults(
+            self.sc, {'predictionCol': [1, 1], 'distance': [2, 2]},
+            ['feat1', 'feat2'], ['lab1', 'lab2']
+        )
 
     def test_add_row_index(self):
         d = {'predictionCol': [1, 2], 'col2': [3, 4]}
@@ -22,7 +25,9 @@ class TestShowResults(PySparkTestCase):
         # df['rowIndex'] = np.array([0, 1])
 
         dataframe = self.spark.createDataFrame(df)
-        dataframe = self.result.add_row_index(dataframe)
-        dataframe.toPandas()
+        computed_dataframe = self.result.add_row_index(dataframe)
+        self.assertIn(('rowId', 'bigint'), computed_dataframe.dtypes)
 
-        self.assertIn(('rowId', 'bigint'), dataframe.dtypes)
+        computed_dataframe = self.result.add_row_index(dataframe, rowId='roow')
+        self.assertIn(('roow','bigint'), computed_dataframe.dtypes)
+

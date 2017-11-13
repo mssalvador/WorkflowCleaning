@@ -17,8 +17,6 @@ from pyspark.ml.linalg import VectorUDT
 # TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?
 # TODO: Hvad skal vi lægge ind i ShowResults klassen?
 
-sc = SparkContext.getOrCreate()
-
 
 class ShowResults(object):
     """
@@ -27,9 +25,12 @@ class ShowResults(object):
     """
 
     def __init__(self,
+                 sc,
                  dict_parameters,
                  list_features,
                  list_labels):
+
+        self.sc = sc.getOrCreate()
 
         self._data_dict = dict_parameters
         # self._dimensions = len(list_features)
@@ -66,7 +67,7 @@ class ShowResults(object):
         from shared.ComputeDistances import make_histogram
 
         list_distances = [i["distance"] for i in df.collect()]
-        make_histogram(list_distances)#, self._dimensions)
+        make_histogram(list_distances) # , self._dimensions)
 
     def compute_shift(self, dataframe):
         """
@@ -113,8 +114,7 @@ class ShowResults(object):
 
     def compute_summary(self, dataframe):
         # df_stats = (dataframe.select(self._data_dict['predictionCol'], 'outliers', 'distance', 'centers')).persist()
-        df_stats = (dataframe.select(F.monotonically_increasing_id().alias("rowId"), self._data_dict['predictionCol'],
-                                     'distance', 'centers')).persist()
+        df_stats = self.add_row_index(dataframe)
 
         expr_type = types.ArrayType(types.StructType([types.StructField('idRow', types.IntegerType(), False),
                                                       types.StructField('dist', types.FloatType(), False)]))
@@ -152,6 +152,12 @@ class ShowResults(object):
                                        .collect())
 
         return list_clusters_with_outliers
+
+    def add_row_index(self, dataframe):
+        display(dataframe)
+        df_stats = (dataframe.select(F.monotonically_increasing_id().alias("rowId"), self._data_dict['predictionCol'],
+                                     'distance', 'centers')).persist()
+        return df_stats
 
     def select_prototypes(self, dataframe, **kwargs):
         """

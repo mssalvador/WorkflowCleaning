@@ -6,6 +6,7 @@ Created on May 15, 2017
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
+from pyspark.ml.linalg import SparseVector
 import math
 from scipy.stats import chi2
 
@@ -18,11 +19,12 @@ def compute_distance(point, center):
     :param center: cluster center
     :return: distance between point and center
     """
-    assert isinstance(point, np.ndarray), str(point)+" is not an a numpy array"
-    assert isinstance(center, np.ndarray), str(center)+" is not an a numpy array"
-
-    squared_dist = np.dot((center-point), (center-point))
-    return float(math.sqrt(squared_dist))
+    if isinstance(point, SparseVector) | isinstance(center, SparseVector):
+        p_d = point.toArray()
+        c_d = center.toArray()
+        return float(np.linalg.norm(p_d-c_d, ord=2))
+    else:
+        return float(np.linalg.norm(point - center, ord=2))
 
 
 def make_histogram(dist: list):#, dim):

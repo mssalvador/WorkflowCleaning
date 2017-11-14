@@ -31,9 +31,8 @@ class ShowResults(object):
                  list_features,
                  list_labels):
 
-
-        assert dict_parameters['predictionCol'] != None, 'Prediction has not been made'
-        assert dict_parameters['k'] != None, 'Number of cluster has not been set'
+        assert dict_parameters['predictionCol'] is not None, 'Prediction has not been made'
+        assert dict_parameters['k'] is not None, 'Number of cluster has not been set'
         self.sc = sc.getOrCreate()
         self._prediction_columns = dict_parameters['predictionCol']
         self._k_clusters = dict_parameters['k']
@@ -45,7 +44,6 @@ class ShowResults(object):
         # self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
         # print(self._data_dict)
-
 
     def select_cluster(self):
         """
@@ -85,7 +83,7 @@ class ShowResults(object):
         :return: dataframe
         """
         prediction_col = kwargs.get('prediction_col','predictionCol')
-        return dataframe.withColumn(colName= prediction_col, col= F.col(prediction_col) + 1)
+        return dataframe.withColumn(colName= prediction_col, col=F.col(prediction_col) + 1)
 
     @staticmethod
     def add_distances(dataframe, **kwargs):
@@ -94,7 +92,7 @@ class ShowResults(object):
         from pyspark.sql import types as T
         from shared import ComputeDistances
 
-        centers_col = kwargs.get('center_col','centers')
+        centers_col = kwargs.get('center_col', 'centers')
         features_col = kwargs.get('feature_col', 'scaled_features')
         dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
 
@@ -114,14 +112,14 @@ class ShowResults(object):
         return (dataframe
                 .groupBy(prediction_col)
                 .agg(F.count(prediction_col).alias('count'), F.collect_list(F.col(outlier_col)).alias('outliers'))
-                .withColumn(colName= 'outlier_count',
-                            col= count_outliers('outliers')
+                .withColumn(colName='outlier_count',
+                            col=count_outliers('outliers')
                             )
-                .withColumn(colName= 'outlier percentage',
-                            col= F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0)
+                .withColumn(colName='outlier percentage',
+                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0)
                             )
-                .withColumnRenamed(existing= prediction_col,
-                                   new= 'Prediction'
+                .withColumnRenamed(existing=prediction_col,
+                                   new='Prediction'
                                    )
                 .drop('outliers')
                 )
@@ -129,7 +127,7 @@ class ShowResults(object):
     @staticmethod
     def add_row_index(dataframe, **kwargs):
 
-        row_id = kwargs.get('rowId','rowId')
+        row_id = kwargs.get('rowId', 'rowId')
         df_stats = dataframe.withColumn(
             colName=row_id, col=F.monotonically_increasing_id())
         return df_stats
@@ -149,8 +147,8 @@ class ShowResults(object):
 
         return (dataframe
             .withColumn(colName='computed_boundary', col= computed_boundary)
-            .withColumn(colName= 'is_outlier',
-                        col= F.when(F.col(distance_col) > computed_boundary, True).otherwise(False)))
+            .withColumn(colName='is_outlier',
+                        col=F.when(F.col(distance_col) > computed_boundary, True).otherwise(False)))
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):

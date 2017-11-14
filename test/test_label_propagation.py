@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from semisupervised import LabelPropagation
 
+
 class TestCreate_complete_graph(PySparkTestCase):
 
     def setUp(self):

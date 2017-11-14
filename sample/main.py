@@ -25,7 +25,7 @@ if __name__ == '__main__':
                 ['feat1', 'feat2'], ['lab1', 'lab2']
                 )
     mini_pdf = pd.DataFrame(
-        {'predictionCol': [1, 1, 1, 1, 1, 1, 2], 'distance': [0.5, 1.5, 0.5, 0.1, 0.01, 6.0, 20.0]},
+        {'predictionCol': [0, 0, 0, 0, 0, 0, 1], 'distance': [0.5, 1.5, 0.5, 0.1, 0.01, 6.0, 20.0]},
         columns=['predictionCol', 'distance']
     )
 

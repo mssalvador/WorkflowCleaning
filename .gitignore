@@ -1,7 +1,4 @@
-
-.idea/.name
-.idea/Workflows.iml
-.idea/workspace.xml
+.idea/
 bin/
 classification/__pycache__/
 dist/
@@ -27,3 +24,4 @@ spark-warehouse/
 /notebooks/derby.log
 /notebooks/Untitled.ipynb
 /notebooks/.ipynb_checkpoints/
+.gitignore

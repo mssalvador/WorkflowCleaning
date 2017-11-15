@@ -23,9 +23,9 @@ class TestShowResults(PySparkTestCase):
 
         d = {'predictionCol': [1, 1, 2],
              'points': [DenseVector(np.array([1.0, 1.0])),
-                         DenseVector(np.array([0.0, 0.0])),
-                         DenseVector(np.array([3.0, 3.0]))
-                         ],
+                        DenseVector(np.array([0.0, 0.0])),
+                        DenseVector(np.array([3.0, 3.0]))
+                        ],
              'centers': [DenseVector(np.array([2.0, 2.0])),
                          DenseVector(np.array([2.0, 2.0])),
                          DenseVector(np.array([6.0, 6.0]))
@@ -49,7 +49,6 @@ class TestShowResults(PySparkTestCase):
         self.assertIn(('distance', 'double'), computed_dataframe.dtypes)
 
         p_computed_dataframe = computed_dataframe.toPandas()
-        print(p_computed_dataframe)
         actual_distances = [sqrt(2.0), sqrt(8.0), sqrt(18.0)]
         for idx, val in enumerate(actual_distances):
             self.assertEqual(val, p_computed_dataframe['distance'][idx])
@@ -64,6 +63,28 @@ class TestShowResults(PySparkTestCase):
 
         actual_values = [False]*5+[True]+[False]
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
+
+    def test_compute_summary(self):
+        mini_pdf = pd.DataFrame(
+            {'predictionCol': [0, 0, 0, 0, 0, 0, 1, 2, 1, 1],
+             'distance': [0.5, 1.5, 0.5, 0.1, 0.01, 6.0, 20.0, 13, 2, 1]},
+            columns=['predictionCol', 'distance']
+        )
+        computed_df = self.spark.createDataFrame(mini_pdf)
+        computed_df = ShowResults.add_outliers(computed_df)
+        summary_pdf = ShowResults.compute_summary(computed_df).toPandas()
+        print(summary_pdf)
+        actual_count_prediction = [6, 3, 1] # counts from predictionCol
+        actual_count_outliers = [1, 0, 0] # counts from outliers in distance
+        # percentage from actual_count_outliers / actual_count_prediction
+        actual_count_percentage = list(map(float, ['%.f' % elem for elem in
+                                                   [out/pre*100 for out, pre in
+                                                    zip(actual_count_outliers, actual_count_prediction)]]))
+
+        self.assertEqual(list(summary_pdf['count']), actual_count_prediction)
+        self.assertEqual(list(summary_pdf['outlier_count']), actual_count_outliers)
+        self.assertEqual(list(summary_pdf['outlier percentage']), actual_count_percentage)
+
 
 
 

@@ -49,6 +49,7 @@ class ShowResults(object):
         """
         Method to decide which cluster to pick!
         ### SKAL UNDERSØGES FOR BRUG ###
+        
         :return:
         """
 
@@ -70,6 +71,7 @@ class ShowResults(object):
         """
         Visualization of data and outliers in histogram ... 
         TO BE EXPANDED
+        
         :param df: Spark data frame
         :return:
         """
@@ -82,9 +84,9 @@ class ShowResults(object):
     def compute_shift(dataframe, **kwargs):
         """
         Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
+        
         :param dataframe: 
-        :param kwargs: 
-            prediction_col can be set in the function call, else it will search for 'predictionCol'
+        :param kwargs: prediction_col can be set in the function call, else it will search for 'predictionCol'
         :return: dataframe with shifted prediction_col
         """
         prediction_col = kwargs.get('prediction_col', 'predictionCol')
@@ -94,6 +96,7 @@ class ShowResults(object):
     def add_row_index(dataframe, **kwargs):
         """
         Uses pyspark's function monotonically_increasing_id() to add a column with indexes 
+        
         :param dataframe: 
         :param kwargs: rowId can be set in the function call, else it will set the column name 'rowId'
         :return: dataframe with added index column
@@ -108,6 +111,7 @@ class ShowResults(object):
         """
         Calculate the distances from points in each cluster to its center
         Uses ComputeDistances which uses the Euclidean distances
+        
         :param dataframe: 
         :param kwargs: 
             center_col can be set in the function call, else it will search for 'centers'
@@ -134,6 +138,7 @@ class ShowResults(object):
         The boundary is the mean plus "stddev" (number of standard derivations) * the standard derivation
         Uses pyspark's Window function to partition over the special predictions and thereby count number of data 
         points in each cluster, their number of outliers and the outlier percentage 
+        
         :param dataframe: 
         :param kwargs: 
             prediction_col can be set in the function call, else it will search for the column name 'predictionCol'
@@ -172,7 +177,6 @@ class ShowResults(object):
         outlier_col = kwargs.get('outlier_col', 'is_outlier')
 
         count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
-        # percentage_outliers = F.udf(lambda count, outliers: out ,types.DoubleType())
 
         return (dataframe
                 .groupBy(prediction_col)
@@ -181,7 +185,7 @@ class ShowResults(object):
                 .withColumn(colName='outlier_count',
                             col=count_outliers('outliers'))
                 .withColumn(colName='outlier percentage',
-                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0))
+                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale=0))
                 .withColumnRenamed(existing=prediction_col,
                                    new='Prediction')
                 .drop('outliers')

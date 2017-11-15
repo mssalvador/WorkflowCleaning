@@ -1,8 +1,10 @@
 .idea/
 bin/
+dist_workflow/
 classification/__pycache__/
 dist/
 docs/
+notebooks/Presentation_folder/
 notebooks/.ipynb_checkpoints/Show_Classification-checkpoint.ipynb
 notebooks/.ipynb_checkpoints/Show_Cleaning-checkpoint.ipynb
 notebooks/.ipynb_checkpoints/spark_test-checkpoint.ipynb

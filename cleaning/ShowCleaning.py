@@ -65,8 +65,11 @@ class ShowResults(object):
 
         display(drop_down_clusters)
 
-    def show_cluster(self, df):
+    @staticmethod
+    def show_cluster(df):
         """
+        Visualization of data and outliers in histogram ... 
+        TO BE EXPANDED
         :param df: Spark data frame
         :return:
         """
@@ -78,63 +81,66 @@ class ShowResults(object):
     @staticmethod
     def compute_shift(dataframe, **kwargs):
         """
-        Compute distance, percentage distance to cluster center, and if outlier.
-        :param dataframe:
-        :return: dataframe
+        Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
+        :param dataframe: 
+        :param kwargs: 
+            prediction_col can be set in the function call, else it will search for 'predictionCol'
+        :return: dataframe with shifted prediction_col
         """
-        prediction_col = kwargs.get('prediction_col','predictionCol')
-        return dataframe.withColumn(colName= prediction_col, col=F.col(prediction_col) + 1)
-
-    @staticmethod
-    def add_distances(dataframe, **kwargs):
-
-        from pyspark.sql import functions as F
-        from pyspark.sql import types as T
-        from shared import ComputeDistances
-
-        centers_col = kwargs.get('center_col', 'centers')
-        features_col = kwargs.get('feature_col', 'scaled_features')
-        dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
-
-        return dataframe.withColumn(
-            colName= 'distance',
-            col=dist_udf(F.col(features_col), F.col(centers_col))
-        )
-
-    @staticmethod
-    def compute_summary(dataframe, **kwargs):
         prediction_col = kwargs.get('prediction_col', 'predictionCol')
-        outlier_col = kwargs.get('outlier_col','is_outlier')
-
-        count_outliers = F.udf(lambda col: int(np.sum(col)),types.IntegerType())
-        # percentage_outliers = F.udf(lambda count, outliers: out ,types.DoubleType())
-
-        return (dataframe
-                .groupBy(prediction_col)
-                .agg(F.count(prediction_col).alias('count'), F.collect_list(F.col(outlier_col)).alias('outliers'))
-                .withColumn(colName='outlier_count',
-                            col=count_outliers('outliers')
-                            )
-                .withColumn(colName='outlier percentage',
-                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0)
-                            )
-                .withColumnRenamed(existing=prediction_col,
-                                   new='Prediction'
-                                   )
-                .drop('outliers')
-                )
+        return dataframe.withColumn(colName=prediction_col, col=F.col(prediction_col) + 1)
 
     @staticmethod
     def add_row_index(dataframe, **kwargs):
-
+        """
+        Uses pyspark's function monotonically_increasing_id() to add a column with indexes 
+        :param dataframe: 
+        :param kwargs: rowId can be set in the function call, else it will set the column name 'rowId'
+        :return: dataframe with added index column
+        """
         row_id = kwargs.get('rowId', 'rowId')
         df_stats = dataframe.withColumn(
             colName=row_id, col=F.monotonically_increasing_id())
         return df_stats
 
     @staticmethod
-    def add_outliers(dataframe, **kwargs):
+    def add_distances(dataframe, **kwargs):
+        """
+        Calculate the distances from points in each cluster to its center
+        Uses ComputeDistances which uses the Euclidean distances
+        :param dataframe: 
+        :param kwargs: 
+            center_col can be set in the function call, else it will search for 'centers'
+            point_col can be set in the function call, else it will search for 'scaled_features'
+        :return: dataframe with added distance column 
+        """
+        from pyspark.sql import functions as F
+        from pyspark.sql import types as T
+        from shared import ComputeDistances
 
+        centers_col = kwargs.get('center_col', 'centers')
+        points_col = kwargs.get('point_col', 'scaled_features')
+        dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
+
+        return dataframe.withColumn(
+            colName='distance',
+            col=dist_udf(F.col(points_col), F.col(centers_col))
+        )
+
+    @staticmethod
+    def add_outliers(dataframe, **kwargs):
+        """
+        Calculate a boundary for which a data point will be considered an outlier [bool]
+        The boundary is the mean plus "stddev" (number of standard derivations) * the standard derivation
+        Uses pyspark's Window function to partition over the special predictions and thereby count number of data 
+        points in each cluster, their number of outliers and the outlier percentage 
+        :param dataframe: 
+        :param kwargs: 
+            prediction_col can be set in the function call, else it will search for the column name 'predictionCol'
+            distance_col can be set in the function call, else it will search for the column name 'distance'
+            stddev (number of standard derivations) can be set in the function call, else default sat to 2
+        :return: dataframe with added 'is_outlier' bool column
+        """
         from pyspark.sql.window import Window
         prediction_col = kwargs.get('prediction_col', 'predictionCol')
         distance_col = kwargs.get('distance_col', 'distance')
@@ -142,13 +148,44 @@ class ShowResults(object):
         assert distance_col in dataframe.columns, 'Distances have not been computed!'
 
         window_outlier = Window().partitionBy(F.col(prediction_col))
-        computed_boundary = F.mean(F.col(distance_col)).over(window_outlier) +\
-                            stddev*F.stddev_pop(F.col(distance_col)).over(window_outlier)
+        computed_boundary = F.mean(F.col(distance_col))\
+                             .over(window_outlier) + stddev * F.stddev_pop(F.col(distance_col))\
+                             .over(window_outlier)
 
         return (dataframe
-            .withColumn(colName='computed_boundary', col= computed_boundary)
-            .withColumn(colName='is_outlier',
-                        col=F.when(F.col(distance_col) > computed_boundary, True).otherwise(False)))
+                .withColumn(colName='computed_boundary', col=computed_boundary)
+                .withColumn(colName='is_outlier',
+                            col=F.when(F.col(distance_col) > computed_boundary, True)
+                            .otherwise(False)))
+
+    @staticmethod
+    def compute_summary(dataframe, **kwargs):
+        """
+        
+        :param dataframe: 
+        :param kwargs: 
+            prediction_col can be set in the function call, else it will search for 'predictionCol'
+            outlier_col can be set in the function call, else it will search for 'is_outlier'
+        :return: 
+        """
+        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        outlier_col = kwargs.get('outlier_col', 'is_outlier')
+
+        count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
+        # percentage_outliers = F.udf(lambda count, outliers: out ,types.DoubleType())
+
+        return (dataframe
+                .groupBy(prediction_col)
+                .agg(F.count(prediction_col).alias('count'),
+                     F.collect_list(F.col(outlier_col)).alias('outliers'))
+                .withColumn(colName='outlier_count',
+                            col=count_outliers('outliers'))
+                .withColumn(colName='outlier percentage',
+                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale= 0))
+                .withColumnRenamed(existing=prediction_col,
+                                   new='Prediction')
+                .drop('outliers')
+                )
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):

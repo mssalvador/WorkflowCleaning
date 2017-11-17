@@ -41,6 +41,12 @@ class TestCreate_complete_graph(PySparkTestCase):
         v_r = [0.00017, 0.97045, 0.00117, 1]
         self.results = [x_r, y_r, z_r, v_r]
 
+    def test_compute_sum_of_non_clamped_transitions(self):
+        data = [(0, 0.5, 0), (1, 0.7, 1), (2, 0.3, None), (3, 0.1, None)]
+        expected_result = 0.4
+        computed_result = LabelPropagation.compute_sum_of_non_clamped_transitions(data)
+        self.assertEqual(expected_result, computed_result)
+
     def test_jobcontext(self):
         self.assertEqual(self.label_context.constants['k'].value, 2)
     

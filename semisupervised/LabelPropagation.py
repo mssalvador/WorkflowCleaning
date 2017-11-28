@@ -1,104 +1,14 @@
 import numpy as np
-
 from pyspark.sql import types as T
-from pyspark.ml import Pipeline
-from pyspark.ml.feature import VectorAssembler, StandardScaler
-from pyspark.ml.linalg import VectorUDT, DenseVector, SparseVector
+from pyspark.ml.linalg import VectorUDT, DenseVector
 from pyspark.sql import functions as F
 from shared import context
 import math
 from functools import partial, reduce
-from shared import ConvertAllToVecToMl
 from shared.WorkflowLogger import logger_info_decorator
+from semisupervised.LP_Graph import create_complete_graph
+from semisupervised.ClassMassNormalisation import class_mass_normalization
 
-
-
-@logger_info_decorator
-def create_complete_graph(
-        data_frame, id_col= None,
-        points= None, sigma= 0.7, standardize = True):
-    """
-    Does a cross-product on the dataframe. And makes sure that the "points" are kept as a vector
-    points: column names that should be the feature vector
-    """
-
-    assert isinstance(points, list), 'this should be a list, not {}'.format(type(points))
-    new_cols = list(set(data_frame.columns) - set(points))
-
-    feature_gen = VectorAssembler(inputCols= points, outputCol= 'features')
-    vector_converter = ConvertAllToVecToMl.ConvertAllToVecToMl(
-        inputCol= feature_gen.getOutputCol(), outputCol= 'conv_feat')
-    standardizer = StandardScaler(
-        withMean= False, withStd= False,
-        inputCol= vector_converter.getOutputCol(), outputCol= 'standard_feat')
-
-    if standardize:
-        standardizer.setWithMean(True)
-        standardizer.setWithStd(True)
-
-    pipeline = Pipeline(stages=[feature_gen, vector_converter, standardizer])
-
-    model = pipeline.fit(data_frame)
-    df_cleaned = (model
-                  .transform(data_frame)
-                  .select(new_cols + [F.col(standardizer.getOutputCol()).alias('features')])
-                  )
-    a_names = [F.col(name).alias('a_' + name) for name in df_cleaned.columns]
-    b_names = [F.col(name).alias('b_' + name) for name in df_cleaned.columns]
-
-    compute_distance_squared = F.udf(
-        lambda x, y: _compute_weights(x, y, sigma), T.DoubleType())
-
-    distance = compute_distance_squared(F.col('a_features'), F.col('b_features'))
-    return (df_cleaned
-            .select(*a_names)
-            .join(df_cleaned.select(*b_names))
-            .withColumn('weights_ab', distance)
-            )
-
-def _class_mass_calculation(label, priors):
-    return map(lambda x: x[0]*x[1], zip(label, priors))
-
-def _class_mass_parse_type(dataframe):
-
-    t_count = dataframe.filter('is_clamped').count()
-    print(t_count)
-    prior_calc = F.count('label') / F.col('t_count')
-
-    priors = (dataframe.filter('is_clamped')
-              .withColumn(colName= 't_count', col= F.lit(t_count))
-              .groupby('label', 't_count').agg(prior_calc).drop('t_count')
-              .rdd.collectAsMap())
-    print(priors)
-    return list(map(lambda x: x[1], sorted(priors.items(),key= lambda x: x[0])))
-
-
-def class_mass_normalization(context, data_frame):
-
-    k = context.constants['k'].value
-    priors = context.constants['priors'].value
-    if isinstance(priors, list) and len(priors) == k:
-        assert float(reduce(lambda x,y: x+y, priors)) == 1.0 , "sum must be equal to 1.0, not {}".format(priors)
-        priors = priors
-    else:
-        priors = _class_mass_parse_type(data_frame)
-    print(priors)
-    udf_mass_calc = F.udf(
-        lambda label: list(_class_mass_calculation(label, priors)),
-        T.ArrayType(T.DoubleType())
-    )
-
-    return data_frame.withColumn(
-        colName= 'initial_label', col=  udf_mass_calc('initial_label'))
-
-@logger_info_decorator
-def _compute_weights(vec_x, vec_y, sigma):
-    if isinstance(vec_y,SparseVector) | isinstance(vec_x, SparseVector):
-        x_d = vec_x.toArray()
-        y_d = vec_y.toArray()
-        return float(np.exp(-(np.linalg.norm(x_d-y_d, ord=2)**2)/sigma**2))
-    else:
-        return float(np.exp(-np.linalg.norm(vec_x - vec_y, ord=2)**2 / sigma**2))
 
 def generate_summed_weights(context, weights, **kwargs):
 
@@ -186,9 +96,13 @@ def label_propagation(
         sc, data_frame, label_col= 'label',
         id_col= 'id', feature_cols = None,
         k= 2, sigma= 0.7, max_iters= 5,
-        tol= 0.05, standardize = True, ):
+        tol= 0.05, standardize= True,
+        eval_type= 'max', priors= None):
     """
     The actual label propagation algorithm
+    :param:eval_type: 'Type of after evaluation; two are supported
+    max: maximum likelihood
+    cmn: Class mass normalisation
     """
     # initial stuff sets up a jobcontext for shared values here.
     label_context = context.JobContext(sc)
@@ -196,6 +110,7 @@ def label_propagation(
     label_context_set('k', k)
     label_context_set('n', data_frame.count())
     label_context_set('tol', tol)
+    label_context_set('priors', priors)
 
     # Lets make a proper dataset
     df_with_weights = create_complete_graph(
@@ -230,7 +145,6 @@ def label_propagation(
     udf_find_max_iter = F.udf(lambda x: compute_convergence_iter(
         x, label_context.constants['tol'].value, max_iters), T.IntegerType())
 
-
     df_normalized_transition_values = df_transition_values.withColumn(
         colName= 'transition_ab', col= edge_normalization('column', 'weights_ab')
     )
@@ -242,25 +156,26 @@ def label_propagation(
                               .agg(F.collect_list(F.struct('column', 'transition_ab', 'column_label')).alias('row_trans'))
                               )
 
-    df_generate_normed_transitions = (df_aggregated_by_trans
-                                      .withColumn(colName= 'converge_summed_transition',
-                                                  col= udf_convergence_sum('row_trans'))
-                                      .withColumn(colName= 'row_trans', col= udf_sorts('row_trans'))
-                                      .withColumn(colName= 'label', col= convert_None_to_nan_expr)
-                                      .withColumn(colName= 'initial_label',
-                                                  col= udf_generate_initial_label('label'))
-                                      .withColumn(colName= 'is_clamped', col= ~F.isnan('label'))
-                                      .withColumn(colName= 'summed_transition',
-                                                  col= udf_summation(F.col('row_trans')))
-                                      .withColumn(colName= 'converge_summed_transition',
-                                                  col= F.col('converge_summed_transition')/F.col('summed_transition')
-                                                  )
-                                      .withColumn(colName= 'max_iteration',
-                                                  col= udf_find_max_iter(F.col('converge_summed_transition'))
-                                                  )
-                                      .withColumn(colName= 'row_trans',
-                                                  col= udf_normalization('row_trans', 'summed_transition'))
-                                      )
+    df_generate_normed_transitions = (
+        df_aggregated_by_trans
+            .withColumn(colName= 'converge_summed_transition',
+                        col= udf_convergence_sum('row_trans'))
+            .withColumn(colName= 'row_trans', col= udf_sorts('row_trans'))
+            .withColumn(colName= 'label', col= convert_None_to_nan_expr)
+            .withColumn(colName= 'initial_label',
+                        col= udf_generate_initial_label('label'))
+            .withColumn(colName= 'is_clamped', col= ~F.isnan('label'))
+            .withColumn(colName= 'summed_transition',
+                        col= udf_summation(F.col('row_trans')))
+            .withColumn(colName= 'converge_summed_transition',
+                        col= F.col('converge_summed_transition')/F.col('summed_transition')
+                        )
+            .withColumn(colName= 'max_iteration',
+                        col= udf_find_max_iter(F.col('converge_summed_transition'))
+                        )
+            .withColumn(colName= 'row_trans',
+                        col= udf_normalization('row_trans', 'summed_transition'))
+    )
 
     df_transition_matrix = df_generate_normed_transitions.select(
         'row', 'label', 'initial_label', 'row_trans', 'is_clamped', 'max_iteration'
@@ -291,11 +206,10 @@ def label_propagation(
                         )
 
         clamping_expr = F.when(F.col('is_clamped'), F.col('initial_label')).otherwise(udf_dot('row_trans'))
-        df_transition_matrix = (df_transition_matrix
-                                .withColumn(colName= 'new_label', col= clamping_expr)
-                                .orderBy('row')
-                                .cache()
-                                )
+        df_transition_matrix = (
+            df_transition_matrix.withColumn(colName= 'new_label', col= clamping_expr)
+                .orderBy('row').cache()
+        )
 
         # convert the column with labels to a dictionary with vector label
         dict_initial_label = generate_label(
@@ -313,8 +227,10 @@ def label_propagation(
         # print("iteration {} label values \n{}\n{}\n".format(iters, *label_context.constants['initial_label'].value.items()))
         df_transition_matrix.unpersist()
 
-    # assign the found labels to the label column after MOST LIKELY candidate
-    udf_arg_max = F.udf(
-        lambda x: float(np.argmax(np.array(x))), T.DoubleType())
-    return  df_transition_matrix.withColumn(
-        colName='label', col= udf_arg_max(F.col('initial_label')))
+    if eval_type == 'cmn':
+        df_transition_matrix =  class_mass_normalization(label_context, df_transition_matrix)
+
+    udf_descision_selection = F.udf(
+            lambda x: float(np.argmax(np.array(x))), T.DoubleType())
+    return df_transition_matrix.withColumn(
+            colName= 'label', col= udf_descision_selection(F.col('initial_label')))

@@ -9,6 +9,7 @@ from ipywidgets import widgets
 from pyspark.sql import functions as F
 from pyspark.sql import types
 import numpy as np
+from shared import ComputeDistances
 from scipy.stats import chi2
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
@@ -81,7 +82,7 @@ class ShowResults(object):
         make_histogram(list_distances) # , self._dimensions)
 
     @staticmethod
-    def compute_shift(dataframe, **kwargs):
+    def _compute_shift(dataframe, **kwargs):
         """
         Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
         
@@ -89,11 +90,11 @@ class ShowResults(object):
         :param kwargs: prediction_col can be set in the function call, else it will search for 'predictionCol'
         :return: dataframe with shifted prediction_col
         """
-        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        prediction_col = kwargs.get('prediction_col', 'prediction')
         return dataframe.withColumn(colName=prediction_col, col=F.col(prediction_col) + 1)
 
     @staticmethod
-    def add_row_index(dataframe, **kwargs):
+    def _add_row_index(dataframe, **kwargs):
         """
         Uses pyspark's function monotonically_increasing_id() to add a column with indexes 
         
@@ -107,7 +108,7 @@ class ShowResults(object):
         return df_stats
 
     @staticmethod
-    def add_distances(dataframe, **kwargs):
+    def _add_distances(dataframe, **kwargs):
         """
         Calculate the distances from points in each cluster to its center
         Uses ComputeDistances which uses the Euclidean distances
@@ -120,8 +121,6 @@ class ShowResults(object):
         """
         from pyspark.sql import functions as F
         from pyspark.sql import types as T
-        from shared import ComputeDistances
-
         centers_col = kwargs.get('center_col', 'centers')
         points_col = kwargs.get('point_col', 'scaled_features')
         dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
@@ -132,7 +131,7 @@ class ShowResults(object):
         )
 
     @staticmethod
-    def add_outliers(dataframe, **kwargs):
+    def _add_outliers(dataframe, **kwargs):
         """
         Calculate a boundary for which a data point will be considered an outlier [bool]
         The boundary is the mean plus "stddev" (number of standard derivations) * the standard derivation
@@ -147,7 +146,7 @@ class ShowResults(object):
         :return: dataframe with added 'is_outlier' bool column
         """
         from pyspark.sql.window import Window
-        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        prediction_col = kwargs.get('prediction_col', 'prediction')
         distance_col = kwargs.get('distance_col', 'distance')
         stddev = kwargs.get('stddev', 2.0)
         assert distance_col in dataframe.columns, 'Distances have not been computed!'
@@ -166,16 +165,16 @@ class ShowResults(object):
     @staticmethod
     def compute_summary(dataframe, **kwargs):
         """
-        
         :param dataframe: 
         :param kwargs: 
             prediction_col can be set in the function call, else it will search for 'predictionCol'
             outlier_col can be set in the function call, else it will search for 'is_outlier'
         :return: 
         """
-        prediction_col = kwargs.get('prediction_col', 'predictionCol')
+        prediction_col = kwargs.get('prediction_col', 'prediction')
         outlier_col = kwargs.get('outlier_col', 'is_outlier')
-
+        if prediction_col == None or outlier_col == None:
+            return None
         count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
 
         return (dataframe
@@ -202,14 +201,10 @@ class ShowResults(object):
 
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
-        dataframe_updated = ShowResults.compute_shift(dataframe, **kwargs)
-        dataframe_updated = ShowResults.add_row_index(dataframe_updated, **kwargs)
-        dataframe_updated = ShowResults.add_distances(dataframe_updated, **kwargs)
-        return ShowResults.add_outliers(dataframe_updated, **kwargs)
-
-
-
-
+        dataframe_updated = ShowResults._compute_shift(dataframe, **kwargs)
+        dataframe_updated = ShowResults._add_row_index(dataframe_updated, **kwargs)
+        dataframe_updated = ShowResults._add_distances(dataframe_updated, **kwargs)
+        return ShowResults._add_outliers(dataframe_updated, **kwargs)
         # # create summary for the clusters along with number in each cluster and number of outliers
         # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
         # list_unique_values = self.compute_summary(dataframe_updated)

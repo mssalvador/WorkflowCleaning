@@ -56,7 +56,7 @@ def make_histogram(dist: list):#, dim):
             kde=True,
             norm_hist=False,
             # ax=ax)
-        )
+        );
 
         fig.canvas.draw()
         plt.show()

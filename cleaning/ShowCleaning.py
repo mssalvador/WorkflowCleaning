@@ -46,7 +46,7 @@ class ShowResults(object):
         self._selected_cluster = 1
         # print(self._data_dict)
 
-    def select_cluster(self):
+    def select_cluster(self, dataframe):
         """
         Method to decide which cluster to pick!
         ### SKAL UNDERSØGES FOR BRUG ###
@@ -57,14 +57,21 @@ class ShowResults(object):
         from ipywidgets import widgets
         from IPython.display import display
 
-        list_options = ['cluster ' + str(i+1) for i in range(self._data_dict['k'])]
+        list_options = ['Cluster ' + str(i+1) for i in range(self._data_dict['k'])]
 
         drop_down_clusters = widgets.Dropdown(
-            options=list_options,
-            value=1,
-            description="Select a Cluster",
-            disabled=False)
+            options= list_options,
+            value= list_options[0],
+            description= "Select a Cluster",
+            disabled= False)
 
+        def observe_cluster_change(change):
+            if change.new != change.old:
+                filtered_df = dataframe.filter(
+                    F.col(self._prediction_columns) == (int(change.new[-1])-1)).select('distance')
+                ShowResults.show_cluster(filtered_df)
+
+        drop_down_clusters.observe(observe_cluster_change, names='value')
         display(drop_down_clusters)
 
     @staticmethod
@@ -187,6 +194,7 @@ class ShowResults(object):
                             col=F.round(F.col('outlier_count') / F.col('count') * 100, scale=0))
                 .withColumnRenamed(existing=prediction_col,
                                    new='Prediction')
+                .withColumn(colName='Prediction',col=F.col('Prediction')-1)
                 .drop('outliers')
                 )
 

@@ -46,15 +46,15 @@ class TestShowResults(PySparkTestCase):
 
     def test_add_row_index(self):
 
-        computed_dataframe = ShowResults.add_row_index(self.dataframe)
+        computed_dataframe = ShowResults._add_row_index(self.dataframe)
         self.assertIn(('rowId', 'bigint'), computed_dataframe.dtypes)
 
-        computed_dataframe = ShowResults.add_row_index(self.dataframe, rowId='roow')
+        computed_dataframe = ShowResults._add_row_index(self.dataframe, rowId='roow')
         self.assertIn(('roow', 'bigint'), computed_dataframe.dtypes)
 
     def test_add_distances(self):
         from math import sqrt
-        computed_dataframe = ShowResults.add_distances(self.dataframe, point_col='point_col')
+        computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
         self.assertIn(('distance', 'double'), computed_dataframe.dtypes)
 
         p_computed_dataframe = computed_dataframe.toPandas()
@@ -63,14 +63,14 @@ class TestShowResults(PySparkTestCase):
             self.assertEqual(val, p_computed_dataframe['distance'][idx])
 
     def test_add_outliers(self):
-        computed_pdf = ShowResults.add_outliers(self.dataframe).toPandas()
+        computed_pdf = ShowResults._add_outliers(self.dataframe).toPandas()
 
         # Boundary pre calculated mean for prediction 0: mean+2*stddev = 8.37
         actual_values = [False]*5+[True]+4*[False]
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
 
     def test_compute_summary(self):
-        computed_df = ShowResults.add_outliers(self.dataframe)
+        computed_df = ShowResults._add_outliers(self.dataframe)
         summary_pdf = ShowResults.compute_summary(computed_df).toPandas()
 
         # counts from predictionCol

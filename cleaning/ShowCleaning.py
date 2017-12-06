@@ -143,18 +143,18 @@ class ShowResults(object):
         :param kwargs: 
             prediction_col can be set in the function call, else it will search for the column name 'predictionCol'
             distance_col can be set in the function call, else it will search for the column name 'distance'
-            stddev (number of standard derivations) can be set in the function call, else default sat to 2
+            no_stddev (number of standard derivations) can be set in the function call, else default sat to 2
         :return: dataframe with added 'is_outlier' bool column
         """
         from pyspark.sql.window import Window
         prediction_col = kwargs.get('prediction_col', 'predictionCol')
         distance_col = kwargs.get('distance_col', 'distance')
-        stddev = kwargs.get('stddev', 2.0)
+        no_stddev = kwargs.get('no_stddev', 2.0)
         assert distance_col in dataframe.columns, 'Distances have not been computed!'
 
         window_outlier = Window().partitionBy(F.col(prediction_col))
         computed_boundary = F.mean(F.col(distance_col))\
-                             .over(window_outlier) + stddev * F.stddev_pop(F.col(distance_col))\
+                             .over(window_outlier) + no_stddev * F.stddev_pop(F.col(distance_col))\
                              .over(window_outlier)
 
         return (dataframe
@@ -166,12 +166,12 @@ class ShowResults(object):
     @staticmethod
     def compute_summary(dataframe, **kwargs):
         """
-        
+        This function creates the summary table for the K-clusters, with their data points, outliers and %-outlier
         :param dataframe: 
         :param kwargs: 
             prediction_col can be set in the function call, else it will search for 'predictionCol'
             outlier_col can be set in the function call, else it will search for 'is_outlier'
-        :return: 
+        :return: Dataframe with Prediction, count, outliers and outlier percentage
         """
         prediction_col = kwargs.get('prediction_col', 'predictionCol')
         outlier_col = kwargs.get('outlier_col', 'is_outlier')
@@ -203,8 +203,11 @@ class ShowResults(object):
         # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
         dataframe_updated = ShowResults.compute_shift(dataframe, **kwargs)
+        # Adds an index column (per default called rowId)
         dataframe_updated = ShowResults.add_row_index(dataframe_updated, **kwargs)
+        # Calculates the distances to the center point for all the data points in each cluster (default name 'distance')
         dataframe_updated = ShowResults.add_distances(dataframe_updated, **kwargs)
+        # Adds 'is_outlier' bool column
         return ShowResults.add_outliers(dataframe_updated, **kwargs)
 
 

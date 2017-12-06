@@ -28,7 +28,6 @@ class GeneralDataImport(object):
     """
     Data object to handle importation of various types of data
     """
-
     counter = 0
     file_ending = {'txt': 'text', 'csv': 'csv', 'parquet': 'parquet', 'jbdc': 'jbdc', 'json': 'json'}
 

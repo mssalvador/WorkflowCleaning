@@ -18,10 +18,7 @@ import itertools
 import pandas as pd
 import numpy as np
 
-sc = SparkContext.getOrCreate()
-sqlCont = SQLContext.getOrCreate(sc=sc)
-
-def create_dummy_data(number_of_samples, feature_names, label_names, **kwargs):
+def create_dummy_data(sc, number_of_samples, feature_names, label_names, **kwargs):
     r"""
     Create a dataframe that contains outliers
 
@@ -47,6 +44,7 @@ def create_dummy_data(number_of_samples, feature_names, label_names, **kwargs):
 
     #label_names = kwargs.get("label_names", [])
     #feature_names = kwargs.get("feature_names", [])
+    sqlCont = SQLContext.getOrCreate(sc=sc)
     outlier_number = kwargs.get("outlier_number", 0)
     outlier_factor = kwargs.get("outlier_factor", 0)
 
@@ -203,7 +201,7 @@ def create_normal_cluster_data_pandas(amounts, means, std=None, labels=None):
     return result
 
 
-def create_normal_cluster_data_spark(dim, n_samples, means, std):
+def create_normal_cluster_data_spark(sc, dim, n_samples, means, std):
     """
     Create a Spark dataframe that with clusters
     :param dim: dimension in data
@@ -214,7 +212,7 @@ def create_normal_cluster_data_spark(dim, n_samples, means, std):
     """
 
     import numpy as np
-
+    sqlCont = SQLContext.getOrCreate(sc=sc)
     # create the fixed schema labels
     schema_fixed = [T.StructField('id', T.IntegerType()),
                     T.StructField('n_clusters', T.IntegerType()),

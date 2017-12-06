@@ -41,6 +41,59 @@ class TestCreate_complete_graph(PySparkTestCase):
         v_r = [0.00017, 0.97045, 0.00117, 1]
         self.results = [x_r, y_r, z_r, v_r]
 
+    def test__class_mass_calculation(self):
+        q = [0.5, 0.8, 0.7]
+        p = [0.5, 0.8, 0.7]
+        computed_values = list(LabelPropagation._class_mass_calculation(p, q))
+        actual_values = [0.25, 0.64, 0.49]
+        for v,w in zip(computed_values, actual_values):
+            self.assertAlmostEqual(v, w, places= 3)
+
+    def test_class_mass_normalization(self):
+
+        # initilization
+        cases_1 = [0.5, 0.5]
+        cases_2 = None
+
+        dic = {'index': [0,1,2,3,4,5],
+               'label': [1.0, 0.0, 0.0, None, None, None],
+               'is_clamped': [True, True, True, False, False, False]}
+        computed_data = pd.DataFrame(dic, columns=['index', 'label', 'is_clamped'])
+        computed_data['initial_label'] = np.reshape(
+            [0.0, 1., 1., 0., .73, .27, .613, .387, .51, .49, .1, .9],
+            [6,2]).tolist()
+        computed_data_frame = self.spark.createDataFrame(computed_data)
+
+        # first case
+        self.label_context_set('priors', cases_1)
+        df_comp = LabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
+        computed_labels = list(map(lambda x: x['initial_label'],
+                                   df_comp.select('initial_label').collect()
+                                   )
+                               )
+        # print(computed_labels)
+        actual_values = np.array(cases_1)*computed_data['initial_label'].tolist()
+        # print(actual_values.tolist())
+        self.assertListEqual(actual_values.tolist(), computed_labels)
+
+        # second case
+        self.label_context_set('priors', cases_2)
+        df_comp = LabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
+        computed_labels = list(map(lambda x: x['initial_label'],
+                                   df_comp.select('initial_label').collect()
+                                   )
+                               )
+        actual_values = np.array([0.67, .33]) * computed_data['initial_label'].tolist()
+        for v, w in zip(computed_labels, actual_values):
+            self.assertAlmostEqual(v[0], w[0],2)
+            self.assertAlmostEqual(v[1], w[1],2)
+
+    def test_compute_sum_of_non_clamped_transitions(self):
+        data = [(0, 0.5, 0), (1, 0.7, 1), (2, 0.3, float('nan')), (3, 0.1, float('nan'))]
+        expected_result = 0.4
+        computed_result = LabelPropagation.compute_sum_of_non_clamped_transitions(data)
+        self.assertEqual(expected_result, computed_result)
+
     def test_jobcontext(self):
         self.assertEqual(self.label_context.constants['k'].value, 2)
     
@@ -169,8 +222,8 @@ class TestCreate_complete_graph(PySparkTestCase):
                          [0.0, 0.0, 1.0, 0.0],
                          [0.0, 0.0, 0.0, 1.0],
                          [1.0, 0.0, 0.0, 0.0],
-                         [0.0, 0.0, 0.0, 0.0],
-                         [0.0, 0.0, 0.0, 0.0]]
+                         [0.25, 0.25, 0.25, 0.25],
+                         [0.25, 0.25, 0.25, 0.25]]
         k = 4
         gen_label_row = partial(LabelPropagation._label_by_row, k)
         computed_label_vec = map(gen_label_row, initial_labels)
@@ -202,7 +255,7 @@ class TestCreate_complete_graph(PySparkTestCase):
     def test_one_iteration(self):
         actual_new_label = [
             [1.0, 0.0], [0.0, 1.0],
-            [0.46984, 0.00023], [0.00009, 0.49225]]
+            [0.73480, 0.26520], [0.25392, 0.74608]]
 
         computed_labels = LabelPropagation.label_propagation(
             self.sc, self.test_df, 'label', 'id',
@@ -210,6 +263,7 @@ class TestCreate_complete_graph(PySparkTestCase):
             standardize= False
         )
         pandas_comp_labels = computed_labels.toPandas()
+        print(pandas_comp_labels)
 
         for idx, vec in enumerate(actual_new_label):
             computed_value = list(pandas_comp_labels['initial_label'][idx])

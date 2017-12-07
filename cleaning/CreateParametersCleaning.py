@@ -13,7 +13,7 @@ from pyspark import SparkContext
 import random
 from shared.WorkflowLogger import logger_info_decorator
 
-sc = SparkContext.getOrCreate()
+#sc = SparkContext.getOrCreate()
 
 
 class ParamsCleaning(object):

@@ -12,7 +12,7 @@ from shared.WorkflowLogger import logger_info_decorator
 
 import numpy as np
 
-sc = SparkContext.getOrCreate()
+#sc = SparkContext.getOrCreate()
 
 ### SPARK_HOME = "/usr/local/share/spark/python/"
 
@@ -160,7 +160,7 @@ class ExecuteWorkflow(object):
         return model
 
     @logger_info_decorator
-    def apply_model(self, model, data_frame):
+    def apply_model(self, sc, model, data_frame):
         """
         Runs the model on a data frame
         :param model: PipelineModel from pyspark

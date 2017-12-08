@@ -1,9 +1,10 @@
 import pyspark
 import pyspark.sql.types as T
-from pyspark.ml import clustering
+from shared.WorkflowLogger import logger_info_decorator, logger
 from ast import literal_eval
 from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
 
+@logger_info_decorator
 def run(sc : pyspark.SparkContext, **kwargs):
 
     # Initialization phase v.1.0
@@ -33,13 +34,15 @@ def run(sc : pyspark.SparkContext, **kwargs):
 
     return clustered_data_frame
 
+@logger_info_decorator
 def _parse_algorithm_variables(vars):
     for key, val in vars.items():
         try:
             vars[key] = literal_eval(val)
         except ValueError as ve:
             print('Data {} is of type {}'.format(key, type(val)))
+            logger.info('Data {} is of type {}'.format(key, type(val)))
         except SyntaxError as se:
             vars[key] = val.strip(' ')
-            print('Data {} is of type {}'.format(key, type(val)))
+            logger.error('Data {} is of type {}'.format(key, type(val)))
     return vars

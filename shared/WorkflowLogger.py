@@ -12,7 +12,7 @@ def create_logger(argument='/tmp/workflow_test.log'):
     """
     # create logger
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create handler
     logger_file_handler = logging.FileHandler(
@@ -43,14 +43,10 @@ def _log_info(orig_function, logger=logger):
         try:
             # print('Ran {} with args {} and kwargs {}'
             #       .format(orig_function.__name__, args, kwargs))
-
             logger.info('Ran {} with args {} and kwargs {}'
                         .format(orig_function.__name__,
-                                args,
-                                kwargs
-                                )
+                                args, kwargs)
                         )
-
             return orig_function(*args, **kwargs)
         except Exception as e:
             tb = sys.exc_info()[2]

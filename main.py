@@ -4,8 +4,6 @@ import sys
 import importlib
 import argparse
 import pyspark
-import json
-import json
 
 package_dict = {
     'semisupervised.zip': './semisupervised', 'cleaning.zip': './cleaning',
@@ -47,7 +45,8 @@ if __name__ == '__main__':
 
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
-        job_module.run(sc, **all_args)
+        data_frame = job_module.run(sc, **all_args)
+        data_frame.show()
     except TypeError as te:
         print('Did not run',te) # make this more logable...
 

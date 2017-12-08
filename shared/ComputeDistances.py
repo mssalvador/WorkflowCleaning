@@ -27,9 +27,10 @@ def compute_distance(point, center):
         return float(np.linalg.norm(point - center, ord=2))
 
 
-def make_histogram(dist: list):#, dim):
-
+def make_histogram(dist: list): # , dim):
     """
+    Makes the histogram of 
+    
     :param dist: Spark data frame  TODO: make this a list input instead
     :param dim: number of _dimensions that needs to be plotted
     :return:
@@ -81,9 +82,6 @@ def make_components_histogram(agg_components, dimension):
     :param dimension: labels containing name of each feature.
     :return: None. Displays a graph
     """
-
-
-
     pass
 
 

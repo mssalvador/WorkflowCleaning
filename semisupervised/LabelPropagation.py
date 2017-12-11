@@ -5,11 +5,11 @@ from pyspark.sql import functions as F
 from shared import context
 import math
 from functools import partial, reduce
-from shared.WorkflowLogger import logger_info_decorator
+from shared.WorkflowLogger import logger_info_decorator, logger
 from semisupervised.LP_Graph import create_complete_graph
 from semisupervised.ClassMassNormalisation import class_mass_normalization
 
-
+@logger_info_decorator
 def generate_summed_weights(context, weights, **kwargs):
 
     """
@@ -26,17 +26,20 @@ def generate_summed_weights(context, weights, **kwargs):
     summed_weights = compute_distributed_weights(columns, weight_col, weights)
     context(broadcast_name, summed_weights)
 
+@logger_info_decorator
 def compute_distributed_weights(columns, weight_col, df_weights):
     summed_weights = (df_weights.groupBy(columns).sum(weight_col)
                       .rdd.map(lambda x: (x[0], x[1])).collectAsMap())
     return summed_weights
 
+@logger_info_decorator
 def compute_transition_values(context, weight, index):
     return weight / context.constants['summed_row_weights'].value[index]
 
 def _sort_by_key(lis):
     return list(map(lambda x: x[1], sorted(lis, key=lambda x: x[0])))
 
+@logger_info_decorator
 def _label_by_row(k, label):
     output = [0.0]*k
     try:
@@ -47,6 +50,7 @@ def _label_by_row(k, label):
     except ValueError as ve:
         return [float(1.0/k)]*k
 
+@logger_info_decorator
 def _compute_entropy(context, **kwargs):
     labels = kwargs.get('labels','initial_label')
     return -reduce(lambda a,b: a+b, map(
@@ -54,11 +58,13 @@ def _compute_entropy(context, **kwargs):
         context.constants[labels].value)
                    )
 
+@logger_info_decorator
 def compute_sum_of_non_clamped_transitions(transition_row):
     # print(math.isnan(transition_row[0][2]))
     candidates = map(lambda x: float(x[1]), filter(lambda x: math.isnan(x[2]), transition_row))
     return reduce(lambda x,y:x+y, candidates)
 
+@logger_info_decorator
 def compute_convergence_iter(transition_row, tol, max_iter):
     for iters in range(max_iter-1,0,-1):
         if transition_row ** iters >= tol:
@@ -66,6 +72,7 @@ def compute_convergence_iter(transition_row, tol, max_iter):
             return iters+1
     return 1
 
+@logger_info_decorator
 def generate_label(context, data_frame= None,
                    label_weights= 'initial_label'):
 
@@ -80,6 +87,7 @@ def generate_label(context, data_frame= None,
             .rdd.map(lambda x: (x['key'], x['label_vector'])).collectAsMap()
             )
 
+@logger_info_decorator
 def explode_dataframe(data_frame, expression):
     df_exploded = (data_frame.withColumn(
         colName='exploded', col=F.explode(F.array(expression))
@@ -89,9 +97,11 @@ def explode_dataframe(data_frame, expression):
                    )
     return df_exploded
 
+@logger_info_decorator
 def _multiply_labels(label, broadcast_label, k):
     return [float(label.dot(broadcast_label[i] )) for i in range(k)]
 
+@logger_info_decorator
 def label_propagation(
         sc, data_frame, label_col= 'label',
         id_col= 'id', feature_cols = None,

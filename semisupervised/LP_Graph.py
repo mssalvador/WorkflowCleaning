@@ -19,12 +19,11 @@ def create_complete_graph(
     assert isinstance(points, list), 'this should be a list, not {}'.format(type(points))
     new_cols = list(set(data_frame.columns) - set(points))
 
-    feature_gen = VectorAssembler(inputCols= points, outputCol= 'features')
+    feature_gen = VectorAssembler(inputCols=points, outputCol='features')
     vector_converter = ConvertAllToVecToMl.ConvertAllToVecToMl(
-        inputCol= feature_gen.getOutputCol(), outputCol= 'conv_feat')
-    standardizer = StandardScaler(
-        withMean= False, withStd= False,
-        inputCol= vector_converter.getOutputCol(), outputCol= 'standard_feat')
+        inputCol=feature_gen.getOutputCol(), outputCol='conv_feat')
+    standardizer = StandardScaler(withMean=False, withStd=False,
+        inputCol=vector_converter.getOutputCol(), outputCol='standard_feat')
 
     if standardize:
         standardizer.setWithMean(True)

@@ -1,152 +1,42 @@
 from unittest import TestCase
-import shared.create_dummy_data as dd
-from pyspark.sql import functions as F
+from pyspark.tests import ReusedPySparkTestCase, PySparkTestCase
+from shared import create_dummy_data
+import functools
+import numpy as np
+import pandas as pd
 
+class TestCreateOutliers(ReusedPySparkTestCase):
 
-class TestCreateOutliers(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.n_samples = [10, 3, 27]
+        self.means = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                      [5.0, 5.0, 5.0, 5.0, 5.0, -5, -5, -5, -5, -5],
+                      [ 1,  5, -4, -9, -9, -5,  8,  0,  6, -2]]
+        self.stds = [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+                     [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+                     [ 8.16, 9.42, 4.27, 0.34 , 8.65, 7.90, 6.14, 5.31, 1.37, 9.96]]
+        self.m = 10
+        self.n = functools.reduce(lambda a, b: a+b, self.n_samples)
+        self.features = [chr(c) for c in range(ord('a'), ord('a')+self.m, 1)]
 
-    sample_size = 20
-    label_list = ['header_1', 'header_2', 'header_3']
-    feature_list = ['feature_1', 'feature_2', 'feature_3', 'feature_4']
-    factor = 10
-    number_of_outliers = 5
+    def test_create_norm_cluster_data_pandas(self):
+        partial_create_dummy = functools.partial(
+            create_dummy_data.create_norm_cluster_data_pandas,
+            n_amounts=self.n_samples, means=self.means, std=None)
 
-    def test_size(self):
-        '''test if the DF is the same size as we asked'''
+        test_instances = [self.m, ['a','b','d','e','c','f','h','u','t','e'], None]
+        result_instances_columns = [self.m, 10, 10]
+        for test_i, result_i in zip(test_instances, result_instances_columns):
+            pdf = partial_create_dummy(features=test_i)
+            self.assertEqual(len(pdf.columns), result_i+2) # check columns
 
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=TestCreateOutliers.label_list,
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
+        self.assertEqual(len(pdf), self.n) # check data point
 
-        res = df_outliers.count()
+    def test_create_norm_cluster_data_spark(self):
+        data_frame = create_dummy_data.create_norm_cluster_data_spark(
+            sc=self.sc, n_amounts = self.n_samples, means = self.means, std = None)
 
-        self.assertEqual(res, TestCreateOutliers.sample_size)
+        self.assertEqual(len(data_frame.columns), self.m+2)
+        self.assertEqual(data_frame.count(), self.n)
 
-    def test_outlier_size(self):
-        '''test if the outliers in the DF is the same size as we asked - both for procentage and integers'''
-
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=TestCreateOutliers.label_list,
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
-
-        res = df_outliers.where(' or '.join(map(lambda f: '(' + f + ' > 1)', TestCreateOutliers.feature_list))).count()
-
-        if isinstance(TestCreateOutliers.number_of_outliers, float):
-            self.assertEqual(res, int(TestCreateOutliers.sample_size*TestCreateOutliers.number_of_outliers))
-        else:
-            self.assertEqual(res, TestCreateOutliers.number_of_outliers)
-
-    def test_size_wo_labels(self):
-        '''test if the DF is the same size as we asked, when there's no labels'''
-
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=TestCreateOutliers.label_list,
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
-
-        res = df_outliers.count()
-        self.assertEqual(res, TestCreateOutliers.sample_size)
-
-    def test_size_wo_features(self):
-        '''test if the DF is the same size as we asked, when there's no features'''
-
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=TestCreateOutliers.label_list,
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
-
-        res = df_outliers.count()
-        self.assertEqual(res, TestCreateOutliers.sample_size)
-
-    def test_type_wo_features(self):
-        '''test if the DF only consists of StringTypes, if we remove features'''
-
-        with self.assertRaises(TypeError) as cm:
-            df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                               label_names=['label'],
-                                               #feature_names=TestCreateOutliers.feature_list,
-                                               outlier_factor=TestCreateOutliers.factor,
-                                               outlier_number=TestCreateOutliers.number_of_outliers)
-
-        error_string = "create_dummy_data() missing 1 required positional argument: 'feature_names'"
-
-        self.assertEqual(str(cm.exception), error_string, str(cm.exception)+" is not equal to: "+error_string)
-
-    def test_type_wo_outlierfactor(self):
-        '''test if the DF only consists of StringTypes, if we remove features'''
-
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=['label'],
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           #outlier_factor=TestCreateOutliers.factor,
-                                           outlier_number=TestCreateOutliers.number_of_outliers)
-
-        res = df_outliers.count()
-        self.assertEqual(res, TestCreateOutliers.sample_size)
-
-    def test_type_wo_outliernumber(self):
-        '''test if the DF only consists of StringTypes, if we remove features'''
-
-        df_outliers = dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                           label_names=['label'],
-                                           feature_names=TestCreateOutliers.feature_list,
-                                           outlier_factor=TestCreateOutliers.factor,
-                                           #outlier_number=TestCreateOutliers.number_of_outliers)
-                                           )
-
-        res = df_outliers.count()
-        self.assertEqual(res, TestCreateOutliers.sample_size)
-
-    def test_size_wo_labels_features(self):
-        '''test for an error when there's no features or labels'''
-
-        with self.assertRaises(TypeError) as cm:
-            dd.create_dummy_data(number_of_samples=TestCreateOutliers.sample_size,
-                                 # label_names=estCreateOutliers.label_list,
-                                 # feature_names=TestCreateOutliers.feature_list,
-                                 # outlier_factor=TestCreateOutliers.factor,
-                                 # outlier_number=TestCreateOutliers.number_of_outliers)
-                                 )
-
-        error_string = "create_dummy_data() missing 2 required positional arguments: 'feature_names' and 'label_names'"
-        self.assertEqual(str(cm.exception), error_string, str(cm.exception)+" is not equal to: "+error_string)
-
-    def test_size_more_outliers(self):
-        '''test for an error when total size is less than outliers'''
-
-        with self.assertRaises(SystemExit) as cm:
-            dd.create_dummy_data(number_of_samples=10,
-                                 label_names=TestCreateOutliers.label_list,
-                                 feature_names=TestCreateOutliers.feature_list,
-                                 outlier_factor=TestCreateOutliers.factor,
-                                 outlier_number=20)
-
-        self.assertEqual(cm.exception.code, "Your total size needs to be bigger then your outlier size")
-
-    def test_make_outliers(self):
-        '''test if number of outliers is as expected'''
-        df = dd.create_dummy_data(number_of_samples=100,
-                                  label_names=TestCreateOutliers.label_list,
-                                  feature_names=TestCreateOutliers.feature_list,
-                                  )
-        outlier_number = 40
-        out_df = dd.make_outliers(df, outlier_number, 100, features=["feature_4"])
-        res = out_df.where(F.col("feature_4") > 1).count()
-        self.assertTrue(outlier_number*0.90 <= res <= outlier_number*1.1, "Numer of outliers is: "+str(res))
-
-    def test_introduce_string_features(self):
-        """Test for string to list conversion in check_input_feature_label"""
-
-        df = dd.create_dummy_data(number_of_samples=10,
-                                  feature_names="x y z",
-                                  label_names="label newLabel")
-
-        columns = df.columns
-
-        self.assertListEqual(columns, ["label", "newLabel", "x", "y", "z"])

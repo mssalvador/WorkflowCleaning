@@ -59,25 +59,7 @@ if __name__ == '__main__':
     # import pandas as pd
     # import matplotlib.pyplot as plt
     # from mpl_toolkits.mplot3d import Axes3D
-    #
-    # helix = PARQUET_PATH+'double_helix.parquet'
-    #
-    # sc = SparkContext.getOrCreate()
-    # spark_session = SparkSession(sc)
-    # spark_session.conf.set("spark.sql.crossJoin.enabled", "true")
-    #
-    # id_col = np.array([0, 1, 2, 3])
-    # # np.random.shuffle(id_col)
-    # data = {
-    #     'label': [0.0, 1.0] + 2 * [None],
-    #     'x': np.array([0., 0.9, 0.1, 0.85]),
-    #     'y': np.array([0., 0.9, 0.1, 0.85]),
-    #     'z': np.array([0., 0.9, 0.1, 0.85]),
-    # }
-    # pdf = pd.DataFrame(data, columns=['label', 'x', 'y', 'z'])
-    # pdf['id'] = id_col
-    #
-    # #df_input = spark_session.createDataFrame(pdf)
+
     # df_input = spark_session.read.parquet(helix)
     # summed_transition = lp.label_propagation(
     #     sc= sc, data_frame= df_input,
@@ -92,18 +74,5 @@ if __name__ == '__main__':
     #     how= 'inner').drop('b.row')
     # combined_hack_df.drop('row_trans').show()
     #
-    # fig = plt.figure()
-    # ax = fig.gca(projection='3d')
     #
-    # pandas_transition = combined_hack_df.toPandas()
-    # for i in range(2):
-    #     ax.scatter(
-    #         pandas_transition[pandas_transition['label'] == i]['x'],
-    #         pandas_transition[pandas_transition['label'] == i]['y'],
-    #         pandas_transition[pandas_transition['label'] == i]['z'])
-    # ax.set_xlabel('X Label')
-    # ax.set_ylabel('Y Label')
-    # ax.set_zlabel('Z Label')
-    # ax.set_title('Our test dataset a double helix')
-    # plt.show()
 

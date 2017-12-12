@@ -181,7 +181,7 @@ class ShowResults(object):
         """
         prediction_col = kwargs.get('prediction_col', 'prediction')
         outlier_col = kwargs.get('outlier_col', 'is_outlier')
-        if prediction_col == None or outlier_col == None:
+        if prediction_col is None or outlier_col is None:
             return None
         count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
 
@@ -208,7 +208,7 @@ class ShowResults(object):
         :return:
         """
 
-        # Shift the prediction column with for, so it goes from 1 to n+1 we need to persist the dataframe in order to
+        # Shift the prediction column, so it goes from n to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
         dataframe_updated = ShowResults._compute_shift(dataframe, **kwargs)
         # Adds an index column (per default called rowId)

@@ -10,14 +10,12 @@ from pyspark.sql import functions as F
 from pyspark import keyword_only
 
 
-
 class ConvertAllToVecToMl(Transformer, HasInputCol, HasOutputCol):
     '''
         This inherrent-class converts a given vector column in a data frame to a ml-dense vector.
         Can be used in a pipeline method
     '''
-    
-    
+
     @keyword_only
     def __init__(self, inputCol=None, outputCol=None):
         super(ConvertAllToVecToMl, self).__init__()

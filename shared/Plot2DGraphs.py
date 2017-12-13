@@ -158,19 +158,23 @@ def plot_known_and_unknown_data(pdf, x='x', y='y', labelCol='used_label', **kwar
     ax.legend(loc=0)
     plt.show()
 
-def plot3D(data):
+def plot3D(data, **kwargs):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
+    label = kwargs.get('label','label')
 
     if not isinstance(data, pd.DataFrame):
         pandas_transition = data.toPandas()
     else:
         pandas_transition = data
-    for i in range(2):
-        ax.scatter(
-            pandas_transition[pandas_transition['known_label'] == i]['x'],
-            pandas_transition[pandas_transition['known_label'] == i]['y'],
-            pandas_transition[pandas_transition['known_label'] == i]['z'])
+
+    pandas_transition= pandas_transition.fillna(-1)
+    pandas_columns = lambda x, pdf: [
+        pdf[pdf[label] == x][dim] for dim in 'x y z'.split(' ')]
+
+    for i in pandas_transition[~pandas_transition[label].isnull()][label].unique():
+        ax.scatter(*pandas_columns(i, pandas_transition))
+
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')

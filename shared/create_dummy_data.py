@@ -8,6 +8,7 @@ import functools
 import itertools
 import pandas as pd
 import numpy as np
+import math
 
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
@@ -47,12 +48,20 @@ def export_csv(data_frame : sql.DataFrame,
                path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):
     return data_frame.write.csv(path=path, mode='overwrite',header=data_frame.columns)
 
-def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0):
+def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
+    if isinstance(missing, float) or missing < 1.0:
+        missing = int(math.ceil(points_pr_helix*missing))
+
     x = np.linspace(0, 10., points_pr_helix)
     double_helix = []
     for i, a in zip(range(2), [alpha, -alpha]):
         double_helix.append(list(map(lambda v: (a*np.sin(v), a*np.cos(v), beta*v, i), x)))
-    return pd.DataFrame(np.vstack(double_helix), columns='x y z color'.split(' '))
+
+    pdf = pd.DataFrame(np.vstack(double_helix), columns='x y z label'.split(' '))
+    unknown_label = lambda x: np.random.permutation([x]*missing+[np.nan]*(points_pr_helix-missing))
+
+    pdf['unknown_label'] = np.hstack((unknown_label(0.0), unknown_label(1.0)))
+    return pdf
 
 def load_mnist(n_samples = None, **kwargs):
     """

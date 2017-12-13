@@ -35,7 +35,8 @@ class TestCreateOutliers(ReusedPySparkTestCase):
 
     def test_create_norm_cluster_data_spark(self):
         data_frame = create_dummy_data.create_spark_data(
-            sc=self.sc, n_amounts = self.n_samples, means = self.means, std = None)
+            sc=self.sc,func= create_dummy_data.create_norm_cluster_data_pandas,
+            n_amounts = self.n_samples, means = self.means, std = None)
 
         self.assertEqual(len(data_frame.columns), self.m+2)
         self.assertEqual(data_frame.count(), self.n)
@@ -45,6 +46,14 @@ class TestCreateOutliers(ReusedPySparkTestCase):
         pdf = create_dummy_data.create_double_helix(n)
         #print(pdf)
         self.assertEqual(len(pdf), n*2)
+
+    def test_create_double_helix_spark(self):
+        double_helix_func = functools.partial(
+            create_dummy_data.create_double_helix, points_pr_helix=100)
+        spark_double_helix = create_dummy_data.create_spark_data(
+            self.sc, double_helix_func)
+        self.assertEqual(spark_double_helix.count(), 200)
+
 
 
 

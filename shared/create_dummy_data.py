@@ -40,9 +40,9 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
         *[ns*[ks] for ns, ks in zip(n_amounts, range(len(n_amounts)))])))
     return data_frame
 
-def create_spark_data(sc, *args ,**kwargs):
+def create_spark_data(sc, func ,**kwargs):
     spark = sql.SparkSession(sparkContext=sc)
-    return spark.createDataFrame(create_norm_cluster_data_pandas(**kwargs))
+    return spark.createDataFrame(func(**kwargs))
 
 def export_csv(data_frame : sql.DataFrame,
                path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):

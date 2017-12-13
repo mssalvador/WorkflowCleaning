@@ -34,9 +34,17 @@ class TestCreateOutliers(ReusedPySparkTestCase):
         self.assertEqual(len(pdf), self.n) # check data point
 
     def test_create_norm_cluster_data_spark(self):
-        data_frame = create_dummy_data.create_norm_cluster_data_spark(
+        data_frame = create_dummy_data.create_spark_data(
             sc=self.sc, n_amounts = self.n_samples, means = self.means, std = None)
 
         self.assertEqual(len(data_frame.columns), self.m+2)
         self.assertEqual(data_frame.count(), self.n)
+
+    def test_create_double_helix(self):
+        n = 300
+        pdf = create_dummy_data.create_double_helix(n)
+        #print(pdf)
+        self.assertEqual(len(pdf), n*2)
+
+
 

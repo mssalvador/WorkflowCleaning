@@ -60,7 +60,6 @@ def load_mnist(n_samples = None, **kwargs):
     :param n_samples: extra parameter that enables extra digits
     :return:
     """
-    # TODO: Denne skal laves færdig
     path = kwargs.get('path','/home/svanhmic/workspace/data/DABAI/mnist')
     train_pdf = pd.read_csv(path+'/train.csv', header=0)
     test_pdf = pd.read_csv(path+'/test.csv',header=0)

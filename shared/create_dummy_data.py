@@ -3,10 +3,7 @@ Created on June, 2017
 
 @author: sidselsrensen
 """
-
-from pyspark.sql import functions as F
-from pyspark.sql import types as T
-from pyspark.sql import SparkSession
+from pyspark import sql
 import functools
 import itertools
 import pandas as pd
@@ -42,7 +39,30 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
         *[ns*[ks] for ns, ks in zip(n_amounts, range(len(n_amounts)))])))
     return data_frame
 
-def create_norm_cluster_data_spark(sc, n_amounts, means, std=None, features=None):
-    spark = SparkSession(sparkContext=sc)
-    return spark.createDataFrame(create_norm_cluster_data_pandas(
-        n_amounts=n_amounts, means=means, std=std, features=features))
+def create_spark_data(sc, *args ,**kwargs):
+    spark = sql.SparkSession(sparkContext=sc)
+    return spark.createDataFrame(create_norm_cluster_data_pandas(**kwargs))
+
+def export_csv(data_frame : sql.DataFrame,
+               path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):
+    return data_frame.write.csv(path=path, mode='overwrite',header=data_frame.columns)
+
+def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0):
+    x = np.linspace(0, 10., points_pr_helix)
+    double_helix = []
+    for i, a in zip(range(2), [alpha, -alpha]):
+        double_helix.append(list(map(lambda v: (a*np.sin(v), a*np.cos(v), beta*v, i), x)))
+    return pd.DataFrame(np.vstack(double_helix), columns='x y z color'.split(' '))
+
+def load_mnist(n_samples = None, **kwargs):
+    """
+    Creates a dataframe with mnist data
+    :param n_samples: extra parameter that enables extra digits
+    :return:
+    """
+    # TODO: Denne skal laves færdig
+    path = kwargs.get('path','/home/svanhmic/workspace/data/DABAI/mnist')
+    train_pdf = pd.read_csv(path+'/train.csv', header=0)
+    test_pdf = pd.read_csv(path+'/test.csv',header=0)
+    return train_pdf, test_pdf
+

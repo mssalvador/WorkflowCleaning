@@ -125,8 +125,7 @@ def label_propagation(
     # Lets make a proper dataset
     df_with_weights = create_complete_graph(
         data_frame= data_frame, points= feature_cols,
-        id_col= 'id', sigma= sigma, standardize= standardize
-    )
+        id_col= 'id', sigma= sigma, standardize= standardize)
 
     #renaming the columns
     df_transition_values = df_with_weights.select(
@@ -137,13 +136,11 @@ def label_propagation(
     df_transition_values.take(1)
 
     generate_summed_weights(
-        context= label_context_set, weights= df_transition_values
-    )
+        context= label_context_set, weights= df_transition_values)
 
     # udf's
     edge_normalization = F.udf(lambda column, weight: compute_transition_values(
-        label_context, weight= weight, index= column),
-                               T.DoubleType()
+        label_context, weight= weight, index= column), T.DoubleType()
     )
     udf_sorts = F.udf(lambda x: DenseVector(_sort_by_key(x)), VectorUDT())
     udf_generate_initial_label = F.udf(lambda x: _label_by_row(

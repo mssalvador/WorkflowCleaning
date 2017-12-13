@@ -42,6 +42,7 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
 
 def create_spark_data(sc, func ,**kwargs):
     spark = sql.SparkSession(sparkContext=sc)
+    spark.conf.set("spark.sql.crossJoin.enabled", "true")
     return spark.createDataFrame(func(**kwargs))
 
 def export_csv(data_frame : sql.DataFrame,
@@ -61,6 +62,7 @@ def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
     unknown_label = lambda x: np.random.permutation([x]*missing+[np.nan]*(points_pr_helix-missing))
 
     pdf['unknown_label'] = np.hstack((unknown_label(0.0), unknown_label(1.0)))
+    pdf['id'] = pdf.index
     return pdf
 
 def load_mnist(n_samples = None, **kwargs):

@@ -158,10 +158,10 @@ def plot_known_and_unknown_data(pdf, x='x', y='y', labelCol='used_label', **kwar
     ax.legend(loc=0)
     plt.show()
 
-def plot3D(data, **kwargs):
+def plot3D(data, *args ,**kwargs):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    label = kwargs.get('label','label')
+    label = kwargs.get('label', args[0])
 
     if not isinstance(data, pd.DataFrame):
         pandas_transition = data.toPandas()

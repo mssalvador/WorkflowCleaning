@@ -17,30 +17,23 @@ class TestShowResults(PySparkTestCase):
         super().setUp()
         self.spark = SparkSession(self.sc)
 
+        c1 = DenseVector(np.array([1.0, 1.0]))
+        c2 = DenseVector(np.array([5.0, 5.0]))
+        c3 = DenseVector(np.array([30.0, 30.0]))
         df = pd.DataFrame(
-            {'predictionCol': [0, 0, 0, 0, 0, 0, 1, 2, 1, 1],
-             'distance': [0.5, 1.5, 0.5, 0.1, 0.01, 6.0, 20.0, 13, 2, 1],
-             'point_col': [DenseVector(np.array([1.0, 1.0])),
-                           DenseVector(np.array([0.0, 0.0])),
-                           DenseVector(np.array([3.0, 3.0])),
-                           DenseVector(np.array([1.0, 1.0])),
-                           DenseVector(np.array([0.0, 0.0])),
-                           DenseVector(np.array([0.0, 0.0])),
-                           DenseVector(np.array([3.0, 3.0])),
-                           DenseVector(np.array([1.0, 1.0])),
-                           DenseVector(np.array([0.0, 0.0])),
-                           DenseVector(np.array([3.0, 3.0]))],
-             'centers': [DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([6.0, 6.0])),
-                         DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([6.0, 6.0])),
-                         DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([2.0, 2.0])),
-                         DenseVector(np.array([6.0, 6.0])),
-                         DenseVector(np.array([6.0, 6.0]))]},
-            columns=['predictionCol', 'distance', 'point_col', 'centers'])
+            {'prediction': [0, 0, 0, 0, 0, 0, 1, 2, 1, 1],
+             'point_col': [DenseVector(np.array([1.0, 2.0])),
+                           DenseVector(np.array([2.0, 1.0])),
+                           DenseVector(np.array([0.0, 1.0])),
+                           DenseVector(np.array([1.0, 0.0])),
+                           DenseVector(np.array([1.0, -1.0])),
+                           DenseVector(np.array([4.0, 5.0])),
+                           DenseVector(np.array([5.0, 6.0])),
+                           DenseVector(np.array([20.0, 30.0])),
+                           DenseVector(np.array([5.0, 7.0])),
+                           DenseVector(np.array([5.0, 10.0]))],
+             'centers': [c1, c1, c1, c1, c1, c1, c2, c3, c2, c2]},
+            columns=['prediction', 'point_col', 'centers'])
 
         self.dataframe = self.spark.createDataFrame(df)
 
@@ -58,19 +51,22 @@ class TestShowResults(PySparkTestCase):
         self.assertIn(('distance', 'double'), computed_dataframe.dtypes)
 
         p_computed_dataframe = computed_dataframe.toPandas()
-        actual_distances = [sqrt(2.0), sqrt(8.0), sqrt(18.0)]
+        actual_distances = [sqrt(1.0), sqrt(1.0), sqrt(1.0), sqrt(1.0), sqrt(4.0),
+                            sqrt(9.0+16.0), sqrt(1.0), sqrt(100.0), sqrt(4.0), sqrt(25.0)]
         for idx, val in enumerate(actual_distances):
             self.assertEqual(val, p_computed_dataframe['distance'][idx])
 
     def test_add_outliers(self):
-        computed_pdf = ShowResults._add_outliers(self.dataframe).toPandas()
+        computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
+        computed_pdf = ShowResults._add_outliers(computed_dataframe).toPandas()
 
-        # Boundary pre calculated mean for prediction 0: mean+2*stddev = 8.37
+        # Boundary pre calculated mean for prediction 0: mean+2*stddev
         actual_values = [False]*5+[True]+4*[False]
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
 
     def test_compute_summary(self):
-        computed_df = ShowResults._add_outliers(self.dataframe)
+        computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
+        computed_df = ShowResults._add_outliers(computed_dataframe)
         summary_pdf = ShowResults.compute_summary(computed_df).toPandas()
 
         # counts from predictionCol

@@ -1,8 +1,8 @@
-'''
+"""
 Created on Feb 13, 2017
 
 @author: svanhmic
-'''
+"""
 from pyspark.ml.param.shared import HasInputCol, HasOutputCol
 from pyspark.ml import Transformer
 from pyspark.ml.linalg import Vectors, VectorUDT
@@ -12,7 +12,7 @@ from pyspark import keyword_only
 
 class ConvertAllToVecToMl(Transformer, HasInputCol, HasOutputCol):
     """
-        This inherrent-class converts a given vector column in a data frame to a ml-dense vector.
+        This inherent-class converts a given vector column in a data frame to a ml-dense vector.
         Can be used in a pipeline method
     """
 

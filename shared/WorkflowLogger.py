@@ -31,6 +31,7 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     return logger
 
+
 logger = create_logger(
     argument='/tmp/workflow_test.log')
 
@@ -54,12 +55,6 @@ def _log_info(orig_function, logger=logger):
             raise
     return wrapper_func
 
+
 # Decorators to be used
 logger_info_decorator = partial(_log_info, logger=logger)  # info
-
-
-
-
-
-
-

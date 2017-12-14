@@ -60,10 +60,10 @@ class ShowResults(object):
         list_options = ['Cluster ' + str(i+1) for i in range(self._data_dict['k'])]
 
         drop_down_clusters = widgets.Dropdown(
-            options= list_options,
-            value= list_options[0],
-            description= "Select a Cluster",
-            disabled= False)
+            options=list_options,
+            value=list_options[0],
+            description="Select a Cluster",
+            disabled=False)
 
         def observe_cluster_change(change):
             if change.new != change.old:
@@ -94,7 +94,7 @@ class ShowResults(object):
         Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
         
         :param dataframe: 
-        :param kwargs: prediction_col can be set in the function call, else it will search for 'predictionCol'
+        :param kwargs: prediction_col can be set in the function call, else it will search for 'prediction'
         :return: dataframe with shifted prediction_col
         """
         prediction_col = kwargs.get('prediction_col', 'prediction')
@@ -195,7 +195,7 @@ class ShowResults(object):
                             col=F.round(F.col('outlier_count') / F.col('count') * 100, scale=0))
                 .withColumnRenamed(existing=prediction_col,
                                    new='Prediction')
-                .withColumn(colName='Prediction',col=F.col('Prediction')-1)
+                .withColumn(colName='Prediction', col=F.col('Prediction')-1)
                 .drop('outliers')
                 )
 
@@ -217,8 +217,6 @@ class ShowResults(object):
         dataframe_updated = ShowResults._add_distances(dataframe_updated, **kwargs)
         # Adds 'is_outlier' bool column
         return ShowResults._add_outliers(dataframe_updated, **kwargs)
-
-
 
         # # create summary for the clusters along with number in each cluster and number of outliers
         # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it

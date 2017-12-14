@@ -4,8 +4,9 @@ from shared.WorkflowLogger import logger_info_decorator, logger
 from ast import literal_eval
 from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
 
+
 @logger_info_decorator
-def run(sc : pyspark.SparkContext, **kwargs):
+def run(sc: pyspark.SparkContext, **kwargs):
 
     # Initialization phase v.1.0
     import_path = kwargs.get('input_data', None)
@@ -33,6 +34,7 @@ def run(sc : pyspark.SparkContext, **kwargs):
         sc=sc, model=training_model, data_frame=training_data_frame)
 
     return clustered_data_frame
+
 
 @logger_info_decorator
 def _parse_algorithm_variables(vars):

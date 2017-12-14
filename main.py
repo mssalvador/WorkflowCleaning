@@ -48,9 +48,7 @@ if __name__ == '__main__':
         data_frame = job_module.run(sc, **all_args)
         data_frame.show()
     except TypeError as te:
-        print('Did not run',te) # make this more logable...
-
-
+        print('Did not run', te) # make this more logable...
 
     # from pyspark import SparkContext
     # from pyspark.sql import SparkSession

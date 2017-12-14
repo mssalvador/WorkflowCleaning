@@ -12,6 +12,7 @@ import itertools
 import pandas as pd
 import numpy as np
 
+
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
     Creates an n*m dimensional dataframe with normal distributed data
@@ -41,6 +42,7 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     data_frame['k'] = np.array(list(itertools.chain(
         *[ns*[ks] for ns, ks in zip(n_amounts, range(len(n_amounts)))])))
     return data_frame
+
 
 def create_norm_cluster_data_spark(sc, n_amounts, means, std=None, features=None):
     spark = SparkSession(sparkContext=sc)

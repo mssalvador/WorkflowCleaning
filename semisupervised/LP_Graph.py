@@ -8,9 +8,8 @@ from shared import ConvertAllToVecToMl
 from shared.WorkflowLogger import logger_info_decorator
 
 @logger_info_decorator
-def create_complete_graph(
-        data_frame, id_col= None,
-        points= None, sigma= 0.7, standardize = True):
+def create_complete_graph(data_frame, id_col=None, points=None,
+                          sigma=0.7, standardize=True):
     """
     Does a cross-product on the dataframe. And makes sure that the "points" are kept as a vector
     points: column names that should be the feature vector
@@ -32,22 +31,18 @@ def create_complete_graph(
     pipeline = Pipeline(stages=[feature_gen, vector_converter, standardizer])
 
     model = pipeline.fit(data_frame)
-    df_cleaned = (model
-                  .transform(data_frame)
-                  .select(new_cols + [F.col(standardizer.getOutputCol()).alias('features')])
-                  )
-    a_names = [F.col(name).alias('a_' + name) for name in df_cleaned.columns]
-    b_names = [F.col(name).alias('b_' + name) for name in df_cleaned.columns]
+    df_cleaned = (model.transform(data_frame)
+        .select(new_cols + [F.col(standardizer.getOutputCol()).alias('features')]))
+
+    a_names = [F.col(name).alias('a_'+name) for name in df_cleaned.columns]
+    b_names = [F.col(name).alias('b_'+name) for name in df_cleaned.columns]
 
     compute_distance_squared = F.udf(
         lambda x, y: _compute_weights(x, y, sigma), T.DoubleType())
 
     distance = compute_distance_squared(F.col('a_features'), F.col('b_features'))
-    return (df_cleaned
-            .select(*a_names)
-            .join(df_cleaned.select(*b_names))
-            .withColumn('weights_ab', distance)
-            )
+    return (df_cleaned.select(*a_names).join(df_cleaned.select(*b_names))
+        .withColumn('weights_ab', distance))
 
 @logger_info_decorator
 def _compute_weights(vec_x, vec_y, sigma):

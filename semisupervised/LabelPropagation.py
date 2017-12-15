@@ -73,8 +73,8 @@ def compute_convergence_iter(transition_row, tol, max_iter):
     return 1
 
 @logger_info_decorator
-def generate_label(context, data_frame= None,
-                   label_weights= 'initial_label'):
+def generate_label(context, data_frame=None,
+                   label_weights='initial_label'):
 
     expression = [F.struct(
         F.lit(i).alias('key'),
@@ -103,11 +103,11 @@ def _multiply_labels(label, broadcast_label, k):
 
 @logger_info_decorator
 def label_propagation(
-        sc, data_frame, label_col= 'label',
-        id_col= 'id', feature_cols = None,
-        k= 2, sigma= 0.7, max_iters= 5,
-        tol= 0.05, standardize= True,
-        eval_type= 'max', priors= None):
+        sc, data_frame, label_col='label',
+        id_col='id', feature_cols=None,
+        k=2, sigma=0.7, max_iters=5,
+        tol=0.05, standardize=True,
+        eval_type='max', priors=None):
     """
     The actual label propagation algorithm
     :param:eval_type: 'Type of after evaluation; two are supported
@@ -124,8 +124,9 @@ def label_propagation(
 
     # Lets make a proper dataset
     df_with_weights = create_complete_graph(
-        data_frame= data_frame, points= feature_cols,
-        id_col= 'id', sigma= sigma, standardize= standardize)
+        data_frame=data_frame, points=feature_cols,
+        id_col='id', sigma=sigma, standardize=standardize)
+    # df_with_weights.write.json('/home/svanhmic/weights.json')
 
     #renaming the columns
     df_transition_values = df_with_weights.select(
@@ -136,68 +137,58 @@ def label_propagation(
     df_transition_values.take(1)
 
     generate_summed_weights(
-        context= label_context_set, weights= df_transition_values)
+        context=label_context_set, weights=df_transition_values)
 
     # udf's
     edge_normalization = F.udf(lambda column, weight: compute_transition_values(
-        label_context, weight= weight, index= column), T.DoubleType()
+        label_context, weight=weight, index=column), T.DoubleType()
     )
     udf_sorts = F.udf(lambda x: DenseVector(_sort_by_key(x)), VectorUDT())
     udf_generate_initial_label = F.udf(lambda x: _label_by_row(
         label_context.constants['k'].value, x), T.ArrayType(T.DoubleType()))
     udf_summation = F.udf(lambda col: float(np.sum(col)), T.DoubleType())
     udf_normalization = F.udf(lambda vector, norm: DenseVector(vector.toArray() / norm), VectorUDT())
-    udf_convergence_sum = F.udf(lambda x: compute_sum_of_non_clamped_transitions(x),
-                                T.DoubleType())
+    udf_convergence_sum = F.udf(
+        lambda x: compute_sum_of_non_clamped_transitions(x), T.DoubleType())
     udf_find_max_iter = F.udf(lambda x: compute_convergence_iter(
         x, label_context.constants['tol'].value, max_iters), T.IntegerType())
 
     df_normalized_transition_values = df_transition_values.withColumn(
-        colName= 'transition_ab', col= edge_normalization('column', 'weights_ab')
+        colName='transition_ab', col=edge_normalization('column', 'weights_ab')
     )
     convert_None_to_nan_expr = F.when(
-        F.col('row_label') == None, value= np.NaN).otherwise(F.col('row_label'))
+        F.col('row_label') == None, value=np.NaN).otherwise(F.col('row_label'))
 
-    df_aggregated_by_trans = (df_normalized_transition_values
-                              .groupBy('row','row_label')
-                              .agg(F.collect_list(F.struct('column', 'transition_ab', 'column_label')).alias('row_trans'))
-                              )
+    df_aggregated_by_trans = (df_normalized_transition_values.groupBy('row','row_label')
+        .agg(F.collect_list(F.struct('column', 'transition_ab', 'column_label')).alias('row_trans')))
 
-    df_generate_normed_transitions = (
-        df_aggregated_by_trans
-            .withColumn(colName= 'converge_summed_transition',
-                        col= udf_convergence_sum('row_trans'))
-            .withColumn(colName= 'row_trans', col= udf_sorts('row_trans'))
-            .withColumn(colName= 'label', col= convert_None_to_nan_expr)
-            .withColumn(colName= 'initial_label',
-                        col= udf_generate_initial_label('label'))
-            .withColumn(colName= 'is_clamped', col= ~F.isnan('label'))
-            .withColumn(colName= 'summed_transition',
-                        col= udf_summation(F.col('row_trans')))
-            .withColumn(colName= 'converge_summed_transition',
-                        col= F.col('converge_summed_transition')/F.col('summed_transition')
-                        )
-            .withColumn(colName= 'max_iteration',
-                        col= udf_find_max_iter(F.col('converge_summed_transition'))
-                        )
-            .withColumn(colName= 'row_trans',
-                        col= udf_normalization('row_trans', 'summed_transition'))
+    df_generate_normed_transitions = (df_aggregated_by_trans
+        .withColumn(colName='converge_summed_transition', col=udf_convergence_sum('row_trans'))
+        .withColumn(colName='row_trans', col=udf_sorts('row_trans'))
+        .withColumn(colName='label', col=convert_None_to_nan_expr)
+        .withColumn(colName='initial_label', col=udf_generate_initial_label('label'))
+        .withColumn(colName='is_clamped', col=~F.isnan('label'))
+        .withColumn(colName='summed_transition', col=udf_summation(F.col('row_trans')))
+        .withColumn(colName='converge_summed_transition',
+                    col=F.col('converge_summed_transition')/F.col('summed_transition'))
+        .withColumn(colName='max_iteration',
+                    col=udf_find_max_iter(F.col('converge_summed_transition')))
+        .withColumn(colName='row_trans', col=udf_normalization('row_trans', 'summed_transition'))
     )
 
     df_transition_matrix = df_generate_normed_transitions.select(
         'row', 'label', 'initial_label', 'row_trans', 'is_clamped', 'max_iteration'
     ).orderBy('row').cache()
     # df_transition_matrix.printSchema()
-    # df_transition_matrix.show(truncate=False)
+    # df_transition_matrix.write.json('/tmp/transition_mat.json')
     dict_initial_label = generate_label(
-        context= label_context, data_frame= df_transition_matrix,
-        label_weights= 'initial_label'
-    )
+        context=label_context, data_frame=df_transition_matrix,
+        label_weights='initial_label')
     #
     convergence_iteration = (df_transition_matrix
-                             .filter(~F.col('is_clamped'))
-                             .agg(F.max('max_iteration').alias('max_iteration'))
-                             .collect()[0]['max_iteration'])
+        .filter(~F.col('is_clamped'))
+        .agg(F.max('max_iteration').alias('max_iteration'))
+        .collect()[0]['max_iteration'])
     print('Number of iterations towards convergence: {}'.format(convergence_iteration))
     label_context_set('initial_label', dict_initial_label)
     # df_transition_matrix.show(truncate=False)
@@ -206,38 +197,35 @@ def label_propagation(
     while iters < convergence_iteration:
         iters+=1
         udf_dot = F.udf(lambda l: _multiply_labels(
-            label= l,
-            broadcast_label= label_context.constants['initial_label'].value,
-            k= label_context.constants['k'].value),
+            label=l, broadcast_label=label_context.constants['initial_label'].value,
+            k=label_context.constants['k'].value),
                         T.ArrayType(T.DoubleType())
                         )
 
         clamping_expr = F.when(F.col('is_clamped'), F.col('initial_label')).otherwise(udf_dot('row_trans'))
         df_transition_matrix = (
-            df_transition_matrix.withColumn(colName= 'new_label', col= clamping_expr)
+            df_transition_matrix.withColumn(colName='new_label', col=clamping_expr)
                 .orderBy('row').cache()
         )
 
         # convert the column with labels to a dictionary with vector label
         dict_initial_label = generate_label(
-            context= label_context, data_frame= df_transition_matrix,
-            label_weights= 'new_label'
+            context=label_context, data_frame=df_transition_matrix,
+            label_weights='new_label'
         )
 
         # Check to see if some of the new labels can be clamped
         df_transition_matrix = (df_transition_matrix.withColumn(
-            colName= 'initial_label', col= F.col('new_label'))
-                                .drop('new_label')
-                                )
+            colName='initial_label', col=F.col('new_label')).drop('new_label'))
 
         label_context_set('initial_label', dict_initial_label)
         # print("iteration {} label values \n{}\n{}\n".format(iters, *label_context.constants['initial_label'].value.items()))
         df_transition_matrix.unpersist()
 
     if eval_type == 'cmn':
-        df_transition_matrix =  class_mass_normalization(label_context, df_transition_matrix)
+        df_transition_matrix = class_mass_normalization(label_context, df_transition_matrix)
 
     udf_descision_selection = F.udf(
             lambda x: float(np.argmax(np.array(x))), T.DoubleType())
     return df_transition_matrix.withColumn(
-            colName= 'label', col= udf_descision_selection(F.col('initial_label')))
+            colName='label', col=udf_descision_selection(F.col('initial_label')))

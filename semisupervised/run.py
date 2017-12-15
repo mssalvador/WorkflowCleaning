@@ -1,5 +1,5 @@
 from semisupervised.LabelPropagation import label_propagation
-from shared.WorkflowLogger import logger_info_decorator, logger
+from shared.WorkflowLogger import logger_info_decorator
 from pyspark.sql import SparkSession
 from pyspark.sql import types as T
 import functools

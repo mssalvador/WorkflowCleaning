@@ -9,6 +9,8 @@ from pyspark.ml.linalg import DenseVector, SparseVector
 import pandas as pd
 import numpy as np
 from semisupervised import LabelPropagation
+from semisupervised.ClassMassNormalisation import _class_mass_calculation
+from semisupervised.LP_Graph import _compute_weights
 
 class TestCreate_complete_graph(PySparkTestCase):
 
@@ -44,9 +46,10 @@ class TestCreate_complete_graph(PySparkTestCase):
     def test__class_mass_calculation(self):
         q = [0.5, 0.8, 0.7]
         p = [0.5, 0.8, 0.7]
-        computed_values = list(LabelPropagation._class_mass_calculation(p, q))
+
+        computed_values = list(_class_mass_calculation(p, q))
         actual_values = [0.25, 0.64, 0.49]
-        for v,w in zip(computed_values, actual_values):
+        for v, w in zip(computed_values, actual_values):
             self.assertAlmostEqual(v, w, places= 3)
 
     def test_class_mass_normalization(self):
@@ -198,8 +201,8 @@ class TestCreate_complete_graph(PySparkTestCase):
         data = [x,y,z,v]
         sigma = self.label_context.constants['sigma'].value
 
-        for i,j in product(range(4),range(4)):
-            computed_weight = LabelPropagation._compute_weights(data[i], data[j], sigma)
+        for i, j in product(range(4),range(4)):
+            computed_weight = _compute_weights(data[i], data[j], sigma)
             self.assertAlmostEqual(self.results[i][j], computed_weight, 5)
 
 
@@ -209,8 +212,8 @@ class TestCreate_complete_graph(PySparkTestCase):
                        DenseVector(z),
                        DenseVector(v)]
 
-        for i,j in product(range(4),range(4)):
-            computed_weight = LabelPropagation._compute_weights(sparse_data[i], sparse_data[j], sigma)
+        for i, j in product(range(4),range(4)):
+            computed_weight = _compute_weights(sparse_data[i], sparse_data[j], sigma)
             self.assertAlmostEqual(self.results[i][j], computed_weight, 5)
 
     # Test label generation

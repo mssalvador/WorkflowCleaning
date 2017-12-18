@@ -1,9 +1,10 @@
 from semisupervised.LabelPropagation import label_propagation
 from shared.WorkflowLogger import logger_info_decorator
+from shared.parse_algorithm_variables import parse_algorithm_variables
 from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
 from pyspark.sql import types as T
-import numpy as np
+from pyspark.sql import functions as F
 import  functools
 
 default_lp_param = {'sigma': 0.42, 'tol':0.01, 'k': 2, 'max_iters': 5,'eval_type': 'max' }
@@ -19,7 +20,7 @@ def run(sc, **kwargs):
     feature_columns = [T.StructField(f, T.DoubleType(), False) for f in kwargs.get('features', None)]
     label_columns = [T.StructField(kwargs.get('labels', None), T.IntegerType(), True)]
     id_column = [T.StructField(idx, T.IntegerType(), False) for idx in kwargs.get('id', 'id')]
-    algo_types = kwargs.get('algo_params', {})
+    algo_types = parse_algorithm_variables(kwargs.get('algo_params', {}))
     for key in default_lp_param.keys():
         if key not in algo_types:
             algo_types[key] = default_lp_param[key]
@@ -34,6 +35,10 @@ def run(sc, **kwargs):
         label_col=kwargs.get('labels', None), id_col=kwargs.get('id', 'id')[0],
         feature_cols=kwargs.get('features', None))
     output_data_frame = partial_lp(**algo_types)
-    # plot3D(output_data_frame)
+
+    merged_df = input_data_frame.alias('a').join(
+        output_data_frame.alias('b'), on=(F.col('a.id') == F.col('b.row')),
+        how='inner')
+    plot3D(merged_df, 'label')
     # Return result
     return output_data_frame

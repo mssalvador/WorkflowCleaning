@@ -71,14 +71,14 @@ def _check_label(label):
 
 @logger_info_decorator
 def compute_sum_of_non_clamped_transitions(transition_row, label='column_label'):
-
     candidates = list(filter(lambda v: _check_label(v[label]), transition_row))
     try:
-        return reduce(lambda x, y: x['transition_ab'] + y['transition_ab'], candidates)
+        summation = reduce(lambda x, y: x+y, map(lambda x: x['transition_ab'], candidates))
     except TypeError as te:
-        print('no candidates {}'.format(candidates))
-        return 1
-
+        logger.error('no candidates {}'.format(candidates[:3]))
+        #print('Error: {} - No candidates {}'.format(te,candidates))
+        summation = 1
+    return summation
 
 
 @logger_info_decorator
@@ -89,7 +89,8 @@ def compute_convergence_iter(transition_row, tol, max_iter):
                 #print(transition_row ** iters)
                 return iters+1
         except TypeError as te:
-            print('transition_row type {}'.format(type(transition_row)))
+            # print('transition_row type {}'.format(type(transition_row)))
+            logger.error('transition_row type {}'.format(type(transition_row)))
     return 1
 
 @logger_info_decorator
@@ -215,7 +216,7 @@ def label_propagation(
     df_aggregated_by_trans = _aggregate_by_trans_vals(
         data_frame=df_normed_trans_none_lab, row_col='row', row_col_label='row_label',
         column_col='column', weight_col='transition_ab', column_lab_col='column_label')
-    # df_aggregated_by_trans.show()
+    # df_aggregated_by_trans.select('row','row_trans').show(5,truncate=False)
 
     df_generate_normed_transitions = (df_aggregated_by_trans
         .withColumn(colName='converge_summed_transition', col=udf_convergence_sum('row_trans'))
@@ -226,7 +227,7 @@ def label_propagation(
         .withColumn(colName='converge_summed_transition',
                     col=F.col('converge_summed_transition')/F.col('summed_transition'))
     )
-    # df_generate_normed_transitions.show(5)
+    #df_generate_normed_transitions.select('row','row_trans','converge_summed_transition').show(5,False)
 
     df_tester = (df_generate_normed_transitions
         .withColumn(colName='max_iteration',

@@ -10,13 +10,13 @@ def double_helix(sc, example, label):
         alpha=example['alpha'], beta=example['beta'], missing=example['missing'])
 
     # spark_double_helix.show()
-    # plot3D(spark_double_helix, label ,**example)
+    plot3D(spark_double_helix, label ,**example)
     spark_double_helix = spark_double_helix.withColumnRenamed(
         existing='label', new='original_label')
     weight_transition = label_propagation(
         sc=sc, data_frame=spark_double_helix,
         label_col=label, id_col='id', feature_cols='x y z'.split(),
-        k=2, max_iters=20, sigma=0.43, )
+        k=2, max_iters=25, sigma=0.43, )
 
     result = spark_double_helix.alias('a').join(
         weight_transition.alias('b'), F.col('a.id') == F.col('b.row'),

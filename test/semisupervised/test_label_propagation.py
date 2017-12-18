@@ -2,6 +2,7 @@ from pyspark.tests import PySparkTestCase
 from pyspark.sql import SparkSession
 from shared.context import JobContext
 from pyspark.sql import functions as F
+from pyspark import Row
 from functools import partial
 from itertools import product
 
@@ -92,10 +93,14 @@ class TestCreate_complete_graph(PySparkTestCase):
             self.assertAlmostEqual(v[1], w[1],2)
 
     def test_compute_sum_of_non_clamped_transitions(self):
-        data = [(0, 0.5, 0), (1, 0.7, 1), (2, 0.3, float('nan')), (3, 0.1, float('nan'))]
+        test_row = Row('column', 'transition_ab', 'column_label')
+        data = [test_row(0, 0.5, 0), test_row(1, 0.7, 1),
+                test_row(2, 0.3, float('nan')), test_row(3, 0.1, float('nan'))]
         expected_result = 0.4
         computed_result = LabelPropagation.compute_sum_of_non_clamped_transitions(data)
         self.assertEqual(expected_result, computed_result)
+        no_value = LabelPropagation.compute_sum_of_non_clamped_transitions(data[:1])
+        self.assertEqual(1.0, no_value)
 
     def test_jobcontext(self):
         self.assertEqual(self.label_context.constants['k'].value, 2)
@@ -254,7 +259,6 @@ class TestCreate_complete_graph(PySparkTestCase):
             self.assertListEqual(val, list(t_pdf.iloc[idx,:]))
 
     # Test one iteration
-
     def test_one_iteration(self):
         actual_new_label = [
             [1.0, 0.0], [0.0, 1.0],
@@ -274,3 +278,30 @@ class TestCreate_complete_graph(PySparkTestCase):
                 self.assertAlmostEqual(val, computed_value[jdx], 4)
 
         print(computed_labels.toPandas())
+
+    def test_one_iteration_v2(self):
+        actual_new_label = [
+            [1.0, 0.0], [0.0, 1.0],
+            [0.73480, 0.26520], [0.25392, 0.74608]]
+
+        new_test_df = self.test_df.withColumn(
+            colName='label', col=F.when(F.isnan(F.col('label')), None).otherwise(F.col('label')))
+        computed_labels = LabelPropagation.label_propagation(
+            self.sc, new_test_df, 'label', 'id',
+            ['a', 'b', 'c'], k=2, sigma=0.5, max_iters=1,
+            standardize=False
+        )
+        pandas_comp_labels = computed_labels.toPandas()
+        print(pandas_comp_labels)
+
+        for idx, vec in enumerate(actual_new_label):
+            computed_value = list(pandas_comp_labels['initial_label'][idx])
+            for jdx, val in enumerate(vec):
+                self.assertAlmostEqual(val, computed_value[jdx], 4)
+
+        print(computed_labels.toPandas())
+
+    def test_correct_label_nan(self):
+        df_correct = LabelPropagation._correct_label_nan(self.test_df, label_column='label')
+        label_col = [x['label'] for x in df_correct.select('label').collect()]
+        self.assertIn(None, label_col)

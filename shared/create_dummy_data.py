@@ -53,7 +53,7 @@ def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
     if isinstance(missing, float) or missing < 1.0:
         missing = int(math.ceil(points_pr_helix*missing))
 
-    x = np.linspace(0, 10., points_pr_helix)
+    x = np.random.uniform(0., 2*3.1415, points_pr_helix)
     double_helix = []
     for i, a in zip(range(2), [alpha, -alpha]):
         double_helix.append(list(map(lambda v: (a*np.sin(v), a*np.cos(v), beta*v, i), x)))

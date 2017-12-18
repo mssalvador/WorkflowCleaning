@@ -27,18 +27,22 @@ def generate_summed_weights(context, weights, **kwargs):
     summed_weights = compute_distributed_weights(columns, weight_col, weights)
     context(broadcast_name, summed_weights)
 
+
 @logger_info_decorator
 def compute_distributed_weights(columns, weight_col, df_weights):
     summed_weights = (df_weights.groupBy(columns).sum(weight_col)
                       .rdd.map(lambda x: (x[0], x[1])).collectAsMap())
     return summed_weights
 
+
 @logger_info_decorator
 def compute_transition_values(context, weight, index):
     return weight / context.constants['summed_row_weights'].value[index]
 
+
 def _sort_by_key(lis):
     return list(map(lambda x: x[1], sorted(lis, key=lambda x: x[0])))
+
 
 @logger_info_decorator
 def _label_by_row(k, label):
@@ -93,6 +97,7 @@ def compute_convergence_iter(transition_row, tol, max_iter):
             logger.error('transition_row type {}'.format(type(transition_row)))
     return 1
 
+
 @logger_info_decorator
 def generate_label(context, data_frame=None,
                    label_weights='initial_label'):
@@ -108,6 +113,7 @@ def generate_label(context, data_frame=None,
             .rdd.map(lambda x: (x['key'], x['label_vector'])).collectAsMap()
             )
 
+
 @logger_info_decorator
 def explode_dataframe(data_frame, expression):
     df_exploded = (data_frame.withColumn(
@@ -118,9 +124,11 @@ def explode_dataframe(data_frame, expression):
                    )
     return df_exploded
 
+
 @logger_info_decorator
 def _multiply_labels(label, broadcast_label, k):
     return [float(label.dot(broadcast_label[i] )) for i in range(k)]
+
 
 @logger_info_decorator
 def _correct_label_nan(data_frame, label_column='column_label'):
@@ -132,6 +140,7 @@ def _correct_label_nan(data_frame, label_column='column_label'):
         colName=label_column,
         col=F.when(F.isnan(label_column), None)
             .otherwise(F.col(label_column)))
+
 
 @logger_info_decorator
 def _aggregate_by_trans_vals(data_frame, **kwargs):

@@ -26,7 +26,7 @@ def run(sc : pyspark.SparkContext, **kwargs):
 
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
-        cols_labels=label_columns,standardize=standardizer
+        cols_labels=label_columns, standardize=standardizer
     )
 
     training_model = cleaning_workflow.execute_pipeline(training_data_frame)

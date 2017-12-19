@@ -20,7 +20,7 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     # create formatter
     logger_format = logging.Formatter(
-        '%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+        '%(asctime)s;%(levelname)s;%(name)s;%(message)s')
 
     # add logger_file_handler to logger
     logger.addHandler(logger_file_handler)
@@ -44,7 +44,7 @@ def _log_info(orig_function, logger=logger):
         try:
             # print('Ran {} with args {} and kwargs {}'
             #       .format(orig_function.__name__, args, kwargs))
-            logger.info('Ran {} with args {} and kwargs {}'
+            logger.info('Ran {}; args {}; kwargs {}'
                         .format(orig_function.__name__,
                                 args, kwargs)
                         )

@@ -1,7 +1,8 @@
 import pyspark
 import pyspark.sql.types as T
-from shared.WorkflowLogger import logger_info_decorator, logger
-from ast import literal_eval
+from shared.WorkflowLogger import logger_info_decorator
+from shared.parse_algorithm_variables import parse_algorithm_variables
+
 from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
 
 
@@ -13,7 +14,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_columns = kwargs.get('features', None)
     label_columns = kwargs.get('labels', 'k')
     id_column = kwargs.get('id', 'id')
-    algorithm_params = _parse_algorithm_variables(kwargs.get('algo_params', None))
+    algorithm_params = parse_algorithm_variables(kwargs.get('algo_params', None))
     standardizer = algorithm_params.get('standardizer', False)
 
     spark_session = pyspark.sql.SparkSession(sc)
@@ -26,7 +27,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
 
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
-        cols_labels=label_columns,standardize=standardizer
+        cols_labels=label_columns, standardize=standardizer
     )
 
     training_model = cleaning_workflow.execute_pipeline(training_data_frame)
@@ -35,16 +36,3 @@ def run(sc: pyspark.SparkContext, **kwargs):
 
     return clustered_data_frame
 
-
-@logger_info_decorator
-def _parse_algorithm_variables(vars):
-    for key, val in vars.items():
-        try:
-            vars[key] = literal_eval(val)
-        except ValueError as ve:
-            print('Data {} is of type {}'.format(key, type(val)))
-            logger.info('Data {} is of type {}'.format(key, type(val)))
-        except SyntaxError as se:
-            vars[key] = val.strip(' ')
-            logger.error('Data {} is of type {}'.format(key, type(val)))
-    return vars

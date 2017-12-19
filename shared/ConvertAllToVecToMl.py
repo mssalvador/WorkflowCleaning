@@ -31,7 +31,7 @@ class ConvertAllToVecToMl(Transformer, HasInputCol, HasOutputCol):
 
         def f(s):
             return Vectors.dense([float(x) for x in s.toArray()])
-        
+
         t = VectorUDT()
         out_col = self.getOutputCol()
         in_col = dataset[self.getInputCol()]

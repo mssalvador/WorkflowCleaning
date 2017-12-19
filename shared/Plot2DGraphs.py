@@ -3,7 +3,7 @@ import seaborn as sb
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.mplot3d import Axes3D
 
 def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
     """
@@ -50,12 +50,8 @@ def plot_cov_ellipse(cov, pos, nstd=2, ax=None, **kwargs):
     return ellip
 
 
-def plot_gaussians(data_frame,
-                   featuresCol=None,
-                   predictionCol='prediction',
-                   clusterCol='centers',
-                   covarianceCol='cov',
-                   **kwargs):
+def plot_gaussians(data_frame, featuresCol=None, predictionCol='prediction',
+                   clusterCol='centers', covarianceCol='cov', **kwargs):
     """
     Creates a full plot with Gaussians mixtures, centers marked, elipsis' and data points
     :param data_frame: pyspark dataframe
@@ -160,4 +156,27 @@ def plot_known_and_unknown_data(pdf, x='x', y='y', labelCol='used_label', **kwar
                 )
     ax.set_title(kwargs.get('title', 'Plot of dataset with and without lables'), fontsize=30)
     ax.legend(loc=0)
+    plt.show()
+
+def plot3D(data, *args ,**kwargs):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    label = kwargs.get('label', args[0])
+
+    if not isinstance(data, pd.DataFrame):
+        pandas_transition = data.toPandas()
+    else:
+        pandas_transition = data
+
+    pandas_transition= pandas_transition.fillna(-1)
+    pandas_columns = lambda x, pdf: [
+        pdf[pdf[label] == x][dim] for dim in 'x y z'.split(' ')]
+
+    for i in pandas_transition[~pandas_transition[label].isnull()][label].unique():
+        ax.scatter(*pandas_columns(i, pandas_transition))
+
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    ax.set_title('Our test dataset a double helix')
     plt.show()

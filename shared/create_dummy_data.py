@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import math
 
+
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
     Creates an n*m dimensional dataframe with normal distributed data
@@ -40,14 +41,17 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
         *[ns*[ks] for ns, ks in zip(n_amounts, range(len(n_amounts)))])))
     return data_frame
 
+
 def create_spark_data(sc, func ,**kwargs):
     spark = sql.SparkSession(sparkContext=sc)
     spark.conf.set("spark.sql.crossJoin.enabled", "true")
     return spark.createDataFrame(func(**kwargs))
 
+
 def export_csv(data_frame : sql.DataFrame,
                path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):
     return data_frame.write.csv(path=path, mode='overwrite',header=data_frame.columns)
+
 
 def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
     if isinstance(missing, float) or missing < 1.0:
@@ -65,14 +69,21 @@ def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
     pdf['id'] = pdf.index
     return pdf
 
-def load_mnist(n_samples = None, **kwargs):
+
+def load_mnist(sc, n_samples = None, **kwargs):
     """
     Creates a dataframe with mnist data
     :param n_samples: extra parameter that enables extra digits
     :return:
     """
     path = kwargs.get('path','/home/svanhmic/workspace/data/DABAI/mnist')
-    train_pdf = pd.read_csv(path+'/train.csv', header=0)
-    test_pdf = pd.read_csv(path+'/test.csv',header=0)
-    return train_pdf, test_pdf
+    package = kwargs.get('package','pandas')
+    if package == 'pandas':
+        train_df = pd.read_csv(path+'/train.csv', header=0)
+        test_df = pd.read_csv(path+'/test.csv', header=0)
+    else:
+        spark_session = sql.SparkSession(sparkContext=sc)
+        train_df = spark_session.read.csv(path=path+'/train.csv', header=True, inferSchema=True, mode='PERMISSIVE')
+        test_df = spark_session.read.csv(path=path+'/test.csv', header=True, inferSchema=True, mode='PERMISSIVE')
+    return train_df, test_df
 

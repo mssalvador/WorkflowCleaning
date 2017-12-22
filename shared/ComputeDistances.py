@@ -27,7 +27,7 @@ def compute_distance(point, center):
         return float(np.linalg.norm(point - center, ord=2))
 
 
-def make_histogram(dist: list): # , dim):
+def make_histogram(dist: list):  # , dim):
     """
     Makes the histogram of 
     

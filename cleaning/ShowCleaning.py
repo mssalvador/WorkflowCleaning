@@ -10,6 +10,7 @@ from pyspark.sql import functions as F
 from pyspark.sql import types
 import numpy as np
 from shared import ComputeDistances
+import pandas as pd
 from scipy.stats import chi2
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
@@ -46,33 +47,33 @@ class ShowResults(object):
         self._selected_cluster = 1
         # print(self._data_dict)
 
-    def select_cluster(self, dataframe):
-        """
-        Method to decide which cluster to pick!
-        ### SKAL UNDERSØGES FOR BRUG ###
-        
-        :return:
-        """
-
-        from ipywidgets import widgets
-        from IPython.display import display
-
-        list_options = ['Cluster ' + str(i+1) for i in range(self._data_dict['k'])]
-
-        drop_down_clusters = widgets.Dropdown(
-            options=list_options,
-            value=list_options[0],
-            description="Select a Cluster",
-            disabled=False)
-
-        def observe_cluster_change(change):
-            if change.new != change.old:
-                filtered_df = dataframe.filter(
-                    F.col(self._prediction_columns) == (int(change.new[-1])-1)).select('distance')
-                ShowResults.show_cluster(filtered_df)
-
-        drop_down_clusters.observe(observe_cluster_change, names='value')
-        display(drop_down_clusters)
+    # def select_cluster(self, dataframe):
+    #     """
+    #     Method to decide which cluster to pick!
+    #     ### SKAL UNDERSØGES FOR BRUG ###
+    #
+    #     :return:
+    #     """
+    #
+    #     from ipywidgets import widgets
+    #     from IPython.display import display
+    #
+    #     list_options = ['Cluster ' + str(i+1) for i in range(self._data_dict['k'])]
+    #
+    #     drop_down_clusters = widgets.Dropdown(
+    #         options=list_options,
+    #         value=list_options[0],
+    #         description="Select a Cluster",
+    #         disabled=False)
+    #
+    #     def observe_cluster_change(change):
+    #         if change.new != change.old:
+    #             filtered_df = dataframe.filter(
+    #                 F.col(self._prediction_columns) == (int(change.new[-1])-1)).select('distance')
+    #             ShowResults.show_cluster(filtered_df)
+    #
+    #     drop_down_clusters.observe(observe_cluster_change, names='value')
+    #     display(drop_down_clusters)
 
     @staticmethod
     def show_cluster(df):
@@ -86,7 +87,7 @@ class ShowResults(object):
         from shared.ComputeDistances import make_histogram
 
         list_distances = [i["distance"] for i in df.collect()]
-        make_histogram(list_distances) # , self._dimensions)
+        make_histogram(list_distances)  # , self._dimensions)
 
     @staticmethod
     def _compute_shift(dataframe, **kwargs):
@@ -217,6 +218,39 @@ class ShowResults(object):
         dataframe_updated = ShowResults._add_distances(dataframe_updated, **kwargs)
         # Adds 'is_outlier' bool column
         return ShowResults._add_outliers(dataframe_updated, **kwargs)
+
+    @staticmethod
+    def cluster_graph(dataframe, **kwargs):
+        """
+        This method creates
+        :param dataframe: containing distances and outliers for a specific cluster
+        :param kwargs:
+        :return: json for frontend to draw the graph
+        """
+
+        dist_out_df = dataframe[['distance', 'is_outlier']]
+
+        bins = np.linspace(0, np.max(dataframe.distance), 21)
+
+        height = []
+        is_outlier = []
+        bin = 0
+        for i in bins[1:]:
+            count = 0
+            for j in range(dist_out_df.shape[0]):
+                if bin < dist_out_df.iloc[j]['distance'] <= i:
+                    count += 1
+                    is_outlier.append(dist_out_df.iloc[j]['is_outlier'])
+                else:
+                    continue
+            height.append(count)
+            if len(is_outlier) < len(height):
+                is_outlier.append(False)
+            bin = i
+
+        graph_df = pd.DataFrame({'Bucket': range(1, 21), 'Height': height, 'Is_outlier': is_outlier})
+
+        return graph_df.to_json(orient='records')
 
         # # create summary for the clusters along with number in each cluster and number of outliers
         # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it

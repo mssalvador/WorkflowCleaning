@@ -87,6 +87,14 @@ class TestShowResults(PySparkTestCase):
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         print(table_df)
 
+    def test_cluster_graph(self):
+
+        table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
+        grouped = table_df.groupby('prediction')
+        for i in range(1, len(table_df.prediction.unique())+1):
+            group_i = grouped.get_group(i)
+            table_json = ShowResults.cluster_graph(group_i)
+            print(table_json)
 
 
 

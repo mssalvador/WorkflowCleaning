@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 import math
 
-
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
     Creates an n*m dimensional dataframe with normal distributed data
@@ -42,13 +41,13 @@ def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     return data_frame
 
 
-def create_spark_data(sc, func ,**kwargs):
+def create_spark_data(sc, func, **kwargs):
     spark = sql.SparkSession(sparkContext=sc)
     spark.conf.set("spark.sql.crossJoin.enabled", "true")
     return spark.createDataFrame(func(**kwargs))
 
 
-def export_csv(data_frame : sql.DataFrame,
+def export_csv(data_frame: sql.DataFrame,
                path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):
     return data_frame.write.csv(path=path, mode='overwrite',header=data_frame.columns)
 

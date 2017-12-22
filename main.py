@@ -22,7 +22,7 @@ if __name__ == '__main__':
                              '(ex. semi-supervised runs jobs in semi-supervised package')
     parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
                                                       '(ex. Algorithm=Kmeans, Standardize=True, k=20')
-    parser.add_argument('--input_data',dest='input_data',type=str, help='The location of the input data file.'
+    parser.add_argument('--input_data', dest='input_data',type=str, help='The location of the input data file.'
                                                        ' (ex. /home/user/data.txt)')
     parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
                                                                 ' (ex. a b c d ... x y)')
@@ -45,4 +45,4 @@ if __name__ == '__main__':
         data_frame = job_module.run(sc, **all_args)
         # data_frame.show()
     except TypeError as te:
-        print('Did not run',te) # make this more logable...
+        print('Did not run', te)  # make this more logable...

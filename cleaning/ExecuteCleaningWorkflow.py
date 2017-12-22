@@ -10,6 +10,7 @@ from pyspark.sql import functions as F
 from shared.WorkflowLogger import logger_info_decorator, logger
 import numpy as np
 
+
 class ExecuteWorkflow(object):
     """
     Object execute workflow. Builds a spark pipeline based on previous data from other class' and executes the pipeline

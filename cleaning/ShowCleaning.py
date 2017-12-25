@@ -11,6 +11,8 @@ from pyspark.sql import types
 import numpy as np
 from shared import ComputeDistances
 import pandas as pd
+import json
+from shared import JSONEncoder
 from scipy.stats import chi2
 from IPython.display import display, clear_output, Javascript, HTML
 import pyspark.ml.clustering as clusters
@@ -222,10 +224,10 @@ class ShowResults(object):
     @staticmethod
     def cluster_graph(dataframe, **kwargs):
         """
-        This method creates
+        This method creates a dataframe with table for a cluster histogram
         :param dataframe: containing distances and outliers for a specific cluster
         :param kwargs:
-        :return: json for frontend to draw the graph
+        :return: dataframe
         """
 
         dist_out_df = dataframe[['distance', 'is_outlier']]
@@ -250,7 +252,26 @@ class ShowResults(object):
 
         graph_df = pd.DataFrame({'Bucket': range(1, 21), 'Height': height, 'Is_outlier': is_outlier})
 
-        return graph_df.to_json(orient='records')
+        return graph_df
+
+    @staticmethod
+    def json_histogram(dataframe, **kwargs):
+        """
+        Creates the json file with the information to draw the histograms for the different clusters.
+        Uses cluster_graph
+        :param dataframe: the prepared_table_data
+        :param kwargs:
+        :return: json
+        """
+        g = {}
+        grouped = dataframe.groupby('prediction')
+
+        for i in range(1, len(dataframe.prediction.unique()) + 1):
+            group = grouped.get_group(i)
+            table = ShowResults.cluster_graph(group)
+            g['group' + str(i)] = table
+
+        return json.dumps(g, sort_keys=True, indent=4, cls=JSONEncoder.JSONEncoder)
 
         # # create summary for the clusters along with number in each cluster and number of outliers
         # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it

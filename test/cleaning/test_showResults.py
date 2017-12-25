@@ -83,11 +83,12 @@ class TestShowResults(PySparkTestCase):
         self.assertEqual(list(summary_pdf['outlier percentage']), actual_count_percentage)
 
     def test_prepare_table_data(self):
-
+        # not tested through
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         print(table_df)
 
     def test_cluster_graph(self):
+        # not tested through
 
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         grouped = table_df.groupby('prediction')
@@ -96,7 +97,12 @@ class TestShowResults(PySparkTestCase):
             table_json = ShowResults.cluster_graph(group_i)
             print(table_json)
 
+    def test_json_histogram(self):
+        # not tested through
 
+        table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
+        hist_json = ShowResults.json_histogram(table_df)
+        print(hist_json)
 
 
 

@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 import math
 
-
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
     Creates an n*m dimensional dataframe with normal distributed data
@@ -70,14 +69,20 @@ def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
     return pdf
 
 
-def load_mnist(n_samples = None, **kwargs):
+def load_mnist(sc, n_samples = None, **kwargs):
     """
     Creates a dataframe with mnist data
     :param n_samples: extra parameter that enables extra digits
     :return:
     """
     path = kwargs.get('path','/home/svanhmic/workspace/data/DABAI/mnist')
-    train_pdf = pd.read_csv(path+'/train.csv', header=0)
-    test_pdf = pd.read_csv(path+'/test.csv', header=0)
-    return train_pdf, test_pdf
+    package = kwargs.get('package','pandas')
+    if package == 'pandas':
+        train_df = pd.read_csv(path+'/train.csv', header=0)
+        test_df = pd.read_csv(path+'/test.csv', header=0)
+    else:
+        spark_session = sql.SparkSession(sparkContext=sc)
+        train_df = spark_session.read.csv(path=path+'/train.csv', header=True, inferSchema=True, mode='PERMISSIVE')
+        test_df = spark_session.read.csv(path=path+'/test.csv', header=True, inferSchema=True, mode='PERMISSIVE')
+    return train_df, test_df
 

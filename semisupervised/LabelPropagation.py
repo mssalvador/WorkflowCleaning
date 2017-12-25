@@ -182,22 +182,11 @@ def label_propagation(
 
     # Lets make a proper dataset
     df_with_weights = create_complete_graph(
-        data_frame=data_frame, points=feature_cols,
-        id_col='id', sigma=sigma, standardize=standardize)
+        data_frame=data_frame, feature_columns=feature_cols, id_column=id_col,
+        label_column=label_col, sigma=sigma, standardize=standardize)
     # df_with_weights.write.json('/home/svanhmic/weights.json')
-
     #renaming the columns
-    try:
-        df_transition_values = df_with_weights.select(
-            F.col('a_'+id_col).alias('row'), F.col('b_'+id_col).alias('column'),
-            F.col('weights_ab'), F.col('a_'+label_col).alias('row_label'),
-            F.col('b_'+label_col).alias('column_label')
-        ).cache()
-        df_transition_values.take(1)
-    except Exception as e:
-        print(e)
-        sys.exit(0)
-    generate_summed_weights(context=label_context_set, weights=df_transition_values)
+    generate_summed_weights(context=label_context_set, weights=df_with_weights)
 
     # udf's
     edge_normalization = F.udf(lambda column, weight: compute_transition_values(
@@ -212,7 +201,7 @@ def label_propagation(
     udf_find_max_iter = F.udf(lambda x: compute_convergence_iter(
         x, label_context.constants['tol'].value, max_iters), T.IntegerType())
 
-    df_normalized_transition_values = (df_transition_values
+    df_normalized_transition_values = (df_with_weights
         .withColumn(colName='transition_ab', col=edge_normalization('column', 'weights_ab')))
 
     df_normed_trans_none_lab = _correct_label_nan(

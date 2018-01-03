@@ -18,9 +18,12 @@ class TestCreate_complete_graph(ReusedPySparkTestCase):
 
 
     def test_create_complete_graph(self):
+
         result = LP_Graph.create_complete_graph(self.helix_df, feature_columns='x y z'.split(),
                                                 id_column='id', label_column='unknown_label')
-        result.show()
+        print('Number of data points {}. Final number of points should be {}'.format(self.helix_df.count(),result.count()))
+        print(result.rdd.getNumPartitions())
+        self.assertEqual(self.helix_df.count()**2, result.count() )
 
 
     # def test_create_rdd_graph(self):

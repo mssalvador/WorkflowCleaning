@@ -38,7 +38,10 @@ def create_complete_graph(data_frame, feature_columns, id_column='id',
     rdd = (model.transform(data_frame)
         .select(id_column, label_column, F.col(standardizer.getOutputCol()).alias('features'))
         .rdd
+        .repartition(10)
+        .cache()
     )
+    print(rdd.getNumPartitions())
     output_column_types = [
         ('row', T.IntegerType(), False), ('row_label', T.DoubleType(), True),
         ('column', T.IntegerType(), False), ('column_label', T.DoubleType(), True),

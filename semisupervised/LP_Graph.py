@@ -10,13 +10,7 @@ from shared.WorkflowLogger import logger_info_decorator
 
 @logger_info_decorator
 def _compute_weights(vec_x, vec_y, sigma):
-    if isinstance(vec_y, SparseVector) | isinstance(vec_x, SparseVector):
-        x_d = vec_x.toArray()
-        y_d = vec_y.toArray()
-        return float(np.exp(-(np.linalg.norm(x_d-y_d, ord=2)**2)/sigma**2))
-    else:
-        return float(np.exp(-np.linalg.norm(vec_x - vec_y, ord=2)**2 / sigma**2))
-
+    return np.exp(-vec_x.squared_distance(vec_y) / sigma ** 2)
 
 @logger_info_decorator
 def create_complete_graph(sc, data_frame, feature_columns, id_column='id',

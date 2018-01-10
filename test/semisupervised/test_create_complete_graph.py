@@ -2,6 +2,7 @@ from pyspark.sql.tests import ReusedPySparkTestCase
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from semisupervised import LP_Graph
+import timeit
 
 
 class TestCreate_complete_graph(ReusedPySparkTestCase):
@@ -23,7 +24,10 @@ class TestCreate_complete_graph(ReusedPySparkTestCase):
                                                 id_column='id', label_column='unknown_label')
         print('Number of data points {}. Final number of points should be {}'.format(self.helix_df.count(),result.count()))
         print(result.rdd.getNumPartitions())
+        timeit.timeit()
+
         self.assertEqual(self.helix_df.count()**2, result.count() )
+
 
 
     # def test_create_rdd_graph(self):

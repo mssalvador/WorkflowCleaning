@@ -30,7 +30,10 @@ class ConvertAllToVecToMl(Transformer, HasInputCol, HasOutputCol):
     def _transform(self, dataset):
 
         def f(s):
-            return Vectors.dense([float(x) for x in s.toArray()])
+            try:
+                return Vectors.dense([float(x) for x in s.toArray()])
+            except Exception as e:
+                print(x)
 
         t = VectorUDT()
         out_col = self.getOutputCol()

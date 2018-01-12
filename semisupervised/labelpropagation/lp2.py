@@ -36,11 +36,13 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
             i=x.i, j=x.j, value=x.value / bc_col_summed.value.get(x.i))
     )
 
-    initial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(
+    clamped_y_rdd, initial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(
         df=data_frame, label_col=label_col, id_col=id_col, k=kwargs.get('k', None))
+
     final_label_matrix = labelpropagation.propagation_step(
-        transition_matrix=hat_transition_rdd, label_matrix=initial_y_matrix,
-        max_iterations=kwargs.get('max_iters', 25))
+        sc, transition_matrix=hat_transition_rdd, label_matrix=initial_y_matrix,
+        clamped=clamped_y_rdd, max_iterations=kwargs.get('max_iters', 25), )
+
     coordinate_label_matrix = distributed.CoordinateMatrix(
         entries=final_label_matrix, numRows=initial_y_matrix.numRows(),
         numCols=initial_y_matrix.numCols())

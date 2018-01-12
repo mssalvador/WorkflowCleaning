@@ -32,7 +32,7 @@ def generate_label_matrix(df, label_col='label', id_col='id', k=None):
     )
     y_matrix = distributed.CoordinateMatrix(
         entries=y_unknown_rdd.union(y_known_rdd), numRows=df.count(), numCols=y_range)
-    return y_matrix
+    return y_known_rdd, y_matrix
 
 
 def merge_data_with_label(sc, org_data_frame, coordinate_label_rdd, id_col='id'):

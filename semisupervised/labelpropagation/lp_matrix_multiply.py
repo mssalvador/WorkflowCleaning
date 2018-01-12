@@ -9,7 +9,6 @@ def coordinate_matrix_decorate(func):
         if isinstance(mat_b, distributed.CoordinateMatrix):
             mat_b = mat_b.entries
         return func(mat_a, mat_b, is_triangle)
-    func_wrapper.unwrapped = func
     return func_wrapper
 
 

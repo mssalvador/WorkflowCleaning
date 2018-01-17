@@ -18,8 +18,8 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
         sc=sc, df=data_frame, id_col=id_col, feature_col=feature_cols, **kwargs).cache()
 
     demon_matrix = distributed.CoordinateMatrix(entries=cartesian_demon_rdd, numRows=n, numCols=n)
-    row_summed_matrix = demon_matrix.entries.flatMap(labelpropagation.lp_helper.triangle_mat_summation).reduceByKey(
-        lambda x, y: x + y).collectAsMap()
+    row_summed_matrix = demon_matrix.entries.flatMap(labelpropagation.lp_helper.triangle_mat_summation)\
+        .reduceByKey(lambda x, y: x + y).collectAsMap()
     bc_row_summed = sc.broadcast(row_summed_matrix)
     # print(type(bc_row_summed.value))
 
@@ -34,7 +34,8 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
     hat_transition_rdd = transition_rdd.map(
         lambda x: distributed.MatrixEntry(
             i=x.i, j=x.j, value=x.value / bc_col_summed.value.get(x.i))
-    )
+    ).cache()
+    hat_transition_rdd.take(1)
 
     clamped_y_rdd, initial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(
         df=data_frame, label_col=label_col, id_col=id_col, k=kwargs.get('k', None))

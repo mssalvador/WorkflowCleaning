@@ -38,6 +38,6 @@ def run(sc, **kwargs):
     try:
         plot3D(output_data_frame, 'new_'+kwargs.get('labels', None))
     except Exception as e:
-        print(e)
+        print('Did not plot the strings')
     # Return result
     return output_data_frame

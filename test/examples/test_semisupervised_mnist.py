@@ -5,19 +5,12 @@ from pyspark.sql import functions as F
 import math
 
 class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
-
     def setUp(self):
         str_input = '/home/svanhmic/workspace/data/DABAI/mnist/train.csv'
         self.spark = SparkSession(sparkContext=self.sc)
         self.data_frame = self.spark.read.csv(
         path=str_input, header=True, inferSchema=True,
         mode='PERMISSIVE', nullValue=float('NAN'), nanValue=float('NAN'))
-
-
-    def test_distort_dataset(self):
-        output_data_frame = SemisupervisedMnist.distort_dataset(self.data_frame,)
-        self.fail()
-
 
     def test_create_nan_labels(self):
         fraction = 0.1
@@ -39,17 +32,30 @@ class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
         for key, val in computed_fractions.items():
             self.assertAlmostEqual(val, desired_fractions[key], delta=input_data_frame.count()*0.01) # 1 percent deviation
 
-
-
     def test_enlarge_dataset(self):
-        output_data_frame = SemisupervisedMnist.enlarge_dataset(self.data_frame, )
-        self.fail()
+        original_size = 1000
+        input_df = self.data_frame.limit(original_size)
 
+        # Test 1: reduce the size to 90
+        new_size = 900
+        output_data_frame = SemisupervisedMnist.enlarge_dataset(
+            dataframe=input_df, size= new_size, feature_cols=['pixel'+str(i) for i in range(784)])
+        self.assertAlmostEqual(output_data_frame.count(), new_size, delta=original_size*0.05)
+
+        # Test 2: enlargen to double size
+        new_size = 2000
+        output_data_frame = SemisupervisedMnist.enlarge_dataset(
+            dataframe=input_df, size= new_size, feature_cols=['pixel'+str(i) for i in range(784)])
+        self.assertAlmostEqual(output_data_frame.count(), new_size, delta=new_size*0.05)
 
     def test_subset_dataset_by_label(self):
-        output_data_frame = SemisupervisedMnist.subset_dataset_by_label(self.data_frame, )
-        self.fail()
+        # Test 1:
+        output_data_frame = SemisupervisedMnist.subset_dataset_by_label(
+            self.sc, self.data_frame, 'label',0 ,1, 2)
 
+        distinct_label = output_data_frame.select('label').distinct().collect()
+        for val in map(lambda x: x['label'],distinct_label):
+            self.assertIn(val, [0,1,2])
 
     def test_compute_fraction(self):
 

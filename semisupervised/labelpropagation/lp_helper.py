@@ -16,6 +16,7 @@ def triangle_mat_summation(mat_element):
 def generate_label_matrix(df, label_col='label', id_col='id', k=None):
     null_nan_check = (~F.isnan(F.col(label_col)) & (~F.isnull(F.col(label_col))))
     y_known = (df.filter(null_nan_check).select(id_col, label_col).cache())
+    y_known.select(label_col).distinct().show()
     y_unknown = df.filter(~null_nan_check).select(id_col).cache()
     if k == None:
         y_range = y_known.select(label_col).distinct().count()
@@ -40,11 +41,12 @@ def merge_data_with_label(sc, org_data_frame, coordinate_label_rdd, id_col='id')
     indexed_label_rdd = (coordinate_label_rdd
         .toIndexedRowMatrix().rows
         .map(lambda x: (x.index, x.vector))) # get rdd with row_index and columns
-
+    # print(indexed_label_rdd.take(10))
     schema = (T.StructType().add(field=id_col, data_type=T.IntegerType())
         .add('probabilities', data_type=linalg.VectorUDT()))
 
     final_label_data_frame = spark.createDataFrame(data=indexed_label_rdd, schema=schema)
+    # final_label_data_frame.show(truncate=False)
     merged_data_frame = org_data_frame.join(final_label_data_frame, on=id_col, how='left')
     return merged_data_frame
 

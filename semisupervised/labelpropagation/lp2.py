@@ -14,8 +14,10 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
     :return:
     """
     n = data_frame.count()
+    max_iter = kwargs.get('max_iters', 25)
     cartesian_demon_rdd = labelpropagation.do_cartesian(
         sc=sc, df=data_frame, id_col=id_col, feature_col=feature_cols, **kwargs).cache()
+    cartesian_demon_rdd.take(1)
 
     demon_matrix = distributed.CoordinateMatrix(entries=cartesian_demon_rdd, numRows=n, numCols=n)
     row_summed_matrix = demon_matrix.entries.flatMap(labelpropagation.lp_helper.triangle_mat_summation)\
@@ -42,7 +44,7 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
 
     final_label_matrix = labelpropagation.propagation_step(
         sc, transition_matrix=hat_transition_rdd, label_matrix=initial_y_matrix,
-        clamped=clamped_y_rdd, max_iterations=kwargs.get('max_iters', 25), )
+        clamped=clamped_y_rdd, max_iterations=max_iter, )
 
     coordinate_label_matrix = distributed.CoordinateMatrix(
         entries=final_label_matrix, numRows=initial_y_matrix.numRows(),

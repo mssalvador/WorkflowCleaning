@@ -1,11 +1,12 @@
 from shared.parse_algorithm_variables import parse_algorithm_variables
-from semisupervised.labelpropagation import label_propagation
+from pyspark.sql import functions as F
+from examples import SemisupervisedMnist
 from pyspark.sql import SparkSession
 from pathlib import Path
 import warnings
 import functools
 
-default_lp_param = {'sigma': 0.42, 'tol':0.01, 'k': 2, 'max_iters': 5,
+default_lp_param = {'sigma': 340, 'tol':0.01, 'k': 10, 'max_iters': 5,
                     'eval_type': None, 'standardize': True, 'priors': None}
 
 def run(sc, **kwargs):
@@ -33,18 +34,13 @@ def run(sc, **kwargs):
     else:
         list_input_cols = [i for i in input_data_frame.columns if i not in list_label_id_cols]
 
-    # distort dataset, assuming perfect data...
+    output_data_frame = SemisupervisedMnist.run_experiment(
+        sc=sc, dataframe=input_data_frame, label_col=list_label_id_cols[0],
+        feature_cols=list_input_cols, data_size=1000, fractions=0.1, **algo_types)
 
+    output_data_frame = output_data_frame.withColumn(
+        colName='error',
+        col=F.when(F.col(list_label_id_cols[0]) == F.col('new_'+list_label_id_cols[0]), 0).otherwise(1))
 
-
-    # choose algorithm
-    try:
-        partial_lp = functools.partial(
-            label_propagation, sc=sc, data_frame=input_data_frame,
-            label_col=kwargs.get('labels', None), id_col=kwargs.get('id', 'id')[0],
-            feature_cols=list_input_cols)
-        output_data_frame = partial_lp(**algo_types)
-        return output_data_frame
-    except Exception as e:
-        print('missing some parameters in partial_lp')
-    return None
+    return output_data_frame.select(
+        'id', list_label_id_cols[0],'new_'+list_label_id_cols[0], 'error', 'probabilities')

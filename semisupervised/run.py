@@ -17,9 +17,9 @@ def run(sc, **kwargs):
     spark = SparkSession(sparkContext=sc)
     # spark.conf.set("spark.sql.crossJoin.enabled", "true")
     input_data = kwargs.get('input_data', None)
-    feature_columns = [T.StructField(f, T.DoubleType(), False) for f in kwargs.get('features', None)]
-    label_columns = [T.StructField(kwargs.get('labels', None), T.IntegerType(), True)]
-    id_column = [T.StructField(idx, T.IntegerType(), False) for idx in kwargs.get('id', 'id')]
+    # feature_columns = [T.StructField(f, T.DoubleType(), False) for f in kwargs.get('features', None)]
+    # label_columns = [T.StructField(kwargs.get('labels', None), T.IntegerType(), True)]
+    # id_column = [T.StructField(idx, T.IntegerType(), False) for idx in kwargs.get('id', 'id')]
     algo_types = parse_algorithm_variables(kwargs.get('algo_params', {}))
     for key in default_lp_param.keys():
         if key not in algo_types:
@@ -30,14 +30,17 @@ def run(sc, **kwargs):
         path=input_data, header=True, inferSchema=True, #schema=T.StructType(id_column+label_columns+feature_columns),
        mode='PERMISSIVE', nullValue=float('NAN'), nanValue=float('NAN'))
     # Execute algorithm
-    partial_lp = functools.partial(
-        label_propagation, sc=sc, data_frame=input_data_frame,
-        label_col=kwargs.get('labels', None), id_col=kwargs.get('id', 'id')[0],
-        feature_cols=kwargs.get('features', None))
-    output_data_frame = partial_lp(**algo_types)
     try:
-        plot3D(output_data_frame, 'new_'+kwargs.get('labels', None))
+        partial_lp = functools.partial(
+            label_propagation, sc=sc, data_frame=input_data_frame,
+            label_col=kwargs.get('labels', None), id_col=kwargs.get('id', 'id')[0],
+            feature_cols=kwargs.get('features', None))
+        # output_data_frame = partial_lp(**algo_types)
     except Exception as e:
-        print('Did not plot the strings')
+        print('missing some parameters in partial_lp')
+    # try:
+    #     plot3D(output_data_frame, 'new_'+kwargs.get('labels', None))
+    # except Exception as e:
+    #     print('Did not plot the strings')
     # Return result
-    return output_data_frame
+    return input_data_frame

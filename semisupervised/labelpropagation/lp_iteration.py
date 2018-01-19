@@ -17,7 +17,10 @@ def propagation_step(sc, transition_matrix, label_matrix, clamped=None, max_iter
     clamped_rows = clamped.map(lambda x: (x.i, x.j)).collect()
     clamped_dict = _generate_clamped_zeros(clamped_rows, label_matrix.numCols())
     clamped_rdd = clamped.map(lambda x: ((x.i, x.j), 1.0))
-    clamped_dict.update(clamped_rdd.collectAsMap())
+    try:
+        clamped_dict.update(clamped_rdd.collectAsMap())
+    except Exception as e:
+        print('Clamped_rdd is {}'.format(clamped_rdd.collectAsMap()))
     broadcasted_clamped = sc.broadcast(clamped_dict)
 
     new_y_matrix = labelpropagation.naive_multiplication_rdd(

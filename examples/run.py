@@ -6,8 +6,7 @@ from pathlib import Path
 from shared.Experiments import Experiments
 import warnings
 import functools
-import numpy as np
-from semisupervised.labelpropagation import label_propagation
+from semisupervised.labelpropagation.lp2 import label_propagation
 
 default_lp_param = {'sigma': 340, 'tol':0.01, 'k': 10, 'max_iters': 5,
                     'eval_type': None, 'standardize': True, 'priors': None}

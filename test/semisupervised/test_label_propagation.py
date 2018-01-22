@@ -9,7 +9,7 @@ from itertools import product
 from pyspark.ml.linalg import DenseVector, SparseVector
 import pandas as pd
 import numpy as np
-from semisupervised import LabelPropagation
+from semisupervised import depLabelPropagation
 from semisupervised.ClassMassNormalisation import _class_mass_calculation
 from semisupervised.LP_Graph import _compute_weights
 
@@ -17,7 +17,7 @@ class TestCreate_complete_graph(PySparkTestCase):
 
     def setUp(self):
         super().setUp()
-        # self.sc.addPyFile('/home/svanhmic/workspace/DABAI/Workflows/semisupervised/LabelPropagation.py')
+        # self.sc.addPyFile('/home/svanhmic/workspace/DABAI/Workflows/semisupervised/depLabelPropagation.py')
         self.spark = SparkSession(self.sc)
         self.spark.conf.set("spark.sql.crossJoin.enabled", "true")
         self.label_context = JobContext(self.sc)
@@ -70,7 +70,7 @@ class TestCreate_complete_graph(PySparkTestCase):
 
         # first case
         self.label_context_set('priors', cases_1)
-        df_comp = LabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
+        df_comp = depLabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
         computed_labels = list(map(lambda x: x['initial_label'],
                                    df_comp.select('initial_label').collect()
                                    )
@@ -82,7 +82,7 @@ class TestCreate_complete_graph(PySparkTestCase):
 
         # second case
         self.label_context_set('priors', cases_2)
-        df_comp = LabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
+        df_comp = depLabelPropagation.class_mass_normalization(self.label_context, computed_data_frame)
         computed_labels = list(map(lambda x: x['initial_label'],
                                    df_comp.select('initial_label').collect()
                                    )
@@ -97,9 +97,9 @@ class TestCreate_complete_graph(PySparkTestCase):
         data = [test_row(0, 0.5, 0), test_row(1, 0.7, 1),
                 test_row(2, 0.3, float('nan')), test_row(3, 0.1, float('nan'))]
         expected_result = 0.4
-        computed_result = LabelPropagation.compute_sum_of_non_clamped_transitions(data)
+        computed_result = depLabelPropagation.compute_sum_of_non_clamped_transitions(data)
         self.assertEqual(expected_result, computed_result)
-        no_value = LabelPropagation.compute_sum_of_non_clamped_transitions(data[:1])
+        no_value = depLabelPropagation.compute_sum_of_non_clamped_transitions(data[:1])
         self.assertEqual(1.0, no_value)
 
     def test_jobcontext(self):
@@ -107,7 +107,7 @@ class TestCreate_complete_graph(PySparkTestCase):
     
     def test_cross_joining_length(self):
 
-        df_crossed = LabelPropagation.create_complete_graph(
+        df_crossed = depLabelPropagation.create_complete_graph(
             data_frame= self.test_df,
             id_col= 'id',
             points= ['a', 'b', 'c'],
@@ -122,7 +122,7 @@ class TestCreate_complete_graph(PySparkTestCase):
     def test_all_dist_in_cross_join(self):
         sigma = self.label_context.constants['sigma'].value
         n = self.label_context.constants['n'].value
-        df_crossed = LabelPropagation.create_complete_graph(
+        df_crossed = depLabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
@@ -135,14 +135,14 @@ class TestCreate_complete_graph(PySparkTestCase):
 
     def test_compute_distributed_weights(self):
 
-        df_crossed = LabelPropagation.create_complete_graph(
+        df_crossed = depLabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
             sigma= self.label_context.constants['sigma'].value,
             standardize= False
         )
-        dict_test_compute_distributed_weights = LabelPropagation.compute_distributed_weights(
+        dict_test_compute_distributed_weights = depLabelPropagation.compute_distributed_weights(
             columns= 'a_id', weight_col= 'weights_ab', df_weights= df_crossed)
         print(dict_test_compute_distributed_weights)
         list_actual_computed_weights = [1.88715007, 1.97097007, 1.88858, 1.97178]
@@ -153,14 +153,14 @@ class TestCreate_complete_graph(PySparkTestCase):
             self.assertAlmostEqual(val, list_actual_computed_weights[idx], 4)
 
     def test_add_broadcasted_summed_weight(self):
-        df_crossed = LabelPropagation.create_complete_graph(
+        df_crossed = depLabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
             sigma=self.label_context.constants['sigma'].value,
             standardize= False
         )
-        LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
+        depLabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
         list_actual_computed_weights = [1.88715007, 1.97097007, 1.88858, 1.97178]
 
         weights_dict = self.label_context.constants['summed_row_weights'].value
@@ -176,19 +176,19 @@ class TestCreate_complete_graph(PySparkTestCase):
                           [0.000090, 0.492369, 0.000635, 0.507156]]
 
 
-        df_crossed = LabelPropagation.create_complete_graph(
+        df_crossed = depLabelPropagation.create_complete_graph(
             data_frame=self.test_df,
             id_col='id',
             points=['a', 'b', 'c'],
             sigma=self.label_context.constants['sigma'].value,
             standardize= False
         )
-        LabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
+        depLabelPropagation.generate_summed_weights(self.label_context_set, df_crossed, column_col='b_id')
         # print(self.label_context.constants['summed_row_weights'].value)
 
         initial_weights = df_crossed.select('a_id', 'b_id','weights_ab').toPandas()
         for i in range(len(initial_weights)):
-            computed_value = LabelPropagation.compute_transition_values(
+            computed_value = depLabelPropagation.compute_transition_values(
                 self.label_context,
                 initial_weights.loc[i]['weights_ab'],
                 initial_weights.loc[i]['b_id']
@@ -233,7 +233,7 @@ class TestCreate_complete_graph(PySparkTestCase):
                          [0.25, 0.25, 0.25, 0.25],
                          [0.25, 0.25, 0.25, 0.25]]
         k = 4
-        gen_label_row = partial(LabelPropagation._label_by_row, k)
+        gen_label_row = partial(depLabelPropagation._label_by_row, k)
         computed_label_vec = map(gen_label_row, initial_labels)
         for idx, vec in enumerate(list(computed_label_vec)):
             self.assertListEqual(actual_labels[idx], vec)
@@ -252,7 +252,7 @@ class TestCreate_complete_graph(PySparkTestCase):
         df = self.spark.createDataFrame(pdf).withColumn('initial_label', F.array('x','y','z','v'))
 
         self.label_context_set('k', 4)
-        computed_label = LabelPropagation.generate_label(self.label_context, df)
+        computed_label = depLabelPropagation.generate_label(self.label_context, df)
 
         t_pdf = pdf.transpose()
         for idx, val in computed_label.items():
@@ -264,7 +264,7 @@ class TestCreate_complete_graph(PySparkTestCase):
             [1.0, 0.0], [0.0, 1.0],
             [0.73480, 0.26520], [0.25392, 0.74608]]
 
-        computed_labels = LabelPropagation.label_propagation(
+        computed_labels = depLabelPropagation.label_propagation(
             self.sc, self.test_df, 'label', 'id',
             ['a', 'b', 'c'], k= 2, sigma= 0.5, max_iters= 1,
             standardize= False
@@ -286,7 +286,7 @@ class TestCreate_complete_graph(PySparkTestCase):
 
         new_test_df = self.test_df.withColumn(
             colName='label', col=F.when(F.isnan(F.col('label')), None).otherwise(F.col('label')))
-        computed_labels = LabelPropagation.label_propagation(
+        computed_labels = depLabelPropagation.label_propagation(
             self.sc, new_test_df, 'label', 'id',
             ['a', 'b', 'c'], k=2, sigma=0.5, max_iters=1,
             standardize=False
@@ -302,6 +302,6 @@ class TestCreate_complete_graph(PySparkTestCase):
         print(computed_labels.toPandas())
 
     def test_correct_label_nan(self):
-        df_correct = LabelPropagation._correct_label_nan(self.test_df, label_column='label')
+        df_correct = depLabelPropagation._correct_label_nan(self.test_df, label_column='label')
         label_col = [x['label'] for x in df_correct.select('label').collect()]
         self.assertIn(None, label_col)

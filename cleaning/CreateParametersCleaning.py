@@ -13,7 +13,7 @@ from pyspark import SparkContext
 import random
 from shared.WorkflowLogger import logger_info_decorator
 
-sc = SparkContext.getOrCreate()
+#sc = SparkContext.getOrCreate()
 
 
 class ParamsCleaning(object):
@@ -67,7 +67,7 @@ class ParamsCleaning(object):
             value=ParamsCleaning.algorithm_clustering[0],
             description="Algorithms",
             disabled=False)
-        setattr(widget_dropdown_algorithms,'name','algorithm')
+        setattr(widget_dropdown_algorithms, 'name', 'algorithm')
 
         all_widgets = widgets.VBox([widget_dropdown_algorithms])
 
@@ -135,7 +135,9 @@ class ParamsCleaning(object):
             min=2,
             max=200,
             step=1,
-            description="Number of Clusters")
+            description="Number of Clusters",
+            disabled=False
+        )
         setattr(widget_k, 'name', 'k')
 
         widget_tol = widgets.FloatSlider(
@@ -154,17 +156,17 @@ class ParamsCleaning(object):
             description="Max iterations")
         setattr(widget_maxIter, 'name', 'maxIter')
 
-        widget_seed = widgets.IntSlider(
-            value=dict.get("seed", random.randint(0, sys.maxsize)),
-            min=0,
-            max=sys.maxsize,
-            step=1000,
-            description="Seed",
-            )
-        setattr(widget_seed, 'name', 'seed')
+        # widget_seed = widgets.IntSlider(
+        #     value=dict.get("seed", random.randint(0, sys.maxsize)),
+        #     min=0,
+        #     max=sys.maxsize,
+        #     step=1000,
+        #     description="Seed",
+        #     )
+        # setattr(widget_seed, 'name', 'seed')
 
-        all_lists = [[widget_k, widget_maxIter],
-                     [widget_tol, widget_seed]]
+        all_lists = [[widget_k, widget_maxIter], [widget_tol]]
+                     # [widget_tol, widget_seed]]
         return list(map(lambda x: widgets.HBox(x), all_lists))
 
     @staticmethod

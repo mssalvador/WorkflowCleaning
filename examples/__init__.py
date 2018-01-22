@@ -1,3 +1,3 @@
 from examples.run import run
-from examples import SemisupervisedMnist
-__all__ = ['run', 'SemisupervisedMnist']
+from examples import depSemisupervisedMnist
+__all__ = ['run', 'depSemisupervisedMnist.py']

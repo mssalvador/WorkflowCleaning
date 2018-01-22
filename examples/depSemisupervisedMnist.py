@@ -2,7 +2,10 @@ from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
-from semisupervised.labelpropagation import label_propagation
+import numpy as np
+from shared import Experiments
+from shared.WorkflowTimer import timeit
+#from semisupervised.labelpropagation import label_propagation
 import functools
 
 
@@ -57,11 +60,11 @@ def create_nan_labels(sc, dataframe, label_col, fraction=None, **kwargs):
     labeled_id = new_data_frame.sampleBy(label_col, fractions=dict_missing_labels).select('id').collect()
 
     bc_labels = sc.broadcast(list(map(lambda x: x['id'], labeled_id)))
-    return new_data_frame.withColumn(
-        colName='missing_'+label_col, col=F.when(
-            condition=F.col('id').isin(bc_labels.value),
-            value=F.col(label_col)).otherwise(float('NAN'))
-    )
+    correct_label = F.when(
+        condition=F.col('id').isin(bc_labels.value),
+        value=F.col(label_col)).otherwise(float('NAN'))
+
+    return new_data_frame.withColumn(colName='missing_'+label_col, col=correct_label)
 
 
 def _compute_fraction(sc, dataframe, label_col, fraction=None, **kwargs):
@@ -76,7 +79,6 @@ def _compute_fraction(sc, dataframe, label_col, fraction=None, **kwargs):
 
 
 def run_experiment(sc, dataframe, label_col, feature_cols=None, data_size=None, fractions=None, **kwargs):
-
     # Increase or decrese size
     if data_size:
         sized_df = enlarge_dataset(
@@ -93,9 +95,14 @@ def run_experiment(sc, dataframe, label_col, feature_cols=None, data_size=None, 
         label_propagation, sc=sc, data_frame=added_nan_df,
         label_col='missing_'+label_col, id_col='id',
         feature_cols=feature_cols)
-    output_data_frame = partial_lp(**kwargs)
-    return output_data_frame
 
+    ex = Experiments.Experiments(5, data_size=1000)
+
+    return timed_label_propagation(sc, partial_lp, **kwargs)
+
+@timeit(repeat=5)
+def timed_label_propagation(sc, func, **kwargs):
+    return func(**kwargs)
 
 
 

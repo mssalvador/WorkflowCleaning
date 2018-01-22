@@ -63,4 +63,5 @@ def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
     cartesian_distance_demon = cartesian_demon.map(lambda x: MatrixEntry(x[0], x[1], _compute_bfs(
         vec_1=bc_vec.value.get(x[0]), vec_2=bc_vec.value.get(x[1]), sigma=sigma)))
 
+    index_rdd.unpersist() # Memory cleanup!
     return cartesian_distance_demon.filter(lambda x: _tolerance_cut(x.value, tol))

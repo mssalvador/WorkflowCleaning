@@ -2,25 +2,26 @@ from pyspark.mllib.linalg import distributed
 import labelpropagation
 
 
-def labelpropation(sc, data_frame=None, id_col='id', label_col='label', feature_col=None, **kwargs):
+def label_propagation(sc, data_frame=None, id_col='id', label_col='label', feature_cols=None, **kwargs):
     """
     New Version of Labelpropagation with sparks matrix lib used
     :param sc:
     :param data_frame:
     :param id_col:
     :param label_col:
-    :param feature_col:
-    :param kwargs: iterations, tol, standardize, sigma, priors, evaluation_type
+    :param feature_cols:
+    :param kwargs: iterations, tol, standardize, sigma, priors, evaluation_type, k
     :return:
     """
     n = data_frame.count()
-    iterations = kwargs.get('iterations', 25)
+    max_iter = kwargs.get('max_iters', 25)
     cartesian_demon_rdd = labelpropagation.do_cartesian(
-        sc=sc, df=data_frame, id_col=id_col, feature_col=feature_col, **kwargs).cache()
+        sc=sc, df=data_frame, id_col=id_col, feature_col=feature_cols, **kwargs).cache()
+    cartesian_demon_rdd.take(1)
 
     demon_matrix = distributed.CoordinateMatrix(entries=cartesian_demon_rdd, numRows=n, numCols=n)
-    row_summed_matrix = demon_matrix.entries.flatMap(labelpropagation.lp_helper.triangle_mat_summation).reduceByKey(
-        lambda x, y: x + y).collectAsMap()
+    row_summed_matrix = demon_matrix.entries.flatMap(labelpropagation.lp_helper.triangle_mat_summation)\
+        .reduceByKey(lambda x, y: x + y).collectAsMap()
     bc_row_summed = sc.broadcast(row_summed_matrix)
     # print(type(bc_row_summed.value))
 
@@ -35,12 +36,24 @@ def labelpropation(sc, data_frame=None, id_col='id', label_col='label', feature_
     hat_transition_rdd = transition_rdd.map(
         lambda x: distributed.MatrixEntry(
             i=x.i, j=x.j, value=x.value / bc_col_summed.value.get(x.i))
-    )
+    ).cache()
+    hat_transition_rdd.take(1)
+    cartesian_demon_rdd.unpersist() # Memory Cleanup!
 
-    intial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(df=data_frame)
+    clamped_y_rdd, initial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(
+        df=data_frame, label_col=label_col, id_col=id_col, k=kwargs.get('k', None))
+
     final_label_matrix = labelpropagation.propagation_step(
-        transition_matrix=hat_transition_rdd, label_matrix=intial_y_matrix, max_iterations=iterations)
-    output_data_frame = labelpropagation.lp_helper.merge_data_with_label(
-        sc=sc, org_data_frame=data_frame, label_rdd=final_label_matrix, id_col=id_col)
+        sc, transition_matrix=hat_transition_rdd, label_matrix=initial_y_matrix,
+        clamped=clamped_y_rdd, max_iterations=max_iter, )
 
-    return output_data_frame
+    coordinate_label_matrix = distributed.CoordinateMatrix(
+        entries=final_label_matrix, numRows=initial_y_matrix.numRows(),
+        numCols=initial_y_matrix.numCols())
+
+    output_data_frame = labelpropagation.lp_helper.merge_data_with_label(
+        sc=sc, org_data_frame=data_frame, coordinate_label_rdd=coordinate_label_matrix, id_col=id_col)
+
+    hat_transition_rdd.unpersist() # Memory Cleanup!
+    return labelpropagation.lp_helper.evaluate_label_based_on_eval(
+        sc=sc, data_frame=output_data_frame, label_col=label_col, **kwargs)

@@ -43,6 +43,6 @@ if __name__ == '__main__':
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
-        # data_frame.show()
+        # data_frame.show(30, truncate=False)
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

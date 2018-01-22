@@ -17,8 +17,11 @@ def _tolerance_cut(value, tol=10e-10):
 
 
 def _to_dense(x):
-    return ml_linalg.DenseVector(x.toArray())
-
+    try:
+        return ml_linalg.DenseVector(x.toArray())
+    except Exception as e:
+        print(e)
+        return x
 
 def _make_feature_vector(df, feature_col=None):
     return 'features', feature.VectorAssembler(inputCols=feature_col, outputCol='features').transform(df)
@@ -28,7 +31,7 @@ def _scale_data_frame(df, vector=None):
         df = df.withColumn(vector, udf(_to_dense, ml_linalg.VectorUDT())(vector))
         scale = feature.StandardScaler(
             withMean=True, withStd=True,
-            inputCol='vector', outputCol='std_vector')
+            inputCol=vector, outputCol='std_vector')
         model = scale.fit(df)
         return (model
             .transform(df)
@@ -38,17 +41,14 @@ def _scale_data_frame(df, vector=None):
 
 def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
     sigma = kwargs.get('sigma', 0.42)
-    tol = kwargs.get('tolerance', 10e-10)
+    tol = kwargs.get('tol', 10e-10)
     standardize = kwargs.get('standardize', True)
 
     if isinstance(feature_col, list):
         feature_col, scaled_df = _make_feature_vector(df=df, feature_col=feature_col)
 
-
-    if ~standardize:
-        scaled_df = _scale_data_frame(df, vector=feature_col)
-    else:
-        scaled_df = df
+    if standardize:
+        scaled_df = _scale_data_frame(scaled_df, vector=feature_col)
 
     if id_col:
         vector_dict = scaled_df.select(id_col, feature_col).rdd.collectAsMap()
@@ -63,4 +63,5 @@ def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
     cartesian_distance_demon = cartesian_demon.map(lambda x: MatrixEntry(x[0], x[1], _compute_bfs(
         vec_1=bc_vec.value.get(x[0]), vec_2=bc_vec.value.get(x[1]), sigma=sigma)))
 
+    index_rdd.unpersist() # Memory cleanup!
     return cartesian_distance_demon.filter(lambda x: _tolerance_cut(x.value, tol))

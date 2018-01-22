@@ -21,9 +21,9 @@ if __name__ == '__main__':
                         help='The name of the module that should be executed. '
                              '(ex. semi-supervised runs jobs in semi-supervised package')
     parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
-                                                      '(ex. Algorithm=Kmeans, Standardize=True, k=20')
-    parser.add_argument('--input_data', dest='input_data',type=str, help='The location of the input data file.'
-                                                       ' (ex. /home/user/data.txt)')
+                                                                       '(ex. Algorithm=Kmeans, Standardize=True, k=20')
+    parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
+                                                                          '(ex. /home/user/data.txt)')
     parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
                                                                 ' (ex. a b c d ... x y)')
     parser.add_argument('--id', type=str, nargs='*', help='The identification column for the dataset')

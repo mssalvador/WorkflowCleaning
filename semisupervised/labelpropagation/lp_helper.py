@@ -34,6 +34,8 @@ def generate_label_matrix(df, label_col='label', id_col='id', k=None):
     )
     y_matrix = distributed.CoordinateMatrix(
         entries=y_unknown_rdd.union(y_known_rdd), numRows=df.count(), numCols=y_range)
+    y_unknown.unpersist()
+    y_known.unpersist()
     return y_known_rdd, y_matrix
 
 

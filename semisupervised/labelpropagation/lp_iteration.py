@@ -37,6 +37,7 @@ def propagation_step(sc, transition_matrix, label_matrix, clamped=None, max_iter
         new_y_matrix = _remove_clamped_values(
             label_matrix=new_y_matrix, clamped=clamped, broad_casted_clamped=broadcasted_clamped)
         iterations += 1
+    persisted_transition_matrix.unpersist()
         # print(new_y_matrix.take(10))
     return new_y_matrix
 

@@ -38,6 +38,7 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
             i=x.i, j=x.j, value=x.value / bc_col_summed.value.get(x.i))
     ).cache()
     hat_transition_rdd.take(1)
+    cartesian_demon_rdd.unpersist() # Memory Cleanup!
 
     clamped_y_rdd, initial_y_matrix = labelpropagation.lp_helper.generate_label_matrix(
         df=data_frame, label_col=label_col, id_col=id_col, k=kwargs.get('k', None))
@@ -53,5 +54,6 @@ def label_propagation(sc, data_frame=None, id_col='id', label_col='label', featu
     output_data_frame = labelpropagation.lp_helper.merge_data_with_label(
         sc=sc, org_data_frame=data_frame, coordinate_label_rdd=coordinate_label_matrix, id_col=id_col)
 
+    hat_transition_rdd.unpersist() # Memory Cleanup!
     return labelpropagation.lp_helper.evaluate_label_based_on_eval(
         sc=sc, data_frame=output_data_frame, label_col=label_col, **kwargs)

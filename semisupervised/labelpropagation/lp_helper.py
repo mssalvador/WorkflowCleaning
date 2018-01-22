@@ -16,8 +16,9 @@ def triangle_mat_summation(mat_element):
 def generate_label_matrix(df, label_col='label', id_col='id', k=None):
     null_nan_check = (~F.isnan(F.col(label_col)) & (~F.isnull(F.col(label_col))))
     y_known = (df.filter(null_nan_check).select(id_col, label_col).cache())
-    y_known.select(label_col).distinct().show()
+    # y_known.select(label_col).distinct().show()
     y_unknown = df.filter(~null_nan_check).select(id_col).cache()
+
     if k == None:
         y_range = y_known.select(label_col).distinct().count()
     else:

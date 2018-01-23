@@ -37,7 +37,7 @@ class Experiments(object):
             error_rate = Experiments._compute_error_rate(
                 data_frame=output, original_label_col='missing_'+label_col, new_label_col='new_'+label_col)
             self.execution_times.append(((d, known_fraction), (timer, error_rate)))
-            self.print_stats_time(timer, error_rate)
+            Experiments.print_stats_time(timer, error_rate)
         return output
 
     @staticmethod
@@ -140,8 +140,8 @@ class Experiments(object):
 
     @staticmethod
     def print_stats_time(execution_times, error_rate):
-        output_str = 'mean execution time {} - std {} - error rate {}'.format(
+        output_str = 'mean_execution_time:{};std:{};error_rate:{}'.format(
             np.mean(execution_times), np.std(execution_times), error_rate)
-        logger.info(output_str)
+        logger.info(str(output_str))
         print(output_str)
 

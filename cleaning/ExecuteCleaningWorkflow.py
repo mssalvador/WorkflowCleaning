@@ -1,8 +1,8 @@
 # This class should execute the clustering model on the recived data.
-
 from pyspark.ml import clustering
 import pyspark.ml.feature as features
 from pyspark.ml import Pipeline
+from pyspark.ml import linalg
 from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
@@ -116,7 +116,7 @@ class ExecuteWorkflow(object):
         # Make sure that the params in self._params are the right for the algorithm
         dict_params_labels = dict(filter(
             lambda x: x[0] in param_map, self._dict_parameters.items()))
-        dict_params_labels['featuresCol'] = caster_after_scale.getOutputCol()
+        dict_params_labels['featuresCol'] = 'scaled_features'
 
         # Model is set
         model = eval("clustering." + self._algorithm)(**dict_params_labels)
@@ -125,10 +125,31 @@ class ExecuteWorkflow(object):
 
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        stages = [vectorized_features, caster, scaling_model, model]
+        stages = [model]#[vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels) # dict gets updated
 
         return Pipeline(stages=stages)
+
+    def _vector_scale(self, df):
+        to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
+        feature_str = 'features'
+
+        vector_df = df.withColumn(colName=feature_str, col=to_dense_udf(*self._list_feature))
+        if self._bool_standardize:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=True, withStd=True).fit(vector_df)
+        else:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=False, withStd=False).fit(vector_df)
+
+        scaled_df = scaling_model.transform(vector_df)
+        return scaled_df.withColumn(colName='scaled_features', col=to_dense_udf(*self._list_feature))
+
+    @staticmethod
+    def _to_dense(*args):
+        return linalg.Vectors.dense(*args)
 
     @logger_info_decorator
     def execute_pipeline(self, data_frame):
@@ -137,9 +158,9 @@ class ExecuteWorkflow(object):
         :param data_frame: spark data frame that can be used for the algorithm
         :return: model and cluster centers with id
         """
-
         assert isinstance(data_frame, DataFrame), " data_frame is not of type dataframe but: "+type(data_frame)
-        model = self._pipeline.fit(data_frame)
+
+        model = self._pipeline.fit(self._vector_scale(data_frame))
         return model
 
     @logger_info_decorator
@@ -152,7 +173,8 @@ class ExecuteWorkflow(object):
         """
         from pyspark.ml.linalg import Vectors, VectorUDT
         sql_ctx = SQLContext.getOrCreate(sc)
-        transformed_data = model.transform(data_frame)
+        vector_scaled_df = self._vector_scale(data_frame)
+        transformed_data = model.transform(vector_scaled_df)
 
         # udf's
         udf_cast_vector = F.udf(

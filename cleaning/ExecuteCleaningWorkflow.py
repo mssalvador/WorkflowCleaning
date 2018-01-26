@@ -3,11 +3,10 @@ from pyspark.ml import clustering
 import pyspark.ml.feature as features
 from pyspark.ml import Pipeline
 from pyspark.ml import linalg
-#from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
 from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql import functions as F
-from shared.WorkflowLogger import logger_info_decorator, logger
+# from shared.WorkflowLogger import logger_info_decorator, logger
 import numpy as np
 
 
@@ -34,7 +33,7 @@ class ExecuteWorkflow(object):
         self._bool_standardize = standardize
         self._algorithm = self._check_algorithm()
         self._pipeline = self.construct_pipeline()
-        logger.info('Initialized pipeline with transformations {}'.format(self._pipeline.getStages()))
+        # logger.info('Initialized pipeline with transformations {}'.format(self._pipeline.getStages()))
 
     def __repr__(self):
         return "ExecuteWorkflow('{}', '{}', '{}', '{}')".format(
@@ -50,7 +49,6 @@ class ExecuteWorkflow(object):
         )
 
     @staticmethod
-    @logger_info_decorator
     def _check_features(cols_features):
         try:
             assert isinstance(cols_features, list), 'cols_features is not of type list, but of type: ' + str(type(cols_features))
@@ -59,7 +57,7 @@ class ExecuteWorkflow(object):
             print(e.args[0])
             return
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def _check_algorithm(self):
         try:
             applicable_algos = {'kmeans': 'KMeans','gaussianmixture': 'GaussianMixture', 'lda':'LDA'}
@@ -84,7 +82,7 @@ class ExecuteWorkflow(object):
     def labels(self):
         return self._list_labels
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def construct_pipeline(self):
         """
         Method that creates a spark pipeline.
@@ -147,7 +145,7 @@ class ExecuteWorkflow(object):
     def _to_dense(*args):
         return linalg.Vectors.dense(*args)
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def execute_pipeline(self, data_frame):
         """
         Executes the pipeline with the dataframe
@@ -159,7 +157,7 @@ class ExecuteWorkflow(object):
         model = self._pipeline.fit(self._vector_scale(data_frame))
         return model
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def apply_model(self, sc, model, data_frame):
         """
         Runs the model on a data frame

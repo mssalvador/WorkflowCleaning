@@ -3,6 +3,7 @@
 from functools import partial, wraps
 import logging
 import sys
+import datetime
 
 
 def create_logger(argument='/tmp/workflow_test.log'):
@@ -31,9 +32,10 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     return logger
 
-
+now = datetime.datetime.now()
+str_now = str(now).replace(':','_').replace('-','_').replace('.','_')
 logger = create_logger(
-    argument='/tmp/workflow_test.log')
+    argument='/tmp/{}_workflow_test.log'.format(str_now))
 
 
 def _log_info(orig_function, logger=logger):

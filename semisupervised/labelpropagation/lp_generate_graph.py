@@ -4,7 +4,6 @@ from pyspark.ml import feature
 from pyspark.sql.functions import udf
 import numpy as np
 
-
 def _compute_bfs(vec_1, vec_2, sigma=0.42):
     return np.exp(-vec_1.squared_distance(vec_2) / sigma ** 2)
 
@@ -40,6 +39,8 @@ def _scale_data_frame(df, vector=None):
 
 
 def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
+    import functools
+
     sigma = kwargs.get('sigma', 0.42)
     tol = kwargs.get('tol', 10e-10)
     standardize = kwargs.get('standardize', True)
@@ -59,9 +60,15 @@ def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
     bc_vec = sc.broadcast(vector_dict)
 
     index_rdd = df.rdd.map(lambda x: x[id_col]).cache()
+    bfs = functools.partial(_compute_bfs)
     cartesian_demon = index_rdd.cartesian(index_rdd).filter(lambda x: x[0] >= x[1])
-    cartesian_distance_demon = cartesian_demon.map(lambda x: MatrixEntry(x[0], x[1], _compute_bfs(
-        vec_1=bc_vec.value.get(x[0]), vec_2=bc_vec.value.get(x[1]), sigma=sigma)))
+    cartesian_distance_demon = cartesian_demon.map(
+        lambda x: MatrixEntry(x[0], x[1], bfs(
+            vec_1=bc_vec.value.get(x[0]),
+            vec_2=bc_vec.value.get(x[1]),
+            sigma=sigma))
+    )
 
     index_rdd.unpersist() # Memory cleanup!
-    return cartesian_distance_demon.filter(lambda x: _tolerance_cut(x.value, tol))
+    tol_cut = functools.partial(_tolerance_cut, tol=tol)
+    return cartesian_distance_demon.filter(lambda x: tol_cut(x.value))

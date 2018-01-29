@@ -1,13 +1,12 @@
 # This class should execute the clustering model on the recived data.
-
 from pyspark.ml import clustering
 import pyspark.ml.feature as features
 from pyspark.ml import Pipeline
-from shared.ConvertAllToVecToMl import ConvertAllToVecToMl
+from pyspark.ml import linalg
 from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql import functions as F
-from shared.WorkflowLogger import logger_info_decorator, logger
+# from shared.WorkflowLogger import logger_info_decorator, logger
 import numpy as np
 
 
@@ -34,7 +33,7 @@ class ExecuteWorkflow(object):
         self._bool_standardize = standardize
         self._algorithm = self._check_algorithm()
         self._pipeline = self.construct_pipeline()
-        logger.info('Initialized pipeline with transformations {}'.format(self._pipeline.getStages()))
+        # logger.info('Initialized pipeline with transformations {}'.format(self._pipeline.getStages()))
 
     def __repr__(self):
         return "ExecuteWorkflow('{}', '{}', '{}', '{}')".format(
@@ -50,7 +49,6 @@ class ExecuteWorkflow(object):
         )
 
     @staticmethod
-    @logger_info_decorator
     def _check_features(cols_features):
         try:
             assert isinstance(cols_features, list), 'cols_features is not of type list, but of type: ' + str(type(cols_features))
@@ -59,7 +57,7 @@ class ExecuteWorkflow(object):
             print(e.args[0])
             return
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def _check_algorithm(self):
         try:
             applicable_algos = {'kmeans': 'KMeans','gaussianmixture': 'GaussianMixture', 'lda':'LDA'}
@@ -84,31 +82,27 @@ class ExecuteWorkflow(object):
     def labels(self):
         return self._list_labels
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def construct_pipeline(self):
         """
         Method that creates a spark pipeline.
         :return: pipeline,  labels_features_and_parameters
         """
-        vectorized_features = features.VectorAssembler(
-            inputCols=self._list_feature, outputCol="features")  # vectorization
+        # vectorized_features = features.VectorAssembler(
+        #     inputCols=self._list_feature, outputCol="features")  # vectorization
 
-        caster = ConvertAllToVecToMl(
-            inputCol=vectorized_features.getOutputCol(),
-            outputCol="casted_features")  # does the double and ml.densevector cast
-
-        if self._bool_standardize:
-            scaling_model = features.StandardScaler(
-                inputCol="casted_features", outputCol="scaled_features",
-                withMean=True, withStd=True)
-        else:
-            scaling_model = features.StandardScaler(
-                inputCol="casted_features", outputCol="scaled_features",
-                withMean=False, withStd=False)
-
-        # does the double and ml.densevector cast
-        caster_after_scale = ConvertAllToVecToMl(
-            inputCol=scaling_model.getOutputCol(), outputCol="scaled_features")
+        # caster = ConvertAllToVecToMl(
+        #     inputCol=vectorized_features.getOutputCol(),
+        #     outputCol="casted_features")  # does the double and ml.densevector cast
+        #
+        # if self._bool_standardize:
+        #     scaling_model = features.StandardScaler(
+        #         inputCol="casted_features", outputCol="scaled_features",
+        #         withMean=True, withStd=True)
+        # else:
+        #     scaling_model = features.StandardScaler(
+        #         inputCol="casted_features", outputCol="scaled_features",
+        #         withMean=False, withStd=False)
 
         model = getattr(clustering, self._algorithm)()
         param_map = [i.name for i in model.params]
@@ -116,7 +110,7 @@ class ExecuteWorkflow(object):
         # Make sure that the params in self._params are the right for the algorithm
         dict_params_labels = dict(filter(
             lambda x: x[0] in param_map, self._dict_parameters.items()))
-        dict_params_labels['featuresCol'] = caster_after_scale.getOutputCol()
+        dict_params_labels['featuresCol'] = 'scaled_features'
 
         # Model is set
         model = eval("clustering." + self._algorithm)(**dict_params_labels)
@@ -125,24 +119,45 @@ class ExecuteWorkflow(object):
 
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        stages = [vectorized_features, caster, scaling_model, model]
+        stages = [model]#[vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels) # dict gets updated
 
         return Pipeline(stages=stages)
 
-    @logger_info_decorator
+    def _vector_scale(self, df):
+        to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
+        feature_str = 'features'
+
+        vector_df = df.withColumn(colName=feature_str, col=to_dense_udf(*self._list_feature))
+        if self._bool_standardize:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=True, withStd=True).fit(vector_df)
+        else:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=False, withStd=False).fit(vector_df)
+
+        scaled_df = scaling_model.transform(vector_df)
+        return scaled_df.withColumn(colName='scaled_features', col=to_dense_udf(*self._list_feature))
+
+    @staticmethod
+    def _to_dense(*args):
+        return linalg.Vectors.dense(*args)
+
+    # @logger_info_decorator
     def execute_pipeline(self, data_frame):
         """
         Executes the pipeline with the dataframe
         :param data_frame: spark data frame that can be used for the algorithm
         :return: model and cluster centers with id
         """
-
         assert isinstance(data_frame, DataFrame), " data_frame is not of type dataframe but: "+type(data_frame)
-        model = self._pipeline.fit(data_frame)
+
+        model = self._pipeline.fit(self._vector_scale(data_frame))
         return model
 
-    @logger_info_decorator
+    # @logger_info_decorator
     def apply_model(self, sc, model, data_frame):
         """
         Runs the model on a data frame
@@ -152,7 +167,8 @@ class ExecuteWorkflow(object):
         """
         from pyspark.ml.linalg import Vectors, VectorUDT
         sql_ctx = SQLContext.getOrCreate(sc)
-        transformed_data = model.transform(data_frame)
+        vector_scaled_df = self._vector_scale(data_frame)
+        transformed_data = model.transform(vector_scaled_df)
 
         # udf's
         udf_cast_vector = F.udf(

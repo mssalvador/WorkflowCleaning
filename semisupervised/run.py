@@ -1,9 +1,8 @@
-from semisupervised.labelpropagation import label_propagation
+from semisupervised import label_propagation
 from shared.WorkflowLogger import logger_info_decorator
 from shared.parse_algorithm_variables import parse_algorithm_variables
 from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
-from pyspark.sql import types as T
 import  functools
 
 default_lp_param = {'sigma': 0.42, 'tol':0.01, 'k': 2, 'max_iters': 5,

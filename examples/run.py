@@ -1,13 +1,10 @@
 from shared.parse_algorithm_variables import parse_algorithm_variables
-from pyspark.sql import functions as F
-# from examples import SemisupervisedMnist
 from pyspark.sql import SparkSession
 from pathlib import Path
 from shared.Experiments import Experiments
 import warnings
 import functools
-import numpy as np
-from semisupervised.labelpropagation import label_propagation
+from semisupervised import label_propagation
 
 default_lp_param = {'sigma': 340, 'tol':0.01, 'k': 10, 'max_iters': 5,
                     'eval_type': None, 'standardize': True, 'priors': None}
@@ -30,6 +27,7 @@ def run(sc, **kwargs):
     input_data_frame = spark.read.csv(
         path=str_input_data, header=True, inferSchema=True,
         mode='PERMISSIVE', nullValue=float('NAN'), nanValue=float('NAN'))
+    input_data_frame.persist()
 
     list_label_id_cols = [kwargs.get('labels', None)] + [kwargs.get('id', None)]
     if kwargs.get('features', None):
@@ -43,7 +41,7 @@ def run(sc, **kwargs):
 
     keys = dict(filter(lambda x: x[0] not in ('sc'), lp.keywords.items()))
 
-    ex = Experiments(data_size=[100])
+    ex = Experiments(data_size=[10000])
     output_data_frame = ex.run_experiment(
         sc=sc, data=input_data_frame, functions=lp, known_fraction=0.1, **keys)
 

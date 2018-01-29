@@ -4,13 +4,9 @@ Created on 22 August 2017
 @author: svanhmic
 """
 
-from pyspark.sql import functions as F
-from pyspark.sql import types
-import numpy as np
-from shared import ComputeDistances
-import pandas as pd
-import json
-from shared import JSONEncoder
+# import pandas as pd
+# import json
+# from shared import JSONEncoder
 
 # TODO: Vi skal finde ud af strukturen i denne klasse. DVS. skal show_*** vise et cluster eller alle?
 # TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?
@@ -23,11 +19,9 @@ class ShowResults(object):
 
     """
 
-    def __init__(self,
-                 sc,
-                 dict_parameters,
-                 list_features,
-                 list_labels):
+    def __init__(
+            self, sc, dict_parameters,
+            list_features, list_labels):
 
         assert dict_parameters['predictionCol'] is not None, 'Prediction has not been made'
         assert dict_parameters['k'] is not None, 'Number of cluster has not been set'
@@ -87,6 +81,7 @@ class ShowResults(object):
 
     @staticmethod
     def _compute_shift(dataframe, **kwargs):
+        from pyspark.sql import functions as F
         """
         Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
         
@@ -98,7 +93,26 @@ class ShowResults(object):
         return dataframe.withColumn(colName=prediction_col, col=F.col(prediction_col) + 1)
 
     @staticmethod
+    def compute_distance(point, center):
+        """
+        Computes the euclidean  distance from a data point to the cluster center.
+
+        :param point: coordinates for given point
+        :param center: cluster center
+        :return: distance between point and center
+        """
+        import numpy as np
+        from pyspark.ml.linalg import SparseVector
+        if isinstance(point, SparseVector) | isinstance(center, SparseVector):
+            p_d = point.toArray()
+            c_d = center.toArray()
+            return float(np.linalg.norm(p_d - c_d, ord=2))
+        else:
+            return float(np.linalg.norm(point - center, ord=2))
+
+    @staticmethod
     def _add_row_index(dataframe, **kwargs):
+        from pyspark.sql import functions as F
         """
         Uses pyspark's function monotonically_increasing_id() to add a column with indexes 
         
@@ -123,11 +137,15 @@ class ShowResults(object):
             point_col can be set in the function call, else it will search for 'scaled_features'
         :return: dataframe with added distance column 
         """
+        # from shared.ComputeDistances import compute_distance
         from pyspark.sql import functions as F
         from pyspark.sql import types as T
+        import functools
+
         centers_col = kwargs.get('center_col', 'centers')
         points_col = kwargs.get('point_col', 'scaled_features')
-        dist_udf = F.udf(lambda point, center: ComputeDistances.compute_distance(point, center), T.DoubleType())
+        computed_dist =  functools.partial(ShowResults.compute_distance)
+        dist_udf = F.udf(lambda point, center: computed_dist(point, center), T.DoubleType())
 
         return dataframe.withColumn(
             colName='distance',
@@ -149,7 +167,9 @@ class ShowResults(object):
             no_stddev (number of standard derivations) can be set in the function call, else default sat to 2
         :return: dataframe with added 'is_outlier' bool column
         """
+        from pyspark.sql import functions as F
         from pyspark.sql.window import Window
+
         prediction_col = kwargs.get('prediction_col', 'prediction')
         distance_col = kwargs.get('distance_col', 'distance')
         no_stddev = kwargs.get('no_stddev', 2.0)
@@ -163,38 +183,38 @@ class ShowResults(object):
         return (dataframe
                 .withColumn(colName='computed_boundary', col=computed_boundary)
                 .withColumn(colName='is_outlier',
-                            col=F.when(F.col(distance_col) > computed_boundary, True)
-                            .otherwise(False)))
+                            col=F.when(F.col(distance_col) > computed_boundary, 1)
+                            .otherwise(0)))
 
-    @staticmethod
-    def compute_summary(dataframe, **kwargs):
-        """
-        This function creates the summary table for the K-clusters, with their data points, outliers and %-outlier
-        :param dataframe: 
-        :param kwargs: 
-            prediction_col can be set in the function call, else it will search for 'predictionCol'
-            outlier_col can be set in the function call, else it will search for 'is_outlier'
-        :return: Dataframe with Prediction, count, outliers and outlier percentage
-        """
-        prediction_col = kwargs.get('prediction_col', 'prediction')
-        outlier_col = kwargs.get('outlier_col', 'is_outlier')
-        if prediction_col is None or outlier_col is None:
-            return None
-        count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
-
-        return (dataframe
-                .groupBy(prediction_col)
-                .agg(F.count(prediction_col).alias('count'),
-                     F.collect_list(F.col(outlier_col)).alias('outliers'))
-                .withColumn(colName='outlier_count',
-                            col=count_outliers('outliers'))
-                .withColumn(colName='outlier percentage',
-                            col=F.round(F.col('outlier_count') / F.col('count') * 100, scale=0))
-                .withColumnRenamed(existing=prediction_col,
-                                   new='Prediction')
-                .withColumn(colName='Prediction', col=F.col('Prediction')-1)
-                .drop('outliers')
-                )
+    # @staticmethod
+    # def compute_summary(dataframe, **kwargs):
+    #     """
+    #     This function creates the summary table for the K-clusters, with their data points, outliers and %-outlier
+    #     :param dataframe:
+    #     :param kwargs:
+    #         prediction_col can be set in the function call, else it will search for 'predictionCol'
+    #         outlier_col can be set in the function call, else it will search for 'is_outlier'
+    #     :return: Dataframe with Prediction, count, outliers and outlier percentage
+    #     """
+    #     prediction_col = kwargs.get('prediction_col', 'prediction')
+    #     outlier_col = kwargs.get('outlier_col', 'is_outlier')
+    #     if prediction_col is None or outlier_col is None:
+    #         return None
+    #     count_outliers = F.udf(lambda col: int(np.sum(col)), types.IntegerType())
+    #
+    #     return (dataframe
+    #             .groupBy(prediction_col)
+    #             .agg(F.count(prediction_col).alias('count'),
+    #                  F.collect_list(F.col(outlier_col)).alias('outliers'))
+    #             .withColumn(colName='outlier_count',
+    #                         col=count_outliers('outliers'))
+    #             .withColumn(colName='outlier percentage',
+    #                         col=F.round(F.col('outlier_count') / F.col('count') * 100, scale=0))
+    #             .withColumnRenamed(existing=prediction_col,
+    #                                new='Prediction')
+    #             .withColumn(colName='Prediction', col=F.col('Prediction')-1)
+    #             .drop('outliers')
+    #             )
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):
@@ -216,56 +236,90 @@ class ShowResults(object):
         return ShowResults._add_outliers(dataframe_updated, **kwargs)
 
     @staticmethod
-    def cluster_graph(dataframe, **kwargs):
-        """
-        This method creates a dataframe with table for a cluster histogram
-        :param dataframe: containing distances and outliers for a specific cluster
-        :param kwargs:
-        :return: dataframe
-        """
+    def create_linspace(lists, min, max, buckets):
+        import numpy as np
+        buks = list(np.linspace(start=min,stop=max,num=buckets).tolist())
+        output = buckets*[0]
+        tmp_list = lists
+        for jdx, b in enumerate(buks[1:]):
 
-        dist_out_df = dataframe[['distance', 'is_outlier']]
-
-        bins = np.linspace(0, np.max(dataframe.distance), 21)
-
-        height = []
-        is_outlier = []
-        bin = 0
-        for i in bins[1:]:
-            count = 0
-            for j in range(dist_out_df.shape[0]):
-                if bin < dist_out_df.iloc[j]['distance'] <= i:
-                    count += 1
-                    is_outlier.append(dist_out_df.iloc[j]['is_outlier'])
-                else:
-                    continue
-            height.append(count)
-            if len(is_outlier) < len(height):
-                is_outlier.append(False)
-            bin = i
-
-        graph_df = pd.DataFrame({'Bucket': range(1, 21), 'Height': height, 'Is_outlier': is_outlier})
-
-        return graph_df
+            for l in tmp_list:
+                if (jdx == 0) and (l < b):
+                    output[jdx] += 1
+                elif (l < b) and (l >= buks[jdx-1]):
+                    output[jdx] += 1
+        return list(zip(range(len(output)), output))
 
     @staticmethod
-    def json_histogram(dataframe, **kwargs):
-        """
-        Creates the json file with the information to draw the histograms for the different clusters.
-        Uses cluster_graph
-        :param dataframe: the prepared_table_data
-        :param kwargs:
-        :return: json
-        """
-        g = {}
-        grouped = dataframe.groupby('prediction')
+    def create_buckets(sc, dataframe, **kwargs):
+        from pyspark.sql import functions as F
+        from pyspark.sql import types
 
-        for i in range(1, len(dataframe.prediction.unique()) + 1):
-            group = grouped.get_group(i)
-            table = ShowResults.cluster_graph(group)
-            g['group' + str(i)] = table
+        n_buckets = sc.broadcast(20)
+        pred = kwargs.get('predictionCol','prediction')
+        generate_list_udf = F.udf(
+            lambda l, minimum, maximum: ShowResults.create_linspace(l, minimum, maximum, n_buckets.value),
+            types.ArrayType(types.ArrayType(types.IntegerType())))
+        tmp = (dataframe.groupBy(pred).agg(
+            F.min('distance').alias('min'),
+            F.max('distance').alias('max'),
+            F.collect_list('distance').alias('distances'))
+        .withColumn('bukets', generate_list_udf('distances','min','max'))
+        )
 
-        return json.dumps(g, sort_keys=True, indent=4, cls=JSONEncoder.JSONEncoder)
+        return tmp.select(pred,'bukets')
+
+    # @staticmethod
+    # def cluster_graph(dataframe, **kwargs):
+    #     """
+    #     This method creates a dataframe with table for a cluster histogram
+    #     :param dataframe: containing distances and outliers for a specific cluster
+    #     :param kwargs:
+    #     :return: dataframe
+    #     """
+    #
+    #     dist_out_df = dataframe[['distance', 'is_outlier']]
+    #
+    #     bins = np.linspace(0, np.max(dataframe.distance), 21)
+    #
+    #     height = []
+    #     is_outlier = []
+    #     bin = 0
+    #     for i in bins[1:]:
+    #         count = 0
+    #         for j in range(dist_out_df.shape[0]):
+    #             if bin < dist_out_df.iloc[j]['distance'] <= i:
+    #                 count += 1
+    #                 is_outlier.append(dist_out_df.iloc[j]['is_outlier'])
+    #             else:
+    #                 continue
+    #         height.append(count)
+    #         if len(is_outlier) < len(height):
+    #             is_outlier.append(False)
+    #         bin = i
+    #
+    #     graph_df = pd.DataFrame({'Bucket': range(1, 21), 'Height': height, 'Is_outlier': is_outlier})
+    #
+    #     return graph_df
+
+    # @staticmethod
+    # def json_histogram(dataframe, **kwargs):
+    #     """
+    #     Creates the json file with the information to draw the histograms for the different clusters.
+    #     Uses cluster_graph
+    #     :param dataframe: the prepared_table_data
+    #     :param kwargs:
+    #     :return: json
+    #     """
+    #     g = {}
+    #     grouped = dataframe.groupby('prediction')
+    #
+    #     for i in range(1, len(dataframe.prediction.unique()) + 1):
+    #         group = grouped.get_group(i)
+    #         table = ShowResults.cluster_graph(group)
+    #         g['group' + str(i)] = table
+    #
+    #     return json.dumps(g, sort_keys=True, indent=4, cls=JSONEncoder.JSONEncoder)
 
         # # create summary for the clusters along with number in each cluster and number of outliers
         # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it

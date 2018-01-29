@@ -1,5 +1,5 @@
 from shared import create_dummy_data as ccd
-from semisupervised.LabelPropagation import label_propagation
+from semisupervised.depLabelPropagation import label_propagation
 from pyspark.sql import functions as F
 from shared.Plot2DGraphs import plot3D
 

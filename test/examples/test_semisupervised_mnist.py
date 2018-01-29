@@ -1,6 +1,6 @@
 from pyspark import tests
 from pyspark.sql import SparkSession
-from examples import SemisupervisedMnist
+from examples import depSemisupervisedMnist
 from pyspark.sql import functions as F
 import math
 
@@ -15,7 +15,7 @@ class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
     def test_create_nan_labels(self):
         fraction = 0.1
         input_data_frame = self.data_frame.filter(F.col('label').isin([0,1]))
-        output_data_frame = SemisupervisedMnist.create_nan_labels(
+        output_data_frame = depSemisupervisedMnist.create_nan_labels(
             self.sc, dataframe=input_data_frame, label_col='label', fraction=fraction)
 
         # TEST 1: Does it contain missing_*label_name*?
@@ -38,19 +38,19 @@ class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
 
         # Test 1: reduce the size to 90
         new_size = 900
-        output_data_frame = SemisupervisedMnist.enlarge_dataset(
+        output_data_frame = depSemisupervisedMnist.enlarge_dataset(
             dataframe=input_df, size= new_size, feature_cols=['pixel'+str(i) for i in range(784)])
         self.assertAlmostEqual(output_data_frame.count(), new_size, delta=original_size*0.05)
 
         # Test 2: enlargen to double size
         new_size = 2000
-        output_data_frame = SemisupervisedMnist.enlarge_dataset(
+        output_data_frame = depSemisupervisedMnist.enlarge_dataset(
             dataframe=input_df, size= new_size, feature_cols=['pixel'+str(i) for i in range(784)])
         self.assertAlmostEqual(output_data_frame.count(), new_size, delta=new_size*0.05)
 
     def test_subset_dataset_by_label(self):
         # Test 1:
-        output_data_frame = SemisupervisedMnist.subset_dataset_by_label(
+        output_data_frame = depSemisupervisedMnist.subset_dataset_by_label(
             self.sc, self.data_frame, 'label',0 ,1, 2)
 
         distinct_label = output_data_frame.select('label').distinct().collect()
@@ -62,7 +62,7 @@ class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
         # TEST 1: Check for constant fractions
         frac = 0.1
         broad_cast_frac = self.sc.broadcast(frac)
-        computed_dict = SemisupervisedMnist._compute_fraction(
+        computed_dict = depSemisupervisedMnist._compute_fraction(
             sc=self.sc, dataframe=self.data_frame, fraction=frac,
             label_col='label')
 
@@ -73,7 +73,7 @@ class Test_Semisupervised_Mnist(tests.ReusedPySparkTestCase):
         # TEST 2: Check for variable fractions
         actual_fractions = dict(zip(map(lambda x: str(x), range(10)), [0.1, 0.2, 0.3, 0.4, 0.4, 0.5, 0.8, 0.9, 0.01, 0.002]))
         try:
-            variable_dict = SemisupervisedMnist._compute_fraction(
+            variable_dict = depSemisupervisedMnist._compute_fraction(
                 sc=self.sc, dataframe=self.data_frame, label_col='label', **actual_fractions)
         except TypeError as te:
             print(te)

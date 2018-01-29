@@ -1,6 +1,7 @@
 from shared.WorkflowLogger import logger_info_decorator, logger
 from ast import literal_eval
 
+
 @logger_info_decorator
 def parse_algorithm_variables(vars):
     for key, val in vars.items():

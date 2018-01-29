@@ -1,12 +1,8 @@
-from unittest import TestCase
-
-from pyspark.tests import ReusedPySparkTestCase, PySparkTestCase
-from pyspark.sql import Window
+from pyspark.tests import PySparkTestCase
 from pyspark.sql import SparkSession
 from pyspark.ml.linalg import DenseVector
 import pandas as pd
 import numpy as np
-from pyspark.sql import functions as F
 
 from cleaning.ShowCleaning import ShowResults
 
@@ -55,6 +51,7 @@ class TestShowResults(PySparkTestCase):
                             sqrt(9.0+16.0), sqrt(1.0), sqrt(100.0), sqrt(4.0), sqrt(25.0)]
         for idx, val in enumerate(actual_distances):
             self.assertEqual(val, p_computed_dataframe['distance'][idx])
+        print('add_distance \n', p_computed_dataframe)
 
     def test_add_outliers(self):
         computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
@@ -63,6 +60,7 @@ class TestShowResults(PySparkTestCase):
         # Boundary pre calculated mean for prediction 0: mean+2*stddev
         actual_values = [False]*5+[True]+4*[False]
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
+        print('add_outliers \n', computed_pdf)
 
     def test_compute_summary(self):
         computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
@@ -81,11 +79,12 @@ class TestShowResults(PySparkTestCase):
         self.assertEqual(list(summary_pdf['count']), actual_count_prediction)
         self.assertEqual(list(summary_pdf['outlier_count']), actual_count_outliers)
         self.assertEqual(list(summary_pdf['outlier percentage']), actual_count_percentage)
+        print('compute_summary \n', summary_pdf)
 
     def test_prepare_table_data(self):
         # not tested through
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
-        print(table_df)
+        print('prepare_table_data \n', table_df)
 
     def test_cluster_graph(self):
         # not tested through
@@ -95,14 +94,14 @@ class TestShowResults(PySparkTestCase):
         for i in range(1, len(table_df.prediction.unique())+1):
             group_i = grouped.get_group(i)
             table_json = ShowResults.cluster_graph(group_i)
-            print(table_json)
+            print('cluster_graph \n', table_json)
 
     def test_json_histogram(self):
         # not tested through
 
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         hist_json = ShowResults.json_histogram(table_df)
-        print(hist_json)
+        print('json_hist \n', hist_json)
 
 
 

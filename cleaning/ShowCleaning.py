@@ -4,8 +4,6 @@ Created on 22 August 2017
 @author: svanhmic
 """
 
-from pyspark.context import SparkContext
-from ipywidgets import widgets
 from pyspark.sql import functions as F
 from pyspark.sql import types
 import numpy as np
@@ -13,10 +11,6 @@ from shared import ComputeDistances
 import pandas as pd
 import json
 from shared import JSONEncoder
-from scipy.stats import chi2
-from IPython.display import display, clear_output, Javascript, HTML
-import pyspark.ml.clustering as clusters
-from pyspark.ml.linalg import VectorUDT
 
 # TODO: Vi skal finde ud af strukturen i denne klasse. DVS. skal show_*** vise et cluster eller alle?
 # TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?

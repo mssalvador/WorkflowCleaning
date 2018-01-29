@@ -4,6 +4,7 @@ from shared.WorkflowLogger import logger_info_decorator
 from shared.parse_algorithm_variables import parse_algorithm_variables
 
 from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
+from cleaning.ShowCleaning import ShowResults
 
 
 @logger_info_decorator
@@ -23,7 +24,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_schema = [T.StructField(f, T.DoubleType(), False) for f in feature_columns]
     training_data_schema = T.StructType(id_schema+label_schema+feature_schema)
     training_data_frame = spark_session.read.load(
-        path=import_path, format='csv', schema= training_data_schema)
+        path=import_path, format='csv', schema=training_data_schema)
 
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,

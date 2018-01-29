@@ -23,7 +23,7 @@ if __name__ == '__main__':
                         help='The name of the module that should be executed. '
                              '(ex. semi-supervised runs jobs in semi-supervised package')
     parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
-                                                                       '(ex. Algorithm=Kmeans, Standardize=True, k=20')
+                                                                       '(ex. Algorithm=kmeans, Standardize=True, k=20')
     parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
                                                                           '(ex. /home/user/data.txt)')
     parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
@@ -41,7 +41,8 @@ if __name__ == '__main__':
     all_args['id'] = args.id
     all_args['labels'] = args.labels
 
-    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name, pyFiles=['file:///home/ml/d/shared.zip','file:///home/ml/d/cleaning.zip'])
+    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name, pyFiles=['file:///home/ml/dist_files/shared.zip',
+                                                                                 'file:///home/ml/dist_files/cleaning.zip'])
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)

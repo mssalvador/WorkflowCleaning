@@ -3,6 +3,7 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 # from shared.WorkflowLogger import logger_info_decorator
 
+
 # @logger_info_decorator
 def run(sc: pyspark.SparkContext, **kwargs):
 
@@ -35,14 +36,14 @@ def run(sc: pyspark.SparkContext, **kwargs):
     clustered_data_frame = cleaning_workflow.apply_model(
         sc=sc, model=training_model, data_frame=training_data_frame)
 
-    print(algorithm_params)
+    # print(algorithm_params)
     show_result = ShowResults(
         sc=sc, dict_parameters=algorithm_params,
-        list_features=feature_columns, list_labels=label_columns )
+        list_features=feature_columns, list_labels=label_columns)
 
     all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
     d_point = 'data_points'
-    new_struct = F.struct(['id',*feature_columns, 'distance','is_outlier']).alias(d_point)
+    new_struct = F.struct(['id', *feature_columns, 'distance', 'is_outlier']).alias(d_point)
 
     buket_df = show_result.create_buckets(sc, all_info_df, **algorithm_params)
 

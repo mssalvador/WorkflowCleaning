@@ -60,11 +60,11 @@ class ExecuteWorkflow(object):
     # @logger_info_decorator
     def _check_algorithm(self):
         try:
-            applicable_algos = {'kmeans': 'KMeans','gaussianmixture': 'GaussianMixture', 'lda':'LDA'}
+            applicable_algos = {'kmeans': 'KMeans', 'gaussianmixture': 'GaussianMixture', 'lda': 'LDA'}
             algorithm = self._dict_parameters.pop('algorithm', 'GaussianMixture')
             return applicable_algos[algorithm.lower()]
         except AttributeError as ae:
-            return 'GaussianMixture'
+            return 'KMeans'
 
     @property
     def pipeline(self):
@@ -119,7 +119,7 @@ class ExecuteWorkflow(object):
 
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        stages = [model]#[vectorized_features, caster, scaling_model, model]
+        stages = [model] # [vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels) # dict gets updated
 
         return Pipeline(stages=stages)

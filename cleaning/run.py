@@ -24,7 +24,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_schema = [T.StructField(f, T.DoubleType(), False) for f in feature_columns]
     training_data_schema = T.StructType(id_schema+label_schema+feature_schema)
     training_data_frame = spark_session.read.load(
-        path=import_path, format='csv', schema= training_data_schema)
+        path=import_path, format='csv', schema=training_data_schema)
 
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,

@@ -41,15 +41,15 @@ if __name__ == '__main__':
     all_args['id'] = args.id
     all_args['labels'] = args.labels
 
-    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name, pyFiles=['file:///home/ml/d/shared.zip','file:///home/ml/d/cleaning.zip'])
+    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name,)# pyFiles=['file:///home/ml/d/shared.zip','file:///home/ml/d/cleaning.zip'])
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
-        # data_frame.printSchema()
-        # data_frame.show()
-        rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
-        js = rdd.collect()
-        print(js)
+        data_frame.printSchema()
+        data_frame.show()
+        # rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        # js = rdd.collect()
+        # print(js)
         # print("""{"cluster":["""+','.join(js)+"""]}""")
 
     except TypeError as te:

@@ -18,24 +18,17 @@ class ShowResults(object):
     Object for displaying results from the clustering
 
     """
+    def __init__(self, id, list_features, list_labels, **kwargs):
 
-    def __init__(
-            self, sc, dict_parameters,
-            list_features, list_labels):
-
-        assert dict_parameters['predictionCol'] is not None, 'Prediction has not been made'
-        assert dict_parameters['k'] is not None, 'Number of cluster has not been set'
-        self.sc = sc.getOrCreate()
-        self._prediction_columns = dict_parameters['predictionCol']
-        self._k_clusters = dict_parameters['k']
-
-        self._data_dict = dict_parameters
-        # self._dimensions = len(list_features)
+        assert kwargs['predictionCol'] is not None, 'Prediction has not been made'
+        assert kwargs['k'] is not None, 'Number of cluster has not been set'
+        self._prediction_columns = kwargs['predictionCol']
+        self._k_clusters = kwargs['k']
+        self._data_dict = kwargs
+        self._id = id
         self._features = list_features
         self._labels = list_labels
-        # self._boundary = chi2.ppf(0.99, self._dimensions)
         self._selected_cluster = 1
-        # print(self._data_dict)
 
     # def select_cluster(self, dataframe):
     #     """
@@ -264,10 +257,28 @@ class ShowResults(object):
             F.min('distance').alias('min'),
             F.max('distance').alias('max'),
             F.collect_list('distance').alias('distances'))
-        .withColumn('bukets', generate_list_udf('distances','min','max'))
+        .withColumn('buckets', generate_list_udf('distances','min','max'))
         )
+        return tmp.select(pred,'buckets')
 
-        return tmp.select(pred,'bukets')
+    def arrange_output(self, sc, dataframe, data_point_name='data_points', **kwargs):
+        from pyspark.sql import functions as F
+        predict_col = kwargs.get('predictionCol', 'Prediction')
+        new_struct = F.struct([self._id, *self._features,
+                               'distance','is_outlier']).alias(data_point_name)
+        percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)
+
+        bucket_df = ShowResults.create_buckets(sc=sc, dataframe=dataframe, **kwargs)
+        re_arranged_df = (dataframe.select(F.col(predict_col), new_struct)
+            .groupBy(F.col(predict_col))
+            .agg(F.count(predict_col).alias('amount'),
+                 F.sum(F.col(data_point_name+".is_outlier")).alias('percentage_outlier'),
+                 F.collect_list(data_point_name).alias(data_point_name))
+            .join(other=bucket_df, on=predict_col, how='inner')
+            .withColumn('amount_outlier', F.col('percentage_outlier'))
+            .withColumn('percentage_outlier', percentage_outlier))
+        return re_arranged_df
+
 
     # @staticmethod
     # def cluster_graph(dataframe, **kwargs):

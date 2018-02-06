@@ -88,21 +88,6 @@ class ExecuteWorkflow(object):
         Method that creates a spark pipeline.
         :return: pipeline,  labels_features_and_parameters
         """
-        # vectorized_features = features.VectorAssembler(
-        #     inputCols=self._list_feature, outputCol="features")  # vectorization
-
-        # caster = ConvertAllToVecToMl(
-        #     inputCol=vectorized_features.getOutputCol(),
-        #     outputCol="casted_features")  # does the double and ml.densevector cast
-        #
-        # if self._bool_standardize:
-        #     scaling_model = features.StandardScaler(
-        #         inputCol="casted_features", outputCol="scaled_features",
-        #         withMean=True, withStd=True)
-        # else:
-        #     scaling_model = features.StandardScaler(
-        #         inputCol="casted_features", outputCol="scaled_features",
-        #         withMean=False, withStd=False)
 
         model = getattr(clustering, self._algorithm)()
         param_map = [i.name for i in model.params]

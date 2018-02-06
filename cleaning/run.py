@@ -35,28 +35,15 @@ def run(sc: pyspark.SparkContext, **kwargs):
     clustered_data_frame = cleaning_workflow.apply_model(
         sc=sc, model=training_model, data_frame=training_data_frame)
 
-    print(algorithm_params)
+    # print(algorithm_params)
     show_result = ShowResults(
         id=id_column[0], list_features=feature_columns,
         list_labels=label_columns, **algorithm_params)
 
     all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
+    # all_info_df.show()
     d_point = 'data_points'
-    new_struct = F.struct(['id', *feature_columns, 'distance','is_outlier']).alias(d_point)
 
-    buket_df = show_result.create_buckets(sc, all_info_df, **algorithm_params)
-
-    return (all_info_df
-        .select(F.col(algorithm_params['predictionCol']), new_struct)
-        .groupBy(F.col(algorithm_params['predictionCol'])).agg(
-        F.count(algorithm_params['predictionCol']).alias('amount'),
-        F.sum(F.col(d_point+".is_outlier")).alias('percentage_outlier'),
-        F.collect_list(d_point).alias(d_point))
-        .join(other=buket_df, on=algorithm_params['predictionCol'], how='inner')
-        .withColumn('amount_outlier', F.col('percentage_outlier'))
-        .withColumn('percentage_outlier', F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3))
-    )
-
-
-
-
+    output_df = show_result.arrange_output(
+        sc=sc, dataframe=all_info_df, data_point_name=d_point, **algorithm_params)
+    return output_df

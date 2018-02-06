@@ -111,14 +111,6 @@ class TestShowResults(PySparkTestCase):
 
     def test_arrange_output(self):
         # Preamble: setup data
-        df = self.spark.range(10)
-        df = (df
-            .select(
-            'id', F.rand(42).alias('a'), F.randn(1).alias('b'),
-            F.round(10 * F.rand(42)).alias('Prediction'),
-            F.rand().alias('distance'))
-            .withColumn('is_outlier', F.when(F.col('distance') >= 0.7, 1.0).otherwise(0.))
-        )
         features = ['a', 'b']
         id = 'id'
         prediction = 'Prediction'
@@ -126,12 +118,35 @@ class TestShowResults(PySparkTestCase):
 
         shows = ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
         d_point = 'dp'
+        df = self._generate_data()
         arranged_df = shows.arrange_output(self.sc, df, data_point_name=d_point)
         expected_cols = [prediction, d_point, 'amount', 'percentage_outlier', 'amount_outlier', 'buckets' ]
         self.assertListEqual(sorted(expected_cols), sorted(arranged_df.columns))
 
-    @unittest.skip('Test not created')
+    def _generate_data(self):
+        df = self.spark.range(10)
+        output = (df
+            .select(
+            'id', F.rand(42).alias('a'), F.randn(1).alias('b'),
+            F.round(10 * F.rand(42)).alias('Prediction'),
+            F.rand().alias('distance'))
+            .withColumn('is_outlier', F.when(F.col('distance') >= 0.7, 1.0).otherwise(0.))
+            .withColumn('computed_boundary', F.randn())
+            )
+        return output
+
+    # @unittest.skip('Test not created')
     def test_create_buckets(self):
+        # Preamble: setup data
+        df = self._generate_data()
+        features = ['a', 'b']
+        id = 'id'
+        prediction = 'Prediction'
+
+        shows = ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
+        buckets = shows.create_buckets(sc=self.sc, dataframe=df, buckets=20, prediction_col=prediction)
+
+        print(buckets.rdd.take(1)[0]['buckets'])
         self.fail()
 
 

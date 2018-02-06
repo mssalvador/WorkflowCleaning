@@ -41,16 +41,20 @@ if __name__ == '__main__':
     all_args['id'] = args.id
     all_args['labels'] = args.labels
 
-    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name,)# pyFiles=['file:///home/ml/d/shared.zip','file:///home/ml/d/cleaning.zip'])
+    dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
+    py_files = ['/shared.zip', '/examples.zip', 'cleaning.zip', 'classification.zip', 'semisupervised.zip']
+
+    sc = pyspark.SparkContext(appName=args.job_name,
+        pyFiles=[dtu_cluster_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
         data_frame.printSchema()
-        data_frame.show()
-        # rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
-        # js = rdd.collect()
+        # data_frame.show()
+        rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        js = rdd.collect()
         # print(js)
-        # print("""{"cluster":["""+','.join(js)+"""]}""")
+        print("""{"cluster":["""+','.join(js)+"""]}""")
 
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

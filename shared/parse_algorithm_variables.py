@@ -8,7 +8,7 @@ def parse_algorithm_variables(vars):
         try:
             vars[key] = literal_eval(val)
         except ValueError as ve:
-            print('Data {} is of type {}'.format(key, type(val)))
+            # print('Data {} is of type {}'.format(key, type(val)))
             logger.info('Data {} is of type {}'.format(key, type(val)))
         except SyntaxError as se:
             vars[key] = val.strip(' ')

@@ -42,18 +42,19 @@ if __name__ == '__main__':
     all_args['labels'] = args.labels
 
     dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
-    py_files = ['/shared.zip', '/examples.zip', 'cleaning.zip', 'classification.zip', 'semisupervised.zip']
+    visma_cluster_path = 'hdfs:///user/spark/code'
+    py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
-    sc = pyspark.SparkContext(appName=args.job_name,
-        pyFiles=[dtu_cluster_path+py_file for py_file in py_files])
+    sc = pyspark.SparkContext(
+        appName=args.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
-        data_frame.printSchema()
-        # data_frame.show()
+        # data_frame.printSchema()
+        #data_frame.show()
         rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
-        # print(js)
+        #print(js)
         print("""{"cluster":["""+','.join(js)+"""]}""")
 
     except TypeError as te:

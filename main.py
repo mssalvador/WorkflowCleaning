@@ -18,36 +18,50 @@ for zip_file, path in package_dict.items():
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Runs a Pyspark job for workflow')
-    parser.add_argument('--job', type=str, required=True, dest='job_name',
-                        help='The name of the module that should be executed. '
-                             '(ex. semi-supervised runs jobs in semi-supervised package')
-    parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
-                                                                       '(ex. Algorithm=Kmeans, Standardize=True, k=20')
-    parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
-                                                                          '(ex. /home/user/data.txt)')
-    parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
-                                                                ' (ex. a b c d ... x y)')
-    parser.add_argument('--id', type=str, nargs='*', help='The identification column for the dataset')
-    parser.add_argument('--labels', type=str, help='Labels on the training dataset.')
-    args = parser.parse_args()
-    # print('Called with arguments: {}'.format(str(args)))
+    # parser = argparse.ArgumentParser(description='Runs a Pyspark job for workflow')
+    # parser.add_argument('--job', type=str, required=True, dest='job_name',
+    #                     help='The name of the module that should be executed. '
+    #                          '(ex. semi-supervised runs jobs in semi-supervised package')
+    # parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
+    #                                                                    '(ex. Algorithm=Kmeans, Standardize=True, k=20')
+    # parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
+    #                                                                       '(ex. /home/user/data.txt)')
+    # parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
+    #                                                             ' (ex. a b c d ... x y)')
+    # parser.add_argument('--id', type=str, nargs='*', help='The identification column for the dataset')
+    # parser.add_argument('--labels', type=str, help='Labels on the training dataset.')
+    # args = parser.parse_args()
+    # print('Called with _arguments: {}'.format(str(args)))
+    # print(sys.argv)
+    from shared.OwnArguments import OwnArguments
+    arguments = OwnArguments()
+    arguments.add_argument('--job', types=str, required=True, dest='job_name')
+    arguments.add_argument('--job_args', dest='job_args', nargs='*')
+    arguments.add_argument('--input_data', dest='input_data', types=str)
+    arguments.add_argument('--features', dest='features', types=str, nargs='*')
+    arguments.add_argument('--id', dest='id' ,types=str, nargs='*')
+    arguments.add_argument('--labels', dest='labels', types=str)
+    arguments.parse_arguments()
+
     all_args = dict()
-    if args.job_args:
-        all_args['algo_params'] = dict(arg.split('=') for arg in args.job_args)
+    print(arguments.job_name)
+    print(arguments.input_data)
+    print(arguments.job_args)
+    if arguments.job_args:
+        all_args['algo_params'] = dict(arg.split('=') for arg in arguments.job_args)
 
-    all_args['input_data'] = args.input_data
-    all_args['features'] = args.features
-    all_args['id'] = args.id
-    all_args['labels'] = args.labels
-
+    all_args['input_data'] = arguments.input_data
+    all_args['features'] = arguments.features
+    all_args['id'] = arguments.id
+    all_args['labels'] = arguments.labels
     dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
-    visma_cluster_path = 'hdfs:///user/spark/code'
+    local_path = "file:/home/svanhmic/workspace/DABAI/Workflows/dist_workflow"
+    visma_cluster_path = 'file:/home/ml/deployments/workflows'
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
     sc = pyspark.SparkContext(
-        appName=args.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
-    job_module = importlib.import_module('{:s}'.format(args.job_name))
+        appName=arguments.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
+    job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()

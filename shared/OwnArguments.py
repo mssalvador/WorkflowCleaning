@@ -3,7 +3,7 @@ import sys
 class LittleOwnArg(object):
     "container class"
     def __init__(self, name='dummy', nargs=1, types=str, dest=None, helper=None, required=False):
-        print(sys.argv)
+        # print(sys.argv)
         self._name = name
         self._nargs = nargs
         self._types = types

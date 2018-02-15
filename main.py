@@ -2,9 +2,7 @@
 import os
 import sys
 import importlib
-import argparse
 import pyspark
-import json
 
 package_dict = {
     'semisupervised.zip': './semisupervised', 'cleaning.zip': './cleaning',
@@ -17,22 +15,6 @@ for zip_file, path in package_dict.items():
         sys.path.insert(0, path)
 
 if __name__ == '__main__':
-
-    # parser = argparse.ArgumentParser(description='Runs a Pyspark job for workflow')
-    # parser.add_argument('--job', type=str, required=True, dest='job_name',
-    #                     help='The name of the module that should be executed. '
-    #                          '(ex. semi-supervised runs jobs in semi-supervised package')
-    # parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
-    #                                                                    '(ex. Algorithm=Kmeans, Standardize=True, k=20')
-    # parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
-    #                                                                       '(ex. /home/user/data.txt)')
-    # parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
-    #                                                             ' (ex. a b c d ... x y)')
-    # parser.add_argument('--id', type=str, nargs='*', help='The identification column for the dataset')
-    # parser.add_argument('--labels', type=str, help='Labels on the training dataset.')
-    # args = parser.parse_args()
-    # print('Called with _arguments: {}'.format(str(args)))
-    # print(sys.argv)
     from shared.OwnArguments import OwnArguments
     arguments = OwnArguments()
     arguments.add_argument('--job', types=str, required=True, dest='job_name')
@@ -44,11 +26,9 @@ if __name__ == '__main__':
     arguments.parse_arguments()
 
     all_args = dict()
-    print(arguments.job_name)
-    print(arguments.input_data)
-    print(arguments.job_args)
     if arguments.job_args:
         all_args['algo_params'] = dict(arg.split('=') for arg in arguments.job_args)
+
 
     all_args['input_data'] = arguments.input_data
     all_args['features'] = arguments.features
@@ -60,12 +40,12 @@ if __name__ == '__main__':
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
     sc = pyspark.SparkContext(
-        appName=arguments.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
+        appName=arguments.job_name, pyFiles=[local_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
-        #data_frame.show()
+        # data_frame.show()
         rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
         #print(js)

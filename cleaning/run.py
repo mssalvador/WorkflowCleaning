@@ -34,10 +34,12 @@ def run(sc: pyspark.SparkContext, **kwargs):
     training_model = cleaning_workflow.execute_pipeline(training_data_frame)
     clustered_data_frame = cleaning_workflow.apply_model(
         sc=sc, model=training_model, data_frame=training_data_frame)
+
+    # clustered_data_frame.show()
+
     show_result = ShowResults(
         id=id_column[0], list_features=feature_columns,
         list_labels=label_columns, **algorithm_params)
-
     all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
     # all_info_df.show()
     d_point = 'data_points'

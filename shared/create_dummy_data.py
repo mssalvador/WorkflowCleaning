@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import math
 
+
 def create_norm_cluster_data_pandas(n_amounts, means, std=None, features=None):
     """
     Creates an n*m dimensional dataframe with normal distributed data
@@ -49,7 +50,7 @@ def create_spark_data(sc, func, **kwargs):
 
 def export_csv(data_frame: sql.DataFrame,
                path='/home/svanhmic/workspace/data/DABAI/sparkdata/csv/double_helix.csv'):
-    return data_frame.write.csv(path=path, mode='overwrite',header=data_frame.columns)
+    return data_frame.write.csv(path=path, mode='overwrite', header=data_frame.columns)
 
 
 def create_double_helix(points_pr_helix, alpha=1.0, beta=1.0, missing = 0.01 ):
@@ -75,8 +76,8 @@ def load_mnist(sc, n_samples = None, **kwargs):
     :param n_samples: extra parameter that enables extra digits
     :return:
     """
-    path = kwargs.get('path','/home/svanhmic/workspace/data/DABAI/mnist')
-    package = kwargs.get('package','pandas')
+    path = kwargs.get('path', '/home/svanhmic/workspace/data/DABAI/mnist')
+    package = kwargs.get('package', 'pandas')
     if package == 'pandas':
         train_df = pd.read_csv(path+'/train.csv', header=0)
         test_df = pd.read_csv(path+'/test.csv', header=0)

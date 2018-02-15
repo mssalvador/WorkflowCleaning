@@ -26,7 +26,8 @@ def run(sc: pyspark.SparkContext, **kwargs):
     training_data_schema = T.StructType(id_schema+label_schema+feature_schema)
     training_data_frame = spark_session.read.load(
         path=import_path, format='csv', schema=training_data_schema)
-
+    training_data_frame = training_data_frame.na.drop()
+    # training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer
@@ -43,7 +44,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
 
     all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
     d_point = 'data_points'
-    new_struct = F.struct(['id', *feature_columns, 'distance', 'is_outlier']).alias(d_point)
+    new_struct = F.struct([id_column[0], *feature_columns, 'distance', 'is_outlier']).alias(d_point)
 
     buket_df = show_result.create_buckets(sc, all_info_df, **algorithm_params)
 

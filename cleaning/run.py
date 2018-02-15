@@ -3,7 +3,6 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 # from shared.WorkflowLogger import logger_info_decorator
 
-
 # @logger_info_decorator
 def run(sc: pyspark.SparkContext, **kwargs):
 
@@ -26,8 +25,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     training_data_schema = T.StructType(id_schema+label_schema+feature_schema)
     training_data_frame = spark_session.read.load(
         path=import_path, format='csv', schema=training_data_schema)
-    training_data_frame = training_data_frame.na.drop()
-    # training_data_frame.show()
+
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer
@@ -39,25 +37,13 @@ def run(sc: pyspark.SparkContext, **kwargs):
 
     # print(algorithm_params)
     show_result = ShowResults(
-        sc=sc, dict_parameters=algorithm_params,
-        list_features=feature_columns, list_labels=label_columns)
+        id=id_column[0], list_features=feature_columns,
+        list_labels=label_columns, **algorithm_params)
 
     all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
+    # all_info_df.show()
     d_point = 'data_points'
-    new_struct = F.struct([id_column[0], *feature_columns, 'distance', 'is_outlier']).alias(d_point)
 
-    buket_df = show_result.create_buckets(sc, all_info_df, **algorithm_params)
-
-    return (all_info_df
-        .select(F.col(algorithm_params['predictionCol']), new_struct)
-        .groupBy(F.col(algorithm_params['predictionCol'])).agg(
-        F.count(algorithm_params['predictionCol']).alias('amount'),
-        F.sum(F.col(d_point+".is_outlier")).alias('percentage_outlier'),
-        F.collect_list(d_point).alias(d_point))
-        .join(other=buket_df, on=algorithm_params['predictionCol'], how='inner')
-        .withColumn('percentage_outlier', 100 * F.col('percentage_outlier') / F.col('amount'))
-    )
-
-
-
-
+    output_df = show_result.arrange_output(
+        sc=sc, dataframe=all_info_df, data_point_name=d_point, **algorithm_params)
+    return output_df

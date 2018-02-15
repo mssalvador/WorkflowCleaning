@@ -1,6 +1,8 @@
+import unittest
 from pyspark.tests import PySparkTestCase
 from pyspark.sql import SparkSession
 from pyspark.ml.linalg import DenseVector
+from pyspark.sql import functions as F
 import pandas as pd
 import numpy as np
 
@@ -62,6 +64,8 @@ class TestShowResults(PySparkTestCase):
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
         print('add_outliers \n', computed_pdf)
 
+
+    @unittest.skip('Reason: Compute summary not in play.')
     def test_compute_summary(self):
         computed_dataframe = ShowResults._add_distances(self.dataframe, point_col='point_col')
         computed_df = ShowResults._add_outliers(computed_dataframe)
@@ -86,6 +90,7 @@ class TestShowResults(PySparkTestCase):
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         print('prepare_table_data \n', table_df)
 
+    @unittest.skip('reason: Not implemented')
     def test_cluster_graph(self):
         # not tested through
 
@@ -96,12 +101,53 @@ class TestShowResults(PySparkTestCase):
             table_json = ShowResults.cluster_graph(group_i)
             print('cluster_graph \n', table_json)
 
+    @unittest.skip('Reason: JSON_histogram not applicable')
     def test_json_histogram(self):
         # not tested through
 
         table_df = ShowResults.prepare_table_data(self.dataframe, point_col='point_col').toPandas()
         hist_json = ShowResults.json_histogram(table_df)
         print('json_hist \n', hist_json)
+
+    def test_arrange_output(self):
+        # Preamble: setup data
+        features = ['a', 'b']
+        id = 'id'
+        prediction = 'Prediction'
+        # Test 1: Are all columns there?
+
+        shows = ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
+        d_point = 'dp'
+        df = self._generate_data()
+        arranged_df = shows.arrange_output(self.sc, df, data_point_name=d_point)
+        expected_cols = [prediction, d_point, 'amount', 'percentage_outlier', 'amount_outlier', 'buckets' ]
+        self.assertListEqual(sorted(expected_cols), sorted(arranged_df.columns))
+
+    def _generate_data(self):
+        df = self.spark.range(10)
+        output = (df
+            .select(
+            'id', F.rand(42).alias('a'), F.randn(1).alias('b'),
+            F.round(10 * F.rand(42)).alias('Prediction'),
+            F.rand().alias('distance'))
+            .withColumn('is_outlier', F.when(F.col('distance') >= 0.7, 1.0).otherwise(0.))
+            .withColumn('computed_boundary', F.randn())
+            )
+        return output
+
+    # @unittest.skip('Test not created')
+    def test_create_buckets(self):
+        # Preamble: setup data
+        df = self._generate_data()
+        features = ['a', 'b']
+        id = 'id'
+        prediction = 'Prediction'
+
+        shows = ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
+        buckets = shows.create_buckets(sc=self.sc, dataframe=df, buckets=20, prediction_col=prediction)
+
+        print(buckets.rdd.take(1)[0]['buckets'])
+        self.fail()
 
 
 

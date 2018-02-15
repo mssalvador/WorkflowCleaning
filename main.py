@@ -23,7 +23,7 @@ if __name__ == '__main__':
                         help='The name of the module that should be executed. '
                              '(ex. semi-supervised runs jobs in semi-supervised package')
     parser.add_argument('--job_args', dest='job_args', nargs='*', help='The settings for the particular workflow '
-                                                                       '(ex. Algorithm=kmeans, Standardize=True, k=20')
+                                                                       '(ex. Algorithm=Kmeans, Standardize=True, k=20')
     parser.add_argument('--input_data', dest='input_data', type=str, help='The location of the input data file.'
                                                                           '(ex. /home/user/data.txt)')
     parser.add_argument('--features', type=str, nargs='*', help='The feature columns for the dataset.'
@@ -41,17 +41,20 @@ if __name__ == '__main__':
     all_args['id'] = args.id
     all_args['labels'] = args.labels
 
-    sc = pyspark.SparkContext(master='local[*]', appName=args.job_name, pyFiles=['file:///home/ml/dist_files/shared.zip',
-                                                                                 'file:///home/ml/dist_files/cleaning.zip'])
+    dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
+    py_files = ['/shared.zip', '/examples.zip', 'cleaning.zip', 'classification.zip', 'semisupervised.zip']
+
+    sc = pyspark.SparkContext(appName=args.job_name,
+        pyFiles=[dtu_cluster_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(args.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
-        # data_frame.printSchema()
+        data_frame.printSchema()
         # data_frame.show()
         rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
-        print(js)
-        # print("""{"cluster":["""+','.join(js)+"""]}""")
+        # print(js)
+        print("""{"cluster":["""+','.join(js)+"""]}""")
 
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

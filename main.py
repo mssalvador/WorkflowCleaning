@@ -40,7 +40,7 @@ if __name__ == '__main__':
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
     sc = pyspark.SparkContext(
-        appName=arguments.job_name, pyFiles=[local_path+py_file for py_file in py_files])
+        appName=arguments.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)

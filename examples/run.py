@@ -50,7 +50,7 @@ def run(sc, **kwargs):
     # output_data_frame = lp2.run(input_data_frame)
     keys = dict(filter(lambda x: x[0] not in ('sc'), lp.keywords.items()))
 
-    ex = Experiments(data_size=[100])
+    ex = Experiments(data_size=[1000])
     output_data_frame = ex.run_experiment(
         sc=sc, data=input_data_frame, functions=lp, known_fraction=0.1, **keys)
 

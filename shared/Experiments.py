@@ -27,15 +27,19 @@ class Experiments(object):
 
         for d in self.data_size:
             sized_df = self.enlarge_dataset(
-                dataframe=data, size=d, feature_cols=feature_cols, label_col=label_col, **kwargs)
+                dataframe=data, size=d, feature_cols=feature_cols,
+                label_col=label_col, **kwargs)
             # Make dataset with nan values
             added_nan_df = Experiments.create_nan_labels(
-                sc=sc, dataframe=sized_df, label_col=label_col, fraction=known_fraction, **kwargs)
-            timer, output = self._execute_function(sc, func=functions, data=added_nan_df, **kwargs)
+                sc=sc, dataframe=sized_df, label_col=label_col,
+                fraction=known_fraction, **kwargs)
+            timer, output = self._execute_function(
+                sc, func=functions, data=added_nan_df, **kwargs)
 
             # output.show()
             error_rate = Experiments._compute_error_rate(
-                data_frame=output, original_label_col='missing_'+label_col, new_label_col='new_'+label_col)
+                data_frame=output, original_label_col='missing_'+label_col,
+                new_label_col='new_'+label_col)
             self.execution_times.append(((d, known_fraction), (timer, error_rate)))
             Experiments.print_stats_time(timer, error_rate)
         return output
@@ -46,10 +50,12 @@ class Experiments(object):
         try:
             error_df = (data_frame
                         .withColumn(colName='error',
-                                    col=F.when(F.col(original_label_col) == F.col(new_label_col), 0.).otherwise(1.))
+                                    col=F.when(
+                                        F.col(original_label_col) == F.col(new_label_col), 0.).otherwise(1.))
                         .groupBy().agg(F.sum(F.col('error')).alias('error_rate'))
             )
-            return error_df.withColumn(colName='error_rate', col=F.col('error_rate') / n).collect()[0]['error_rate']
+            return error_df.withColumn(
+                colName='error_rate', col=F.col('error_rate') / n).collect()[0]['error_rate']
         except Exception as e:
             print(e)
             if original_label_col not in data_frame.columns:

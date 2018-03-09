@@ -17,12 +17,13 @@ for zip_file, path in package_dict.items():
 if __name__ == '__main__':
     from shared.OwnArguments import OwnArguments
     arguments = OwnArguments()
+    arguments.add_argument('--cluster_path', types=str, required=True, dest='cluster_path')
     arguments.add_argument('--job', types=str, required=True, dest='job_name')
     arguments.add_argument('--job_args', dest='job_args', nargs='*')
     arguments.add_argument('--input_data', dest='input_data', types=str)
     arguments.add_argument('--features', dest='features', types=str, nargs='*')
     arguments.add_argument('--id', dest='id' ,types=str, nargs='*')
-    arguments.add_argument('--labels', dest='labels', types=str)
+    arguments.add_argument('--labels', dest='labels', types=str, required=False)
     arguments.parse_arguments()
 
     all_args = dict()
@@ -34,13 +35,13 @@ if __name__ == '__main__':
     all_args['features'] = arguments.features
     all_args['id'] = arguments.id
     all_args['labels'] = arguments.labels
-    dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
-    local_path = "file:/home/svanhmic/workspace/DABAI/Workflows/dist_workflow"
-    visma_cluster_path = 'file:/home/ml/deployments/workflows'
+    # dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
+    # local_path = "file:/home/svanhmic/workspace/DABAI/Workflows/dist_workflow"
+    # visma_cluster_path = 'file:/home/ml/deployments/workflows'
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
     sc = pyspark.SparkContext(
-        appName=arguments.job_name, pyFiles=[visma_cluster_path+py_file for py_file in py_files])
+        appName=arguments.job_name, pyFiles=[arguments.cluster_path+py_file for py_file in py_files])
     job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)

@@ -1,12 +1,22 @@
 """
 Created on 22 August 2017
-
 @author: svanhmic
 """
 
 # import pandas as pd
 # import json
 # from shared import JSONEncoder
+
+# Sparks imports
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
+from pyspark.sql.window import Window
+from pyspark.ml.linalg import SparseVector
+
+# Python imports
+import functools
+import math
+
 
 # TODO: Vi skal finde ud af strukturen i denne klasse. DVS. skal show_*** vise et cluster eller alle?
 # TODO: Hvor lægges afstandsberegningen? I ExecuteWorkflow, eller i ShowResults?
@@ -18,8 +28,8 @@ class ShowResults(object):
     Object for displaying results from the clustering
 
     """
-    def __init__(self, id, list_features, list_labels, **kwargs):
 
+    def __init__(self, id, list_features, list_labels, **kwargs):
         assert kwargs['predictionCol'] is not None, 'Prediction has not been made'
         assert kwargs['k'] is not None, 'Number of cluster has not been set'
         self._prediction_columns = kwargs['predictionCol']
@@ -74,7 +84,6 @@ class ShowResults(object):
 
     @staticmethod
     def _compute_shift(dataframe, **kwargs):
-        from pyspark.sql import functions as F
         """
         Adds 1 to the prediction column to have clusters named 1 to n+1, instead of 0 to n
         
@@ -95,7 +104,6 @@ class ShowResults(object):
         :return: distance between point and center
         """
         import numpy as np
-        from pyspark.ml.linalg import SparseVector
         if isinstance(point, SparseVector) | isinstance(center, SparseVector):
             p_d = point.toArray()
             c_d = center.toArray()
@@ -105,7 +113,6 @@ class ShowResults(object):
 
     @staticmethod
     def _add_row_index(dataframe, **kwargs):
-        from pyspark.sql import functions as F
         """
         Uses pyspark's function monotonically_increasing_id() to add a column with indexes 
         
@@ -115,7 +122,9 @@ class ShowResults(object):
         """
         row_id = kwargs.get('rowId', 'rowId')
         df_stats = dataframe.withColumn(
-            colName=row_id, col=F.monotonically_increasing_id())
+            colName=row_id,
+            col=F.monotonically_increasing_id()
+        )
         return df_stats
 
     @staticmethod
@@ -131,18 +140,21 @@ class ShowResults(object):
         :return: dataframe with added distance column 
         """
         # from shared.ComputeDistances import compute_distance
-        from pyspark.sql import functions as F
-        from pyspark.sql import types as T
-        import functools
-
         centers_col = kwargs.get('center_col', 'centers')
         points_col = kwargs.get('point_col', 'scaled_features')
-        computed_dist =  functools.partial(ShowResults.compute_distance)
-        dist_udf = F.udf(lambda point, center: computed_dist(point, center), T.DoubleType())
-
+        computed_dist = functools.partial(
+            ShowResults.compute_distance
+        )
+        dist_udf = F.udf(
+            f=lambda point, center: computed_dist(point, center),
+            returnType=T.DoubleType()
+        )
         return dataframe.withColumn(
             colName='distance',
-            col=dist_udf(F.col(points_col), F.col(centers_col))
+            col=dist_udf(
+                F.col(points_col),
+                F.col(centers_col)
+            )
         )
 
     @staticmethod
@@ -160,24 +172,21 @@ class ShowResults(object):
             no_stddev (number of standard derivations) can be set in the function call, else default sat to 2
         :return: dataframe with added 'is_outlier' bool column
         """
-        from pyspark.sql import functions as F
-        from pyspark.sql.window import Window
-
-        prediction_col = kwargs.get('prediction_col', 'prediction')
-        distance_col = kwargs.get('distance_col', 'distance')
+        prediction_col = F.col(kwargs.get('prediction_col', 'prediction'))
+        distance_col = F.col(kwargs.get('distance_col', 'distance'))
         no_stddev = kwargs.get('no_stddev', 2.0)
         assert distance_col in dataframe.columns, 'Distances have not been computed!'
 
-        window_outlier = Window().partitionBy(F.col(prediction_col))
-        computed_boundary = F.mean(F.col(distance_col))\
-                             .over(window_outlier) + no_stddev * F.stddev_pop(F.col(distance_col))\
-                             .over(window_outlier)
-
+        window_outlier = Window().partitionBy(prediction_col)
+        computed_boundary = (F.mean(distance_col).over(window_outlier)
+                             + no_stddev * F.stddev_pop(distance_col).over(window_outlier)
+                             )
         return (dataframe
-                .withColumn(colName='computed_boundary', col=computed_boundary)
-                .withColumn(colName='is_outlier',
-                            col=F.when(F.col(distance_col) > computed_boundary, 1)
-                            .otherwise(0)))
+            .withColumn(colName='computed_boundary',
+                        col=computed_boundary)
+            .withColumn(colName='is_outlier',
+                        col=F.when(distance_col > computed_boundary, 1).otherwise(0))
+            )
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):
@@ -187,80 +196,126 @@ class ShowResults(object):
         :param:
         :return:
         """
-
         # Shift the prediction column, so it goes from n to n+1 we need to persist the dataframe in order to
         # ensure the consistency in the results.
-        dataframe_updated = ShowResults._compute_shift(dataframe, **kwargs)
+        dataframe_updated = ShowResults._compute_shift(
+            dataframe=dataframe, **kwargs
+        )
         # Adds an index column (per default called rowId)
-        dataframe_updated = ShowResults._add_row_index(dataframe_updated, **kwargs)
+        dataframe_updated = ShowResults._add_row_index(
+            dataframe=dataframe_updated, **kwargs
+        )
         # Calculates the distances to the center point for all the data points in each cluster (default name 'distance')
-        dataframe_updated = ShowResults._add_distances(dataframe_updated, **kwargs)
+        dataframe_updated = ShowResults._add_distances(
+            dataframe=dataframe_updated, **kwargs
+        )
         # Adds 'is_outlier' bool column
-        return ShowResults._add_outliers(dataframe_updated, **kwargs)
+        return ShowResults._add_outliers(
+            dataframe=dataframe_updated, **kwargs
+        )
 
     @staticmethod
     def create_linspace(data, min, max, buckets, boundary):
         import numpy as np
-        import math
-        outlier_ratio = ShowResults._compute_outlier_ratio(data, boundary)
-        outlier_buckets = math.ceil(buckets*outlier_ratio)
-        prototypes = list(np.linspace(start=min, stop=boundary, num=buckets-outlier_buckets).tolist())
-        outliers = list(np.linspace(start=boundary,stop=max,num=outlier_buckets).tolist())
-        bucket_boundary = sorted(prototypes+outliers)
-
-        output = len(bucket_boundary)*[0]
-        bucket_outlier = len(prototypes)*[0] + len(outliers)*[1]
+        outlier_ratio = ShowResults._compute_outlier_ratio(
+            data_points=data, boundary=boundary
+        )
+        outlier_buckets = math.ceil(buckets * outlier_ratio)
+        prototypes = list(
+            np.linspace(
+                start=min, stop=boundary,
+                num=buckets - outlier_buckets
+            ).tolist()
+        )
+        outliers = list(
+            np.linspace(
+                start=boundary, stop=max,
+                num=outlier_buckets
+            ).tolist()
+        )
+        bucket_boundary = sorted(prototypes + outliers)
+        output = len(bucket_boundary) * [0]
+        bucket_outlier = len(prototypes) * [0] + len(outliers) * [1]
         tmp_list = data
         for bucket_idx, bucket_val in enumerate(bucket_boundary[1:]):
             for distance_val in tmp_list:
-                if (bucket_idx == 0) and (distance_val < bucket_val):
+                if ((bucket_idx == 0) and (distance_val < bucket_val)):
                     output[bucket_idx] += 1
-                elif (distance_val < bucket_val) and (distance_val >= bucket_boundary[bucket_idx-1]):
+                elif ((distance_val < bucket_val)
+                      and (distance_val >= bucket_boundary[bucket_idx - 1])):
                     output[bucket_idx] += 1
-        return list(zip(range(len(output)), output, bucket_outlier))
+        return list(
+            zip(range(len(output)), output, bucket_outlier)
+        )
 
     @staticmethod
     def _compute_outlier_ratio(data_points, boundary):
-        from functools import reduce
         outliers = [0. if val < boundary else 1. for val in data_points]
-        n_outliers = float(reduce(lambda x,y: x+y, outliers))
-        return float(n_outliers/len(data_points))
+        n_outliers = float(functools.reduce(lambda x, y: x + y, outliers))
+        return float(n_outliers / len(data_points))
 
     @staticmethod
     def create_buckets(sc, dataframe, buckets=20, prediction_col='prediction'):
-        from pyspark.sql import functions as F
-        from pyspark.sql import types
-
         n_buckets = sc.broadcast(buckets)
         generate_list_udf = F.udf(
-            lambda l, minimum, maximum, boundary: ShowResults.create_linspace(
-                l, minimum, maximum, n_buckets.value, boundary),
-            types.ArrayType(types.ArrayType(types.IntegerType())))
-        tmp = (dataframe.groupBy(prediction_col, F.col('computed_boundary')).agg(
-            F.min('distance').alias('min'),
-            F.max('distance').alias('max'),
-            F.collect_list('distance').alias('distances'))
-        .withColumn('buckets', generate_list_udf('distances','min','max', 'computed_boundary'))
+            f=lambda l, minimum, maximum, boundary: ShowResults.create_linspace(
+                data=l, min=minimum, max=maximum,
+                buckets=n_buckets.value, boundary=boundary
+            ),
+            returnType=T.ArrayType(
+                elementType=T.ArrayType(
+                    elementType=T.IntegerType(),
+                    containsNull=True),
+                containsNull=True
+            )
         )
-        return tmp.select(prediction_col,'buckets')
+        tmp = (dataframe
+            .groupBy(prediction_col,
+                     F.col('computed_boundary')
+                     )
+            .agg(F.min('distance').alias('min'),
+                 F.max('distance').alias('max'),
+                 F.collect_list('distance').alias('distances')
+                 )
+            .withColumn(colName='buckets',
+                        col=generate_list_udf(
+                            'distances', 'min', 'max',
+                            'computed_boundary')
+                        )
+            )
+        return tmp.select(prediction_col, 'buckets')
 
-    def arrange_output(self, sc, dataframe, data_point_name='data_points', **kwargs):
-        from pyspark.sql import functions as F
+    def arrange_output(self, sc, dataframe,
+                       data_point_name='data_points', **kwargs):
         predict_col = kwargs.get('predictionCol', 'Prediction')
-        new_struct = F.struct([self._id, *self._features,
-                               'distance','is_outlier']).alias(data_point_name)
+        new_struct = F.struct(
+            [self._id, *self._features,
+             'distance', 'is_outlier'
+             ]
+        ).alias(data_point_name)
         percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)
 
         bucket_df = ShowResults.create_buckets(
-            sc=sc, dataframe=dataframe, buckets=20, prediction_col=predict_col)
-        re_arranged_df = (dataframe.select(F.col(predict_col), new_struct)
-            .groupBy(F.col(predict_col))
-            .agg(F.count(predict_col).alias('amount'),
-                 F.sum(F.col(data_point_name+".is_outlier")).alias('percentage_outlier'),
-                 F.collect_list(data_point_name).alias(data_point_name))
-            .join(other=bucket_df, on=predict_col, how='inner')
-            .withColumn('amount_outlier', F.col('percentage_outlier'))
-            .withColumn('percentage_outlier', percentage_outlier))
+            sc=sc, dataframe=dataframe,
+            buckets=20, prediction_col=predict_col
+        )
+        re_arranged_df = (
+            dataframe
+                .select(F.col(predict_col), new_struct)
+                .groupBy(F.col(predict_col))
+                .agg(F.count(predict_col).alias('amount'),
+                     F.sum(F.col(data_point_name
+                                 + ".is_outlier")).alias('percentage_outlier'),
+                     F.collect_list(data_point_name).alias(data_point_name))
+                .join(other=bucket_df, on=predict_col,
+                      how='inner')
+                .withColumn(colName='amount_outlier',
+                            col=F.col('percentage_outlier')
+                            )
+                .withColumn(colName='percentage_outlier',
+                            col=percentage_outlier
+                            )
+        )
         return re_arranged_df
 
     # @staticmethod
@@ -346,47 +401,47 @@ class ShowResults(object):
     #
     #     return json.dumps(g, sort_keys=True, indent=4, cls=JSONEncoder.JSONEncoder)
 
-        # # create summary for the clusters along with number in each cluster and number of outliers
-        # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
-        # list_unique_values = self.compute_summary(dataframe_updated)
-        #
-        # list_clusters_with_outliers = sorted(map(
-        #     lambda x: x[self._data_dict['predictionCol']], list_unique_values))
-        # # print(list_clusters_with_outliers)
-        #
-        # dropdown_prototypes = widgets.Dropdown(
-        #     options=list_clusters_with_outliers,
-        #     description="Select Cluster",
-        #     disabled=False
-        # )
-        #
-        # def selected_cluster_number(b):
-        #     clear_output()
-        #     filter_expr = (F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value)
-        #     cluster_dataframe = dataframe_updated.filter(filter_expr)
-        #
-        #     self.show_cluster(cluster_dataframe)
-        #     self._selected_cluster = dropdown_prototypes.value
-        #
-        #     # Show only a table containing outliers: This is bad but better than converting to pandas all the time
-        #     output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
-        #     # print(output_cols)
-        #     # cluster_dataframe.select(output_cols).show()
-        #     pdf = (cluster_dataframe
-        #            .select(output_cols)
-        #            .filter(F.col('outliers') == 1)
-        #            .orderBy(F.col('distance').desc())
-        #            .toPandas()
-        #            )
-        #
-        #     if len(pdf) != 0:
-        #         display(pdf)
-        #     else:
-        #         print("There seems to be no outliers in this cluster")
-        #
-        # button_prototypes.on_click(selected_cluster_number)
-        #
-        # first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
-        # display(first_line)
-        #
-        # return dataframe_updated
+    # # create summary for the clusters along with number in each cluster and number of outliers
+    # # find out how many unique data points we got, meaning that if the distance is equal then we won't display it
+    # list_unique_values = self.compute_summary(dataframe_updated)
+    #
+    # list_clusters_with_outliers = sorted(map(
+    #     lambda x: x[self._data_dict['predictionCol']], list_unique_values))
+    # # print(list_clusters_with_outliers)
+    #
+    # dropdown_prototypes = widgets.Dropdown(
+    #     options=list_clusters_with_outliers,
+    #     description="Select Cluster",
+    #     disabled=False
+    # )
+    #
+    # def selected_cluster_number(b):
+    #     clear_output()
+    #     filter_expr = (F.col(self._data_dict['predictionCol']) == dropdown_prototypes.value)
+    #     cluster_dataframe = dataframe_updated.filter(filter_expr)
+    #
+    #     self.show_cluster(cluster_dataframe)
+    #     self._selected_cluster = dropdown_prototypes.value
+    #
+    #     # Show only a table containing outliers: This is bad but better than converting to pandas all the time
+    #     output_cols = self._labels + list(self._features) + ['distance', 'Percentage distance', 'outliers']
+    #     # print(output_cols)
+    #     # cluster_dataframe.select(output_cols).show()
+    #     pdf = (cluster_dataframe
+    #            .select(output_cols)
+    #            .filter(F.col('outliers') == 1)
+    #            .orderBy(F.col('distance').desc())
+    #            .toPandas()
+    #            )
+    #
+    #     if len(pdf) != 0:
+    #         display(pdf)
+    #     else:
+    #         print("There seems to be no outliers in this cluster")
+    #
+    # button_prototypes.on_click(selected_cluster_number)
+    #
+    # first_line = widgets.HBox((dropdown_prototypes, button_prototypes))
+    # display(first_line)
+    #
+    # return dataframe_updated

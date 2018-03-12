@@ -14,7 +14,9 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_columns = kwargs.get('features', None)
     label_columns = kwargs.get('labels', None)
     id_column = kwargs.get('id', 'id')
-    algorithm_params = parse_algorithm_variables(kwargs.get('algo_params', None))
+    algorithm_params = parse_algorithm_variables(
+        vars=kwargs.get('algo_params', None)
+    )
     standardizer = algorithm_params.get('standardizer', False)
     spark_session = pyspark.sql.SparkSession(sc)
 
@@ -25,43 +27,51 @@ def run(sc: pyspark.SparkContext, **kwargs):
     # training_data_schema = T.StructType(all_structs)
 
     training_data_frame = spark_session.read.load(
-        path=import_path, format='csv', inferSchema=True, header=True) #
-    # training_data_frame.show()
-
+        path=import_path, format='csv', inferSchema=True,
+        header=True
+    ) #training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer
     )
-
-    training_model = cleaning_workflow.execute_pipeline(training_data_frame)
+    training_model = cleaning_workflow.execute_pipeline(
+        data_frame=training_data_frame
+    )
     clustered_data_frame = cleaning_workflow.apply_model(
-        sc=sc, model=training_model, data_frame=training_data_frame)
-
+        sc=sc, model=training_model, data_frame=training_data_frame
+    )
     # clustered_data_frame.show()
-
     show_result = ShowResults(
         id=id_column[0], list_features=feature_columns,
-        list_labels=label_columns, **algorithm_params)
-    all_info_df = show_result.prepare_table_data(clustered_data_frame, **algorithm_params)
+        list_labels=label_columns, **algorithm_params
+    )
+    all_info_df = show_result.prepare_table_data(
+        dataframe=clustered_data_frame, **algorithm_params
+    )
     # all_info_df.show()
     d_point = 'data_points'
 
     output_df = show_result.arrange_output(
-        sc=sc, dataframe=all_info_df, data_point_name=d_point, **algorithm_params)
+        sc=sc, dataframe=all_info_df,
+        data_point_name=d_point, **algorithm_params
+    )
     return output_df
 
 
 def create_sub_schema(columns, type='label'):
-    types = {'label': T.StringType(), 'id' : T.IntegerType(), 'feature': T.DoubleType()}
+    types = {'label': T.StringType(),
+             'id' : T.IntegerType(),
+             'feature': T.DoubleType()
+             }
     if isinstance(columns, list):
         return [T.StructField(
             name=column, dataType=types[type],
-            nullable=False) for column in columns]
+            nullable=False) for column in columns
+        ]
     elif isinstance(columns, str):
         return [T.StructField(
             name=columns, dataType=types[type],
-            nullable=False)]
+            nullable=False)
+        ]
     else:
         return [None]
-
-

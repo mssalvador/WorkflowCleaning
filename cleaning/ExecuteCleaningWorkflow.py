@@ -60,8 +60,14 @@ class ExecuteWorkflow(object):
     # @logger_info_decorator
     def _check_algorithm(self):
         try:
-            applicable_algos = {'kmeans': 'KMeans','gaussianmixture': 'GaussianMixture', 'lda':'LDA'}
-            algorithm = self._dict_parameters.pop('algorithm', 'GaussianMixture')
+            applicable_algos = {
+                'kmeans': 'KMeans',
+                'gaussianmixture': 'GaussianMixture',
+                'lda':'LDA'
+            }
+            algorithm = self._dict_parameters.pop(
+                'algorithm', 'GaussianMixture'
+            )
             return applicable_algos[algorithm.lower()]
         except AttributeError as ae:
             return 'GaussianMixture'
@@ -94,14 +100,15 @@ class ExecuteWorkflow(object):
 
         # Make sure that the params in self._params are the right for the algorithm
         dict_params_labels = dict(filter(
-            lambda x: x[0] in param_map, self._dict_parameters.items()))
+            lambda x: x[0] in param_map, self._dict_parameters.items())
+        )
         dict_params_labels['featuresCol'] = 'scaled_features'
 
         # Model is set
         model = eval("clustering." + self._algorithm)(**dict_params_labels)
         dict_params_labels = dict(map(
-            lambda i: (i.name, model.getOrDefault(i.name)), model.params))
-
+            lambda i: (i.name, model.getOrDefault(i.name)), model.params)
+        )
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
         stages = [model]#[vectorized_features, caster, scaling_model, model]
@@ -113,7 +120,10 @@ class ExecuteWorkflow(object):
         to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
         feature_str = 'features'
 
-        vector_df = df.withColumn(colName=feature_str, col=to_dense_udf(*self._list_feature))
+        vector_df = df.withColumn(
+            colName=feature_str,
+            col=to_dense_udf(*self._list_feature)
+        )
         if self._bool_standardize:
             scaling_model = features.StandardScaler(
                 inputCol=feature_str, outputCol="scaled_features",
@@ -124,7 +134,10 @@ class ExecuteWorkflow(object):
                 withMean=False, withStd=False).fit(vector_df)
 
         scaled_df = scaling_model.transform(vector_df)
-        return scaled_df.withColumn(colName='scaled_features', col=to_dense_udf(*self._list_feature))
+        return scaled_df.withColumn(
+            colName='scaled_features',
+            col=to_dense_udf(*self._list_feature)
+        )
 
     @staticmethod
     def _to_dense(*args):
@@ -137,7 +150,8 @@ class ExecuteWorkflow(object):
         :param data_frame: spark data frame that can be used for the algorithm
         :return: model and cluster centers with id
         """
-        assert isinstance(data_frame, DataFrame), " data_frame is not of type dataframe but: "+type(data_frame)
+        assert isinstance(data_frame, DataFrame),\
+            " data_frame is not of type dataframe but: "+type(data_frame)
 
         model = self._pipeline.fit(self._vector_scale(data_frame))
         return model
@@ -163,29 +177,39 @@ class ExecuteWorkflow(object):
         if self._algorithm == 'GaussianMixture':
             # convert gaussian mean/covariance dataframe to pandas dataframe
             pandas_cluster_centers = (
-                model.stages[-1].gaussiansDF.toPandas())
-
-            centers = sql_ctx.createDataFrame(self.gen_gaussians_center(
-                self._dict_parameters['k'], pandas_cluster_centers)
+                model.stages[-1].gaussiansDF.toPandas()
             )
-
+            centers = sql_ctx.createDataFrame(
+                self.gen_gaussians_center(
+                    self._dict_parameters['k'],
+                    pandas_cluster_centers
+                )
+            )
             merged_df = transformed_data.join(
-                centers, self._dict_parameters['predictionCol'], 'inner')
+                centers, self._dict_parameters['predictionCol'],
+                'inner'
+            )
             merged_df = merged_df.withColumn(
-                'centers', udf_cast_vector('mean'))  # this is stupidity from spark!
+                'centers', udf_cast_vector('mean')
+            ) # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
             centers = self.gen_cluster_center(
-                self._dict_parameters['k'], np_centers)
+                k=self._dict_parameters['k'],
+                centers=np_centers
+            )
             broadcast_center = sc.broadcast(centers)
 
             # Create user defined function for added cluster centers to data frame
             udf_assign_cluster = F.udf(
-                lambda x: Vectors.dense(broadcast_center.value[x]), VectorUDT())
-
+                f=lambda x: Vectors.dense(broadcast_center.value[x]),
+                returnType=VectorUDT()
+            )
             merged_df = transformed_data.withColumn(
-                "centers", udf_assign_cluster(self._dict_parameters['predictionCol']))
-
+                "centers", udf_assign_cluster(
+                    self._dict_parameters['predictionCol']
+                )
+            )
         # return the result
         return merged_df
 
@@ -200,9 +224,11 @@ class ExecuteWorkflow(object):
         """
         # create dummy id pandas dataframe
         import pandas as pd
-
-        pandas_id = pd.DataFrame({
-            prediction_label: (range(k))}, columns=[prediction_label])
+        predictions = {prediction_label: (range(k))}
+        pandas_id = pd.DataFrame(
+            data=predictions,
+            columns=[prediction_label]
+        )
         return pd.concat([gaussians, pandas_id], axis=1)
 
     @staticmethod

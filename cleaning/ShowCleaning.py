@@ -172,11 +172,10 @@ class ShowResults(object):
             no_stddev (number of standard derivations) can be set in the function call, else default sat to 2
         :return: dataframe with added 'is_outlier' bool column
         """
+        assert kwargs.get('distance_col', 'distance') in dataframe.columns, 'Distances have not been computed!'
         prediction_col = F.col(kwargs.get('prediction_col', 'prediction'))
         distance_col = F.col(kwargs.get('distance_col', 'distance'))
         no_stddev = kwargs.get('no_stddev', 2.0)
-        assert distance_col in dataframe.columns, 'Distances have not been computed!'
-
         window_outlier = Window().partitionBy(prediction_col)
         computed_boundary = (F.mean(distance_col).over(window_outlier)
                              + no_stddev * F.stddev_pop(distance_col).over(window_outlier)

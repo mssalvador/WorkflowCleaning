@@ -31,7 +31,9 @@ def convert(list_time):
                 factor = 0.001
             duration += factor * float(value)
         except IndexError as e:
-            print('Does not comupte got: value {} and time unit {}'.format(value, time_unit))
+            print('Does not comupte got: value {} and time unit {}'
+                  .format(value, time_unit)
+                  )
             break
     return duration
 
@@ -52,26 +54,34 @@ def fix_logfile_mess(pdf):
         return re.split(r'±',x)[0], re.split(r'±',x)[1]
 
 
-    partitions_df = (pdf[['ts','type','function','Iteration','Number of partions']]
-                     .dropna())
-    partitions_df['Number of partions'] = partitions_df['Number of partions'].map(make_partition_int)
-
-    data_df = (pdf[['Iteration','data']]
-                     .dropna())
-    train_mod_df = (pdf[['Iteration','Training model time']]
-                     .dropna())
-    train_mod_df['mean'], train_mod_df['std']  = zip(*train_mod_df['Training model time'].map(split_to))
+    partitions_df = (pdf[[
+        'ts','type','function',
+        'Iteration','Number of partions']].dropna()
+    )
+    partitions_df['Number of partions'] = (partitions_df['Number of partions']
+        .map(make_partition_int)
+    )
+    data_df = (pdf[['Iteration','data']].dropna()
+    )
+    train_mod_df = (pdf[['Iteration','Training model time']].dropna()
+    )
+    train_mod_df['mean'], train_mod_df['std']  = zip(
+        *train_mod_df['Training model time'].map(split_to)
+    )
     train_mod_df['std'] = train_mod_df['std'].map(get_std)
     merged_df = partitions_df.merge(data_df,on=['Iteration'])
-    merged_df = merged_df.merge(train_mod_df[['Iteration','mean','std']],on=['Iteration'])
+    merged_df = merged_df.merge(
+        other=train_mod_df[['Iteration','mean','std']],
+        on=['Iteration']
+    )
     merged_df['mean'] = (merged_df['mean']
-                         .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
-                         .map(lambda x: convert(x))
-                        )
+        .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
+        .map(lambda x: convert(x))
+    )
     merged_df['std'] = (merged_df['std']
-                        .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
-                        .map(lambda x: convert(x))
-                       )
+        .map(lambda x: re.findall('[a-zA-Z]+|\\d+\.\d+|\\d+',x))
+        .map(lambda x: convert(x))
+    )
     merged_df['n'] = merged_df['data'].map(get_n)
     merged_df['partitions'] = merged_df['Number of partions']
     del merged_df['data']
@@ -86,28 +96,41 @@ def split_logfile(log_file):
     :return: list of lists.
     """
     # split of date from rest
-    tmp = list(map(lambda l: l[1:],
-                   map(lambda x: re.split(r'(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})', x),
-                       log_file)))
+    tmp = list(map(
+        func=lambda l: l[1:],
+        iter1=map(
+            func=lambda x: re.split(r'(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})', x),
+            iter1=log_file))
+    )
     tmp_1 = list(map(
-        lambda line: (datetime.strptime(line[0], '%Y-%m-%d %H:%M:%S,%f'), line[1][1:])
-        , tmp))
-
+        func=lambda line: (datetime.strptime(line[0], '%Y-%m-%d %H:%M:%S,%f'), line[1][1:]),
+        iter1=tmp)
+    )
     # split on :
     tmp_2 = list(map(
-        lambda line: (line[0], re.split(r':', line[1]))
-        , tmp_1))
-
+        func=lambda line: (line[0], re.split(r':', line[1])),
+        iter1=tmp_1)
+    )
     labels = ('ts', 'type', 'function')
-
-    temp_3 = list(map(lambda x: [x[0]] + x[1].split(':'), tmp_1))
-    temp_4 = list(map(lambda x: list(zip(labels, x[:3])) + [':'.join(x[3:])], temp_3))
-    temp_5 = list(map(lambda x: x[:3] + x[3].split(' - '), temp_4))
-
+    temp_3 = list(map(
+        func=lambda x: [x[0]] + x[1].split(':'),
+        iter1=tmp_1)
+    )
+    temp_4 = list(map(
+        func=lambda x: list(zip(labels, x[:3]))
+                       + [':'.join(x[3:])],
+        iter1=temp_3)
+    )
+    temp_5 = list(map(
+        func=lambda x: x[:3] + x[3].split(' - '),
+        iter1=temp_4)
+    )
     raw_data = list(map(
-        lambda l: l[:3] + [tuple(re.split(':', l[3]))] + [tuple(re.split(':', l[4]))],
-        temp_5))
-
+        func=lambda l: l[:3]
+                       + [tuple(re.split(':', l[3]))]
+                       + [tuple(re.split(':', l[4]))],
+        iter1=temp_5)
+    )
     filtered_raw_data = []
     for t in raw_data:
         try:

@@ -20,7 +20,9 @@ class Experiments(object):
     def __str__(self):
         return '{}'.format('hat')
 
-    def run_experiment(self, sc, data=None, functions=None, known_fraction=0.1,  **kwargs):
+    def run_experiment(
+            self, sc, data=None, functions=None,
+            known_fraction=0.1,  **kwargs):
         feature_cols = kwargs.pop('feature_cols', None)
         label_col = kwargs.pop('label_col', None)
         output = None
@@ -28,40 +30,54 @@ class Experiments(object):
         for d in self.data_size:
             sized_df = self.enlarge_dataset(
                 dataframe=data, size=d, feature_cols=feature_cols,
-                label_col=label_col, **kwargs)
+                label_col=label_col, **kwargs
+            )
             # Make dataset with nan values
             added_nan_df = Experiments.create_nan_labels(
                 sc=sc, dataframe=sized_df, label_col=label_col,
-                fraction=known_fraction, **kwargs)
+                fraction=known_fraction, **kwargs
+            )
             timer, output = self._execute_function(
-                sc, func=functions, data=added_nan_df, **kwargs)
-
+                sc, func=functions, data=added_nan_df, **kwargs
+            )
             # output.show()
             error_rate = Experiments._compute_error_rate(
                 data_frame=output, original_label_col='missing_'+label_col,
-                new_label_col='new_'+label_col)
-            self.execution_times.append(((d, known_fraction), (timer, error_rate)))
+                new_label_col='new_'+label_col
+            )
+            self.execution_times.append(
+                ((d, known_fraction), (timer, error_rate))
+            )
             Experiments.print_stats_time(timer, error_rate)
         return output
 
     @staticmethod
     def _compute_error_rate(data_frame, original_label_col, new_label_col):
         n = float(data_frame.count())
+        new_label_equal_org_label = (F.col(original_label_col) == F.col(new_label_col))
         try:
             error_df = (data_frame
-                        .withColumn(colName='error',
-                                    col=F.when(
-                                        F.col(original_label_col) == F.col(new_label_col), 0.).otherwise(1.))
-                        .groupBy().agg(F.sum(F.col('error')).alias('error_rate'))
+                .withColumn(colName='error',
+                            col=F.when(new_label_equal_org_label, 0.).otherwise(1.))
+                .groupBy()
+                .agg(F.sum(F.col('error')).alias('error_rate'))
             )
-            return error_df.withColumn(
-                colName='error_rate', col=F.col('error_rate') / n).collect()[0]['error_rate']
+            first_err_rate = (error_df
+                .withColumn(colName='error_rate',
+                            col=F.col('error_rate') / n)
+                .collect()
+            )
+            return first_err_rate[0]['error_rate']
         except Exception as e:
             print(e)
             if original_label_col not in data_frame.columns:
-                print('missing following column {}'.format(original_label_col))
+                print('missing following column {}'
+                      .format(original_label_col)
+                      )
             if new_label_col not in data_frame.columns:
-                print('missing following column {}'.format(new_label_col))
+                print('missing following column {}'
+                      .format(new_label_col)
+                      )
             print([i for i in data_frame.columns if 'pixel' not in i])
 
     @timeit(5)
@@ -71,28 +87,46 @@ class Experiments(object):
     @staticmethod
     def subset_dataset_by_label(sc, dataframe: DataFrame, label_col, *args):
         if args:
-            return dataframe.filter(F.col(label_col).isin(list(args)))
+            return dataframe.filter(
+                condition=F.col(label_col).isin(list(args))
+            )
         else:
             return dataframe
 
     @staticmethod
     @logger_info_decorator
-    def enlarge_dataset(dataframe: DataFrame, size=None, feature_cols=None, label_col=None, **kwargs):
+    def enlarge_dataset(dataframe: DataFrame, size=None,
+                        feature_cols=None, label_col=None, **kwargs):
         # size must be larger than dataframe size
         n = dataframe.count()
         if n <= size:
             extras = (size - n) / n
-            extra_df = dataframe.sample(withReplacement=True, fraction=extras)
-            columns = [F.col(i) if i not in feature_cols else F.col(i) + F.rand() for i in extra_df.columns]
+            extra_df = dataframe.sample(
+                withReplacement=True, fraction=extras
+            )
+            columns = [F.col(i) if i not in feature_cols
+                       else F.col(i) + F.rand()
+                       for i in extra_df.columns
+                       ]
             return extra_df.select(columns).union(dataframe)
         else:
             frac = 1 - (n - size) / n
-            samples = dataframe.sample(withReplacement=False, fraction=frac)
-            all_types = list(map(lambda x: x[label_col], samples.select(label_col).distinct().collect()))
+            samples = dataframe.sample(
+                withReplacement=False, fraction=frac
+            )
+            all_types = list(map(
+                func=lambda x: x[label_col],
+                iter1=samples.select(label_col).distinct().collect())
+            )
             while not (len(list(all_types)) == kwargs.get('k', 10)):
                 print('iteration')
-                samples = dataframe.sample(withReplacement=False, fraction=frac)
-                all_types = list(map(lambda x: x[label_col], samples.select(label_col).distinct().collect()))
+                samples = dataframe.sample(
+                    withReplacement=False, fraction=frac
+                )
+                all_types = list(map(
+                    func=lambda x: x[label_col],
+                    iter1=samples.select(label_col).distinct().collect())
+                )
             return samples
 
     @staticmethod

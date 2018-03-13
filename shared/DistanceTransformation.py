@@ -27,13 +27,17 @@ class DistanceTransformation(Transformer, HasInputCol, HasOutputCol):
             '''
             Insert a clusterCenter as column.
             '''
-
-            distanceUdf = F.udf(lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))), T.DoubleType())
-
+            distanceUdf = F.udf(
+                f=lambda x, y: float(np.sqrt(np.sum((x - y) * (x - y)))),
+                returnType=T.DoubleType()
+            )
             return (dataset
-                    .join(F.broadcast(centers), on=(dataset["prediction"] == centers["cluster"]), how="inner")
-                    .withColumn(colName="distance", col=distanceUdf(F.col("scaledFeatures"), F.col("center")))
-                    .drop("cluster")
-                    .drop("features")
-                    .drop("v2")
-                    )
+                .join(other=F.broadcast(centers),
+                      on=(dataset["prediction"] == centers["cluster"]),
+                      how="inner")
+                .withColumn(colName="distance",
+                            col=distanceUdf(F.col("scaledFeatures"), F.col("center")))
+                .drop("cluster")
+                .drop("features")
+                .drop("v2")
+            )

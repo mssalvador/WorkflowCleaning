@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 #we create a jobContext Class
 
-class JobContext(object):
 
+class JobContext(object):
     def __init__(self,sc):
         self.counters = OrderedDict()
         self.constants = OrderedDict()
@@ -25,14 +25,21 @@ class JobContext(object):
 
     def inc_counter(self, name, value=1):
         if name not in self.counters:
-            raise ValueError('{!s} counter was not initialized. ({!s})'.format(name, self.counters.keys()))
-
+            raise ValueError(
+                '{!s} counter was not initialized. ({!s})'.format(
+                    name, self.counters.keys()
+                )
+            )
         self.counters[name] += value
 
     def print_accumulators(self):
-        print(tabulate(self.counters.items(), self.counters.keys(), tablefmt="simple"))
+        print(tabulate(
+            self.counters.items(),
+            self.counters.keys(), tablefmt="simple")
+        )
 
     def print_broadcasts(self):
-        print(tabulate(self.constants.items(), self.constants.keys(), tablefmt='simple'))
-
-
+        print(tabulate(
+            self.constants.items(),
+            self.constants.keys(), tablefmt='simple')
+        )

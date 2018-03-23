@@ -40,9 +40,17 @@ if __name__ == '__main__':
     # visma_cluster_path = 'file:/home/ml/deployments/workflows'
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
-    sc = pyspark.SparkContext(
-        appName=arguments.job_name, pyFiles=[arguments.cluster_path+py_file for py_file in py_files])
+    spark_conf = pyspark.SparkConf(loadDefaults=False)
+    (spark_conf
+        .set('spark.executor.cores', 4)
+        .set('spark.executor.memory', '1G')
+        .set('spark.executors', 2)
+    )
+    sc = pyspark.SparkContext(appName=arguments.job_name)
     job_module = importlib.import_module('{:s}'.format(arguments.job_name))
+    # sc = pyspark.SparkContext(
+    #     appName=arguments.job_name, pyFiles=[arguments.cluster_path+py_file for py_file in py_files], conf=spark_conf)
+    # job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()

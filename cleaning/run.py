@@ -29,7 +29,9 @@ def run(sc: pyspark.SparkContext, **kwargs):
     training_data_frame = spark_session.read.load(
         path=import_path, format='csv', inferSchema=True,
         header=True
-    ) #training_data_frame.show()
+    ).persist()
+    training_data_frame.take(1)
+    #training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer
@@ -55,6 +57,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
         sc=sc, dataframe=all_info_df,
         data_point_name=d_point, **algorithm_params
     )
+    training_data_frame.unpersist()
     return output_df
 
 

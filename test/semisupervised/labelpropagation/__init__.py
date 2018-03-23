@@ -1,0 +1,1 @@
+import test.semisupervised.test_label_propagation

@@ -22,18 +22,17 @@ class CastInPipeline(Transformer, HasInputCol):
                         'doublefloat',
                         'floatdouble',
                         'stringdouble',
-                        'stringint']
-
+                        'stringint'
+                        ]
     castTo = Param(
-        Params._dummy(),
-        'castTo',
-        'Indicates the what we want to cast to.',
+        parent=Params._dummy(),
+        name='castTo',
+        doc='Indicates the what we want to cast to.',
         typeConverter=TypeConverters.toString
     )
 
     @keyword_only
     def __init__(self, inputCol=None, castTo=None,):
-
         if castTo not in ['string', 'int', 'float', 'double', 'boolean']:
             raise TypeError('new type must be a valid type!')
 

@@ -3,6 +3,8 @@
 from functools import partial, wraps
 import logging
 import sys
+import datetime
+
 
 def create_logger(argument='/tmp/workflow_test.log'):
     """
@@ -11,7 +13,7 @@ def create_logger(argument='/tmp/workflow_test.log'):
     """
     # create logger
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create handler
     logger_file_handler = logging.FileHandler(
@@ -19,7 +21,7 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     # create formatter
     logger_format = logging.Formatter(
-        '%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+        '%(asctime)s;%(levelname)s;%(name)s;%(message)s')
 
     # add logger_file_handler to logger
     logger.addHandler(logger_file_handler)
@@ -30,8 +32,11 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     return logger
 
+now = datetime.datetime.now()
 logger = create_logger(
-    argument='/tmp/workflow_test.log')
+    argument='/tmp/{year}_{month}_{day}_workflow_test.log'.format(
+        year=now.year, month=now.month, day=now.day))
+
 
 def _log_info(orig_function, logger=logger):
 
@@ -41,14 +46,10 @@ def _log_info(orig_function, logger=logger):
         try:
             # print('Ran {} with args {} and kwargs {}'
             #       .format(orig_function.__name__, args, kwargs))
-
-            logger.info('Ran {} with args {} and kwargs {}'
+            logger.info('Ran {}; args {}; kwargs {}'
                         .format(orig_function.__name__,
-                                args,
-                                kwargs
-                                )
+                                args, kwargs)
                         )
-
             return orig_function(*args, **kwargs)
         except Exception as e:
             tb = sys.exc_info()[2]
@@ -56,12 +57,6 @@ def _log_info(orig_function, logger=logger):
             raise
     return wrapper_func
 
+
 # Decorators to be used
 logger_info_decorator = partial(_log_info, logger=logger)  # info
-
-
-
-
-
-
-

@@ -1,9 +1,10 @@
-build: 
-
-	rm -rf ./dist*
-	mkdir ./dist_workflow
-	cp ./sample/main.py ./dist_workflow
-	rsync -av --progress sample ./dist_workflow --exclude sample/main.py
-	rsync -av --progress shared ./dist_workflow
-	cd dist_workflow && zip -x main.py -x sample/\* -r ./shared.zip * && rm -rf shared &&  . 
-	cd dist_workflow && zip -x main.py -x shared.zip i  -r ./sample.zip * && rm -rf sample && .
+clean-build:
+	rm -rf ./dist_workflow
+	mkdir dist_workflow
+	cp ./main.py ./dist_workflow
+	zip -r ./dist_workflow/cleaning.zip ./cleaning
+	zip -r ./dist_workflow/classification.zip ./classification
+	zip -r ./dist_workflow/cleaning.zip ./cleaning
+	zip -r ./dist_workflow/examples.zip ./examples
+	zip -r ./dist_workflow/semisupervised.zip ./semisupervised
+	zip -r ./dist_workflow/shared.zip ./shared

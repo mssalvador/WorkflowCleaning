@@ -23,7 +23,12 @@ def print_human_readable_time(timespan, precision=3):
     @param: precision: the precision of time
     """
     if timespan >= 60.0:
-        parts = [("d", 60 * 60 * 24), ("h", 60 * 60), ("min", 60), ("s", 1)]
+        parts = [
+            ("d", 60 * 60 * 24),
+            ("h", 60 * 60),
+            ("min", 60),
+            ("s", 1)
+        ]
         time = []
         leftover = timespan
         for suffix, length in parts:
@@ -62,8 +67,9 @@ def pretty_time_result(timer):
             pm = u'\xb1'
         finally:
             return (
-                u"{mean} {pm} {std} per loop (mean {pm} std. dev. of {runs} run{run_plural}, {loops} loop{loop_plural} each)"
-                    .format(
+                u"{mean} {pm} {std} per loop (mean {pm}"
+                "std. dev. of {runs} run{run_plural},"
+                "{loops} loop{loop_plural} each)".format(
                     pm=pm,
                     runs=timer.repeat,
                     loops=timer.loops,

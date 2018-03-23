@@ -33,9 +33,9 @@ def create_logger(argument='/tmp/workflow_test.log'):
     return logger
 
 now = datetime.datetime.now()
-str_now = str(now).replace(':','_').replace('-','_').replace('.','_')
 logger = create_logger(
-    argument='/tmp/{}_workflow_test.log'.format(str_now))
+    argument='/tmp/{year}_{month}_{day}_workflow_test.log'.format(
+        year=now.year, month=now.month, day=now.day))
 
 
 def _log_info(orig_function, logger=logger):

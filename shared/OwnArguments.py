@@ -2,7 +2,8 @@ import sys
 
 class LittleOwnArg(object):
     "container class"
-    def __init__(self, name='dummy', nargs=1, types=str, dest=None, helper=None, required=False):
+    def __init__(self, name='dummy', nargs=1, types=str,
+                 dest=None, helper=None, required=False):
         # print(sys.argv)
         self._name = name
         self._nargs = nargs
@@ -64,9 +65,12 @@ class OwnArguments(object):
     def __repr__(self):
         return 'Called'
 
-    def add_argument(self, name='dummy', nargs=1, types=str, dest=None, helper=None, required=False):
+    def add_argument(self, name='dummy', nargs=1,
+                     types=str, dest=None, helper=None, required=False):
         self._all_arguments.append(LittleOwnArg(
-            name=name, nargs=nargs, types=types, dest=dest, helper=helper, required=required))
+            name=name, nargs=nargs, types=types,
+            dest=dest, helper=helper, required=required)
+        )
 
     def parse_arguments(self):
         for arg in self._all_arguments:

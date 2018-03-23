@@ -22,8 +22,10 @@ def _to_dense(x):
         print(e)
         return x
 
+
 def _make_feature_vector(df, feature_col=None):
     return 'features', feature.VectorAssembler(inputCols=feature_col, outputCol='features').transform(df)
+
 
 def _scale_data_frame(df, vector=None):
     if vector:

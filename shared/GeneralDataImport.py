@@ -8,17 +8,24 @@ import logging
 
 logger_data_import = logging.getLogger(__name__)
 logger_data_import.setLevel(logging.DEBUG)
-logger_file_handler_parameter = logging.FileHandler('/tmp/workflow_classification.log')
-logger_formatter_parameter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+logger_file_handler_parameter = logging.FileHandler(
+    '/tmp/workflow_classification.log'
+)
+logger_formatter_parameter = logging.Formatter(
+    '%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+)
 
-logger_data_import.addHandler(logger_file_handler_parameter)
-logger_file_handler_parameter.setFormatter(logger_formatter_parameter)
+logger_data_import.addHandler(
+    logger_file_handler_parameter
+)
+logger_file_handler_parameter.setFormatter(
+    logger_formatter_parameter
+)
 
 from pyspark import SparkContext, SQLContext
 from pyspark.sql import types as T
 from IPython import display
 from ipywidgets import widgets
-from functools import partial
 
 sc = SparkContext.getOrCreate()
 sql_context = SQLContext.getOrCreate(sc)
@@ -29,7 +36,12 @@ class GeneralDataImport(object):
     Data object to handle importation of various types of data
     """
     counter = 0
-    file_ending = {'txt': 'text', 'csv': 'csv', 'parquet': 'parquet', 'jbdc': 'jbdc', 'json': 'json'}
+    file_ending = {'txt': 'text',
+                   'csv': 'csv',
+                   'parquet': 'parquet',
+                   'jbdc': 'jbdc',
+                   'json': 'json'
+                   }
 
     def __init__(self, path=None, **kwargs):
         """
@@ -50,7 +62,11 @@ class GeneralDataImport(object):
         # Run the selection method
         self.select_file(**kwargs)
 
-        logger_data_import.info("GeneralDataImport object created. {}".format(str(GeneralDataImport)))
+        logger_data_import.info(
+            "GeneralDataImport object created. {}".format(
+                str(GeneralDataImport)
+            )
+        )
 
     @property
     def data_frame(self):
@@ -68,35 +84,61 @@ class GeneralDataImport(object):
             return
 
         # Create casted features and labels
-        feature_types = [GeneralDataImport.cast_to_right_type(feature) for feature in self._list_structfield_features]
-        id_types = [F.col(id.name).cast('string').alias(id.name) for id in self._list_structfield_id]
-        label_types = list(map(lambda c: F.col(c.name).cast('double').alias(c.name), self._list_structfield_label))
+        feature_types = [GeneralDataImport.cast_to_right_type(feature)
+                         for feature in self._list_structfield_features
+                         ]
+        id_types = [F.col(id.name).cast('string').alias(id.name)
+                    for id in self._list_structfield_id
+                    ]
+        label_types = list(map(
+            func=lambda c: F.col(c.name).cast('double').alias(c.name),
+            iter1=self._list_structfield_label)
+        )
 
         # Log the selected features and labels
         logger_data_import.info(
-            "Data frame exported with columns: {}, missing: {}"
-                .format(self._list_structfield_label + self._list_structfield_id + self._list_structfield_features,
-                        set(self._all_columns) - set(self._list_structfield_label + self._list_structfield_id + self._list_structfield_features)
+            "Data frame exported with columns: {col}, missing: {mis}"
+                .format(col=self._list_structfield_label
+                            + self._list_structfield_id
+                            + self._list_structfield_features,
+                        mis=set(self._all_columns)
+                            - set(self._list_structfield_label
+                                  + self._list_structfield_id
+                                  + self._list_structfield_features
+                                  )
                         )
         )
-
-        return self._data_frame.select(id_types+label_types+feature_types)
+        return self._data_frame.select(
+            id_types+label_types+feature_types
+        )
 
     @property
     def all_columns(self):
-        return list(map(lambda x: x.name, self._all_columns))
+        return list(map(
+            func=lambda x: x.name,
+            iter1=self._all_columns)
+        )
 
     @property
     def list_label(self):
-        return list(map(lambda x: x.name, self._list_structfield_label))
+        return list(map(
+            func=lambda x: x.name,
+            iter1=self._list_structfield_label)
+        )
 
     @property
     def list_id(self):
-        return list(map(lambda x: x.name, self._list_structfield_id))
+        return list(map(
+            func=lambda x: x.name,
+            iter1=self._list_structfield_id)
+        )
 
     @property
     def list_features(self):
-        return list(map(lambda x: x.name, self._list_structfield_features))
+        return list(map(
+            func=lambda x: x.name,
+            iter1=self._list_structfield_features)
+        )
 
     @property
     def standardize(self):
@@ -104,18 +146,24 @@ class GeneralDataImport(object):
 
     @list_features.setter
     def list_features(self, list_feature):
-        self._list_structfield_features = [T.StructField(feature, T.FloatType(), True)
-                                           for feature in list_feature]
+        self._list_structfield_features = [
+            T.StructField(feature, T.FloatType(), True)
+            for feature in list_feature
+        ]
 
     @list_label.setter
     def list_label(self, list_label):
-        self._list_structfield_label = [T.StructField(label, T.StringType(), True)
-                                        for label in list_label]
+        self._list_structfield_label = [
+            T.StructField(label, T.StringType(), True)
+            for label in list_label
+        ]
 
     @list_id.setter
     def list_id(self, list_id):
-        self._list_structfield_id = [T.StructField(ids, T.IntegerType(), True)
-                                     for ids in list_id]
+        self._list_structfield_id = [
+            T.StructField(ids, T.IntegerType(), True)
+            for ids in list_id
+        ]
 
     def __del__(self):
         GeneralDataImport.counter = 0
@@ -143,31 +191,55 @@ class GeneralDataImport(object):
         from ipywidgets import widgets
 
         # Widgets to be used
-        text_import_file = widgets.Text(value= self._path_to_data, description= "path")
-        button_import_file = widgets.Button(description= "Import file!")
-        checkbox_standardize_data = widgets.Checkbox(value= False, description= "Standardize Data:")
+        text_import_file = widgets.Text(
+            value= self._path_to_data, description= "path"
+        )
+        button_import_file = widgets.Button(
+            description= "Import file!"
+        )
+        checkbox_standardize_data = widgets.Checkbox(
+            value= False, description= "Standardize Data:"
+        )
 
         # Inline method for button handler
         def button_import_on_click(b):
-            logger_data_import.info("File selected: {:s} - standardize is : {}"
-                                    .format(text_import_file.value, checkbox_standardize_data.value))
+            logger_data_import.info(
+                "File selected: {:s} - standardize is : {}"
+                    .format(text_import_file.value,
+                            checkbox_standardize_data.value
+                            )
+            )
             self._path_to_data = text_import_file.value
             self._standardize = checkbox_standardize_data.value
             # print(b.description)
             GeneralDataImport.counter += 1
-            self._data_frame = GeneralDataImport.import_data(self._path_to_data, **kwargs)
-
+            self._data_frame = GeneralDataImport.import_data(
+                path=self._path_to_data, **kwargs
+            )
             # set up for all columns and cleanup for labels and features
             self._all_columns = self._data_frame.schema
-            self._list_structfield_id = [ids for ids in self._all_columns if ids.name in kwargs.get('idCols', [])]
-            self._list_structfield_features = [feature for feature in self._all_columns
-                                               if feature.name in kwargs.get('featureCols', [])]
-            self._list_structfield_label = [lab for lab in self._all_columns
-                                            if lab.name in kwargs.get('labelCols', [])]
-
+            self._list_structfield_id = [
+                ids for ids in self._all_columns
+                if ids.name in kwargs.get('idCols', [])
+            ]
+            self._list_structfield_features = [
+                feature for feature in self._all_columns
+                if feature.name in kwargs.get('featureCols', [])
+            ]
+            self._list_structfield_label = [
+                lab for lab in self._all_columns
+                if lab.name in kwargs.get('labelCols', [])
+            ]
         # register button event and show widgets
         button_import_file.on_click(button_import_on_click)
-        display.display(widgets.HBox([text_import_file, button_import_file, checkbox_standardize_data]))
+        display.display(
+            widgets.HBox(
+                [text_import_file,
+                 button_import_file,
+                 checkbox_standardize_data
+                 ]
+            )
+        )
 
     @staticmethod
     def cast_to_right_type(name_and_type):
@@ -180,7 +252,10 @@ class GeneralDataImport(object):
         # Imports
         import pyspark.sql.functions as F
         if name_and_type.dataType == T.StringType():
-            return F.col(name_and_type.name).cast('float').alias(name_and_type.name)
+            return (F.col(name_and_type.name)
+                .cast('float')
+                .alias(name_and_type.name)
+            )
         else:
             return F.col(name_and_type.name)
 
@@ -212,14 +287,13 @@ class GeneralDataImport(object):
         # Special case for json. There might be a schema hidding somewhere.
         if data_format[1:] != 'json':
             return (sql_context
-                    .read
-                    .format(GeneralDataImport.file_ending[data_format[1:]])
-                    .options(**kwargs)
-                    .load(path))
+                .read.format(GeneralDataImport.file_ending[data_format[1:]])
+                .options(**kwargs).load(path)
+            )
         else:
-            return (sql_context
-                    .read
-                    .json(path))
+            return (
+                sql_context.read.json(path)
+            )
 
     def select_id(self):
         set_all_columns = set([
@@ -234,13 +308,16 @@ class GeneralDataImport(object):
             set_all_columns - set_features - set_labels - set_ids)
 
         widget_select_id = widgets.SelectMultiple(
-            value=[], options=list_avail_columns, description="Select Features"
+            value=[], options=list_avail_columns,
+            description="Select Features"
         )
 
         def obs_id(change):
             if change.new != change.old:
-                self._list_structfield_id = [i for i in self._all_columns if
-                                             i.name in widget_select_id.value]
+                self._list_structfield_id = [
+                    i for i in self._all_columns if
+                    i.name in widget_select_id.value
+                ]
 
         widget_select_id.observe(obs_id, names='value')
         display.display(widget_select_id)
@@ -258,13 +335,16 @@ class GeneralDataImport(object):
             set_all_columns - set_features - set_labels - set_ids)
 
         widget_select_feature = widgets.SelectMultiple(
-            value= [], options= list_avail_columns, description= "Select Features"
+            value= [], options= list_avail_columns,
+            description= "Select Features"
         )
 
         def obs_feature(change):
             if change.new != change.old:
-                self._list_structfield_features = [i for i in self._all_columns if
-                                             i.name in widget_select_feature.value]
+                self._list_structfield_features = [
+                    i for i in self._all_columns if
+                    i.name in widget_select_feature.value
+                ]
 
         widget_select_feature.observe(obs_feature, names= 'value')
         display.display(widget_select_feature)
@@ -282,12 +362,15 @@ class GeneralDataImport(object):
             set_all_columns - set_features - set_labels - set_ids)
 
         widget_select_labels = widgets.SelectMultiple(
-            value= [], options= list_avail_columns, description= "Select Features"
+            value= [], options= list_avail_columns,
+            description= "Select Features"
         )
 
         def obs_feature(change):
             if change.new != change.old:
-                self._list_structfield_label = [i for i in self._all_columns if
-                                             i.name in widget_select_labels.value]
+                self._list_structfield_label = [
+                    i for i in self._all_columns if
+                    i.name in widget_select_labels.value
+                ]
         widget_select_labels.observe(obs_feature, names= 'value')
         display.display(widget_select_labels)

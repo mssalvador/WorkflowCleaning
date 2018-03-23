@@ -14,7 +14,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     # Initialization phase v.1.0
     import_path = kwargs.get('input_data', None)
     feature_columns = kwargs.get('features', None)
-    label_columns = kwargs.get('label', 'k')
+    label_columns = kwargs.get('labels', 'k')
     id_column = kwargs.get('id', 'id')
     algorithm_params = parse_algorithm_variables(kwargs.get('algo_params', None))
     standardizer = algorithm_params.get('standardizer', False)
@@ -25,8 +25,8 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_schema = [T.StructField(f, T.DoubleType(), False) for f in feature_columns]
     training_data_schema = T.StructType(id_schema+label_schema+feature_schema)
     training_data_frame = spark_session.read.load(
-        path=import_path, format='csv', schema=training_data_schema)
-
+        path=import_path, format='csv', schema=training_data_schema, header=True)
+    training_data_frame.printSchema()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer

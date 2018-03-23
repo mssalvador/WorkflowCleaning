@@ -29,13 +29,13 @@ if __name__ == '__main__':
     if arguments.job_args:
         all_args['algo_params'] = dict(arg.split('=') for arg in arguments.job_args)
 
-
     all_args['input_data'] = arguments.input_data
+    # print(all_args['input_data'])
     all_args['features'] = arguments.features
     all_args['id'] = arguments.id
     all_args['labels'] = arguments.labels
     dtu_cluster_path = 'file:///home/micsas/workspace/distributions/dist_workflow'
-    local_path = "file:/home/svanhmic/workspace/DABAI/Workflows/dist_workflow"
+    local_path = "file:/home/sidsel/workspace/WorkflowCleaning/dist_workflow"
     visma_cluster_path = 'file:/home/ml/deployments/workflows'
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
@@ -46,9 +46,9 @@ if __name__ == '__main__':
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
         # data_frame.show()
-        rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
-        #print(js)
+        # print(js)
         print("""{"cluster":["""+','.join(js)+"""]}""")
 
     except TypeError as te:

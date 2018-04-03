@@ -22,8 +22,8 @@ if __name__ == '__main__':
     arguments.add_argument('--job_args', dest='job_args', nargs='*')
     arguments.add_argument('--input_data', dest='input_data', types=str)
     arguments.add_argument('--features', dest='features', types=str, nargs='*')
-    arguments.add_argument('--id', dest='id' ,types=str, nargs='*')
-    arguments.add_argument('--labels', dest='labels', types=str, required=False)
+    arguments.add_argument('--id', dest='id', types=str, nargs='*')
+    arguments.add_argument('--labels', dest='labels', types=str, nargs='*', required=False)
     arguments.parse_arguments()
 
     all_args = dict()

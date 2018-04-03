@@ -15,6 +15,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     feature_columns = kwargs.get('features', None)
     label_columns = kwargs.get('labels', None)
     id_column = kwargs.get('id', 'id')
+    # header_columns = kwargs.get('headers', None)
     algorithm_params = parse_algorithm_variables(
         vars=kwargs.get('algo_params', None)
     )
@@ -31,8 +32,8 @@ def run(sc: pyspark.SparkContext, **kwargs):
         path=import_path, format='csv', inferSchema=True,
         header=True
     ).persist()
-    training_data_frame.take(1)
-    #training_data_frame.show()
+    header_columns = training_data_frame.columns
+    # training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
         cols_labels=label_columns, standardize=standardizer
@@ -46,7 +47,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     # clustered_data_frame.show()
     show_result = ShowResults(
         id=id_column[0], list_features=feature_columns,
-        list_labels=label_columns, **algorithm_params
+        list_labels=label_columns, list_headers=header_columns, **algorithm_params
     )
     all_info_df = show_result.prepare_table_data(
         dataframe=clustered_data_frame, **algorithm_params

@@ -21,13 +21,13 @@ class ExecuteWorkflow(object):
             cols_labels=None,
             standardize=False):
         """
-        Constructor for Executeworkflow
+        Constructor for ExecuteWorkflow
         :param dict_params:
         :param cols_features:
         :param cols_labels:
         :param standardize:
         """
-        self._dict_parameters = dict_params # dict of _parameters including model, mode and so on
+        self._dict_parameters = dict_params  # dict of _parameters including model, mode and so on
         self._list_feature = ExecuteWorkflow._check_features(cols_features)
         self._list_labels = cols_labels
         self._bool_standardize = standardize
@@ -111,8 +111,8 @@ class ExecuteWorkflow(object):
         )
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        stages = [model]#[vectorized_features, caster, scaling_model, model]
-        self._dict_parameters.update(dict_params_labels) # dict gets updated
+        stages = [model]  # [vectorized_features, caster, scaling_model, model]
+        self._dict_parameters.update(dict_params_labels)  # dict gets updated
 
         return Pipeline(stages=stages)
 
@@ -166,8 +166,8 @@ class ExecuteWorkflow(object):
         """
         from pyspark.ml.linalg import Vectors, VectorUDT
         sql_ctx = SQLContext.getOrCreate(sc)
-        vector_scaled_df = self._vector_scale(data_frame)
-        transformed_data = model.transform(vector_scaled_df)
+        vector_scaled_df = self._vector_scale(data_frame)  # adds DenseVector for features and scaled_features
+        transformed_data = model.transform(vector_scaled_df)  # adds prediction
 
         # udf's
         udf_cast_vector = F.udf(
@@ -191,7 +191,7 @@ class ExecuteWorkflow(object):
             )
             merged_df = merged_df.withColumn(
                 'centers', udf_cast_vector('mean')
-            ) # this is stupidity from spark!
+            )  # this is stupidity from spark!
         else:
             np_centers = model.stages[-1].clusterCenters()
             centers = self.gen_cluster_center(
@@ -205,7 +205,7 @@ class ExecuteWorkflow(object):
                 f=lambda x: Vectors.dense(broadcast_center.value[x]),
                 returnType=VectorUDT()
             )
-            merged_df = transformed_data.withColumn(
+            merged_df = transformed_data.withColumn(  # adds DenseVector of centers
                 "centers", udf_assign_cluster(
                     self._dict_parameters['predictionCol']
                 )

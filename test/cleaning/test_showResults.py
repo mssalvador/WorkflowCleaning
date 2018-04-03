@@ -35,6 +35,7 @@ class TestShowResults(PySparkTestCase):
 
         self.dataframe = self.spark.createDataFrame(df)
 
+    # probably not needed!!!
     def test_add_row_index(self):
 
         computed_dataframe = ShowResults._add_row_index(self.dataframe)
@@ -63,7 +64,6 @@ class TestShowResults(PySparkTestCase):
         actual_values = [False]*5+[True]+4*[False]
         self.assertListEqual(list(computed_pdf['is_outlier']), actual_values)
         print('add_outliers \n', computed_pdf)
-
 
     @unittest.skip('Reason: Compute summary not in play.')
     def test_compute_summary(self):
@@ -120,20 +120,26 @@ class TestShowResults(PySparkTestCase):
         d_point = 'dp'
         df = self._generate_data()
         arranged_df = shows.arrange_output(self.sc, df, data_point_name=d_point)
-        expected_cols = [prediction, d_point, 'amount', 'percentage_outlier', 'amount_outlier', 'buckets' ]
+        expected_cols = [prediction, d_point, 'amount', 'percentage_outlier', 'amount_outlier', 'buckets']
         self.assertListEqual(sorted(expected_cols), sorted(arranged_df.columns))
 
     def _generate_data(self):
         df = self.spark.range(10)
         output = (df
-            .select(
-            'id', F.rand(42).alias('a'), F.randn(1).alias('b'),
-            F.round(10 * F.rand(42)).alias('Prediction'),
-            F.rand().alias('distance'))
-            .withColumn('is_outlier', F.when(F.col('distance') >= 0.7, 1.0).otherwise(0.))
-            .withColumn('computed_boundary', F.randn())
-            )
+                  .select(
+                   'id', F.rand(42).alias('a'), F.randn(1).alias('b'),
+                   F.round(10 * F.rand(42)).alias('Prediction'),
+                   F.rand().alias('distance'))
+                  .withColumn('is_outlier', F.when(F.col('distance') >= 0.7, 1.0).otherwise(0.))
+                  .withColumn('computed_boundary', F.randn())
+                  )
         return output
+
+    def test_create_linspace(self):  # data, min, max, buckets, boundary):
+        data = ShowResults.prepare_table_data(self.dataframe, point_col='point_col')
+        data.show()
+
+
 
     # @unittest.skip('Test not created')
     def test_create_buckets(self):
@@ -143,7 +149,8 @@ class TestShowResults(PySparkTestCase):
         id = 'id'
         prediction = 'Prediction'
 
-        shows = ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
+        shows = ShowResults.prepare_table_data(self.dataframe, point_col='point_col')
+        # ShowResults(id=id, list_features=features, list_labels=['k'], predictionCol=prediction, k=10)
         buckets = shows.create_buckets(sc=self.sc, dataframe=df, buckets=20, prediction_col=prediction)
 
         print(buckets.rdd.take(1)[0]['buckets'])

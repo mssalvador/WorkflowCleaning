@@ -65,7 +65,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
 
 def create_sub_schema(columns, type='label'):
     types = {'label': T.StringType(),
-             'id' : T.IntegerType(),
+             'id': T.IntegerType(),
              'feature': T.DoubleType()
              }
     if isinstance(columns, list):

@@ -182,11 +182,14 @@ class ShowResults(object):
                              + no_stddev * F.stddev_pop(distance_col).over(window_outlier)
                              )
         return (dataframe
-            .withColumn(colName='computed_boundary',
-                        col=computed_boundary)
-            .withColumn(colName='is_outlier',
-                        col=F.when(distance_col > computed_boundary, 1).otherwise(0))
-            )
+                .withColumn(colName='computed_boundary',
+                            col=computed_boundary)
+                .withColumn(colName='is_outlier',
+                            col=F.when(distance_col > computed_boundary, 1).otherwise(0))
+                )
+
+    # @staticmethod
+    # def _add_median(dataframe, ):
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):

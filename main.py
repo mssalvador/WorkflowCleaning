@@ -53,11 +53,13 @@ if __name__ == '__main__':
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
-        # data_frame.show()
+        data_frame.show()
         rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
         # print(js)
-        print("""{"cluster":["""+','.join(js)+"""]}""")
-
+        if arguments.job_name == 'cleaning':
+            print("""{"cluster":["""+','.join(js)+"""]}""")
+        elif arguments.job_name == 'classification':
+            print("""{"classification":[""" + ','.join(js) + """]}""")
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

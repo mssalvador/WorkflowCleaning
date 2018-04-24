@@ -29,7 +29,7 @@ class ShowResults(object):
 
     """
 
-    def __init__(self, id, list_features, list_labels, **kwargs):
+    def __init__(self, id, list_features, list_labels, list_headers, **kwargs):
         assert kwargs['predictionCol'] is not None, 'Prediction has not been made'
         assert kwargs['k'] is not None, 'Number of cluster has not been set'
         self._prediction_columns = kwargs['predictionCol']
@@ -39,6 +39,7 @@ class ShowResults(object):
         self._features = list_features
         self._labels = list_labels
         self._selected_cluster = 1
+        self._headers = list_headers
 
     # def select_cluster(self, dataframe):
     #     """
@@ -181,11 +182,14 @@ class ShowResults(object):
                              + no_stddev * F.stddev_pop(distance_col).over(window_outlier)
                              )
         return (dataframe
-            .withColumn(colName='computed_boundary',
-                        col=computed_boundary)
-            .withColumn(colName='is_outlier',
-                        col=F.when(distance_col > computed_boundary, 1).otherwise(0))
-            )
+                .withColumn(colName='computed_boundary',
+                            col=computed_boundary)
+                .withColumn(colName='is_outlier',
+                            col=F.when(distance_col > computed_boundary, 1).otherwise(0))
+                )
+
+    # @staticmethod
+    # def _add_median(dataframe, ):
 
     @staticmethod
     def prepare_table_data(dataframe, **kwargs):
@@ -238,7 +242,7 @@ class ShowResults(object):
         tmp_list = data
         for bucket_idx, bucket_val in enumerate(bucket_boundary[1:]):
             for distance_val in tmp_list:
-                if ((bucket_idx == 0) and (distance_val < bucket_val)):
+                if (bucket_idx == 0) and (distance_val < bucket_val):
                     output[bucket_idx] += 1
                 elif ((distance_val < bucket_val)
                       and (distance_val >= bucket_boundary[bucket_idx - 1])):
@@ -254,12 +258,52 @@ class ShowResults(object):
         return float(n_outliers / len(data_points))
 
     @staticmethod
+    def make_buckets(distances, ratio, boundary, n_buckets):
+        num = n_buckets * [0]
+        out = n_buckets * [0]
+
+        for dist in distances:
+            for i in range(n_buckets):
+                if ratio * i < dist <= ratio * (i+1):
+                    num[i] += 1
+                    if dist > boundary:
+                        out[i] = 1
+        return list(zip(range(n_buckets), num, out))
+
+    @staticmethod
+    def frontend_result(sc, dataframe, buckets=20, prediction_col='prediction'):
+        n_buckets = sc.broadcast(buckets)
+        buckets_list_udf = F.udf(
+            f=lambda dist, ratio, boundary: ShowResults.make_buckets(
+                distances=dist, ratio=ratio, boundary=boundary, n_buckets=n_buckets.value)
+            ,
+            returnType=T.ArrayType(
+                elementType=T.ArrayType(
+                    elementType=T.IntegerType(),
+                    containsNull=True),
+                containsNull=True
+            )
+        )
+
+        tmp = (dataframe
+               .groupBy(prediction_col, F.col('computed_boundary'))
+               .agg(F.min('distance').alias('min'), F.max('distance').alias('max'),
+                    F.sum('is_outlier').alias('n_outliers'),
+                    F.collect_list('distance').alias('distances'))
+               .withColumn(colName='ratio', col=F.col('max')/n_buckets.value)
+               .withColumn(colName='buckets', col=buckets_list_udf(
+                            'distances', 'ratio', 'computed_boundary'))
+               )
+
+        return tmp.select(prediction_col, 'buckets')
+
+    @staticmethod
     def create_buckets(sc, dataframe, buckets=20, prediction_col='prediction'):
         n_buckets = sc.broadcast(buckets)
         generate_list_udf = F.udf(
             f=lambda l, minimum, maximum, boundary: ShowResults.create_linspace(
                 data=l, min=minimum, max=maximum,
-                buckets=n_buckets.value, boundary=boundary
+                boundary=boundary, buckets=n_buckets.value
             ),
             returnType=T.ArrayType(
                 elementType=T.ArrayType(
@@ -269,51 +313,49 @@ class ShowResults(object):
             )
         )
         tmp = (dataframe
-            .groupBy(prediction_col,
-                     F.col('computed_boundary')
-                     )
-            .agg(F.min('distance').alias('min'),
-                 F.max('distance').alias('max'),
-                 F.collect_list('distance').alias('distances')
-                 )
-            .withColumn(colName='buckets',
-                        col=generate_list_udf(
+               .groupBy(prediction_col, F.col('computed_boundary'))
+               .agg(F.min('distance').alias('min'), F.max('distance').alias('max'),
+                    F.sum('is_outlier').alias('n_outliers'),
+                    F.collect_list('distance').alias('distances'))
+               .withColumn(colName='buckets', col=generate_list_udf(
                             'distances', 'min', 'max',
-                            'computed_boundary')
-                        )
-            )
+                            'computed_boundary'))
+               )
         return tmp.select(prediction_col, 'buckets')
 
     def arrange_output(self, sc, dataframe,
                        data_point_name='data_points', **kwargs):
         predict_col = kwargs.get('predictionCol', 'Prediction')
         new_struct = F.struct(
-            [self._id, *self._features,
+            [*self._headers,
              'distance', 'is_outlier'
              ]
-        ).alias(data_point_name)
-        percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)
+        ).alias(data_point_name)  # here we loose the rest of the columns... # self._id, *self._labels, *self._features,
+        percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)  # where do 'percentage_outlier' and 'amount' come from??
 
-        bucket_df = ShowResults.create_buckets(
+        bucket_df = ShowResults.frontend_result(
             sc=sc, dataframe=dataframe,
-            buckets=20, prediction_col=predict_col
-        )
+            buckets=20, prediction_col=predict_col)
+        # bucket_df = ShowResults.create_buckets(
+        #     sc=sc, dataframe=dataframe,
+        #     buckets=20, prediction_col=predict_col
+        # )
         re_arranged_df = (
             dataframe
-                .select(F.col(predict_col), new_struct)
-                .groupBy(F.col(predict_col))
-                .agg(F.count(predict_col).alias('amount'),
-                     F.sum(F.col(data_point_name
-                                 + ".is_outlier")).alias('percentage_outlier'),
-                     F.collect_list(data_point_name).alias(data_point_name))
-                .join(other=bucket_df, on=predict_col,
-                      how='inner')
-                .withColumn(colName='amount_outlier',
-                            col=F.col('percentage_outlier')
-                            )
-                .withColumn(colName='percentage_outlier',
-                            col=percentage_outlier
-                            )
+            .select(F.col(predict_col), new_struct)
+            .groupBy(F.col(predict_col))
+            .agg(F.count(predict_col).alias('amount'),
+                 F.sum(F.col(data_point_name
+                             + ".is_outlier")).alias('percentage_outlier'),
+                 F.collect_list(data_point_name).alias(data_point_name))
+            .join(other=bucket_df, on=predict_col,
+                  how='inner')
+            .withColumn(colName='amount_outlier',
+                        col=F.col('percentage_outlier')
+                        )
+            .withColumn(colName='percentage_outlier',
+                        col=percentage_outlier
+                        )
         )
         return re_arranged_df
 

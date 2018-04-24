@@ -22,14 +22,13 @@ if __name__ == '__main__':
     arguments.add_argument('--job_args', dest='job_args', nargs='*')
     arguments.add_argument('--input_data', dest='input_data', types=str)
     arguments.add_argument('--features', dest='features', types=str, nargs='*')
-    arguments.add_argument('--id', dest='id' ,types=str, nargs='*')
-    arguments.add_argument('--labels', dest='labels', types=str, required=False)
+    arguments.add_argument('--id', dest='id', types=str, nargs='*')
+    arguments.add_argument('--labels', dest='labels', types=str, nargs='*', required=False)
     arguments.parse_arguments()
 
     all_args = dict()
     if arguments.job_args:
         all_args['algo_params'] = dict(arg.split('=') for arg in arguments.job_args)
-
 
     all_args['input_data'] = arguments.input_data
     all_args['features'] = arguments.features
@@ -54,11 +53,13 @@ if __name__ == '__main__':
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
-        # data_frame.show()
-        rdd = data_frame.toJSON()#.saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        data_frame.show()
+        rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
-        #print(js)
-        print("""{"cluster":["""+','.join(js)+"""]}""")
-
+        # print(js)
+        if arguments.job_name == 'cleaning':
+            print("""{"cluster":["""+','.join(js)+"""]}""")
+        elif arguments.job_name == 'classification':
+            print("""{"classification":[""" + ','.join(js) + """]}""")
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

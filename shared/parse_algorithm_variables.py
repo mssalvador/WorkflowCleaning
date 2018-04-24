@@ -4,6 +4,11 @@ from ast import literal_eval
 
 @logger_info_decorator
 def parse_algorithm_variables(vars):
+    """
+    Parses variables that are supplied as strings
+    :param vars: list of string variables
+    :return: list of strings with variables in the correct Python format
+    """
     for key, val in vars.items():
         try:
             vars[key] = literal_eval(val)

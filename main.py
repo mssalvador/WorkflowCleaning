@@ -53,7 +53,7 @@ if __name__ == '__main__':
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
-        data_frame.show()
+        # data_frame.show()
         rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
         js = rdd.collect()
         # print(js)

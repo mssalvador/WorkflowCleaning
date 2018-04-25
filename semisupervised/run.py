@@ -1,7 +1,7 @@
-from semisupervised import label_propagation
+from semisupervised.labelpropagation import label_propagation
 from shared.WorkflowLogger import logger_info_decorator
 from shared.parse_algorithm_variables import parse_algorithm_variables
-from shared.Plot2DGraphs import plot3D
+#from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
 import  functools
 
@@ -32,14 +32,12 @@ def run(sc, **kwargs):
     try:
         partial_lp = functools.partial(
             label_propagation, sc=sc, data_frame=input_data_frame,
-            label_col=kwargs.get('labels', None), id_col=kwargs.get('id', 'id')[0],
+            label_col=kwargs.get('labels', None)[0], id_col=kwargs.get('id', 'id')[0],
             feature_cols=kwargs.get('features', None))
-        # output_data_frame = partial_lp(**algo_types)
+
+        output_data_frame = partial_lp(**algo_types)
     except Exception as e:
-        print('missing some parameters in partial_lp')
-    # try:
-    #     plot3D(output_data_frame, 'new_'+kwargs.get('labels', None))
-    # except Exception as e:
-    #     print('Did not plot the strings')
-    # Return result
-    return input_data_frame
+        print('missing some parameters in partial_lp'+str(e))
+        output_data_frame = input_data_frame.sample(withReplacement=True,fraction=0.1)
+    # output_data_frame.show()
+    return output_data_frame

@@ -4,6 +4,7 @@ from semisupervised.labelpropagation.lp_generate_graph import do_cartesian
 from semisupervised.labelpropagation import lp_helper
 from semisupervised.labelpropagation import lp_iteration
 
+
 def label_propagation(
         sc, data_frame=None,
         id_col='id', label_col='label',

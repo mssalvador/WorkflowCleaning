@@ -61,5 +61,7 @@ if __name__ == '__main__':
             print("""{"cluster":["""+','.join(js)+"""]}""")
         elif arguments.job_name == 'classification':
             print("""{"classification":[""" + ','.join(js) + """]}""")
+        elif arguments.job_name == 'semisupervised':
+            print("""{"semisuper":["""+ ','.join(js)+"""]}""")
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

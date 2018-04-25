@@ -32,6 +32,12 @@ def run(sc: SparkContext, **kwargs):
     )
     # Execute model
     model = workflow.pipeline.fit(training_data_frame)
+    output_df = model.transform(test_data_frame).cache()
+    output_df.take(1)
+    data_frame.unpersist()
     # Cross Validation will be included in v 1.1
     # Return result
-    return model.transform(test_data_frame)
+    return output_df.select(
+        id_column+feature_columns+label_columns
+        +["rawPrediction", "probability", "prediction"]
+    )

@@ -326,6 +326,7 @@ class ShowResults(object):
     def arrange_output(self, sc, dataframe,
                        data_point_name='data_points', **kwargs):
         predict_col = kwargs.get('predictionCol', 'Prediction')
+        show_buckets = kwargs.get('showBuckets', None)
         new_struct = F.struct(
             [*self._headers,
              'distance', 'is_outlier'
@@ -348,8 +349,6 @@ class ShowResults(object):
                  F.sum(F.col(data_point_name
                              + ".is_outlier")).alias('percentage_outlier'),
                  F.collect_list(data_point_name).alias(data_point_name))
-            .join(other=bucket_df, on=predict_col,
-                  how='inner')
             .withColumn(colName='amount_outlier',
                         col=F.col('percentage_outlier')
                         )
@@ -357,6 +356,10 @@ class ShowResults(object):
                         col=percentage_outlier
                         )
         )
+
+        if show_buckets:
+            return re_arranged_df.join(other=bucket_df, on=predict_col, how='inner')
+
         return re_arranged_df
 
     # @staticmethod

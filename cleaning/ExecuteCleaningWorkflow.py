@@ -111,6 +111,7 @@ class ExecuteWorkflow(object):
         )
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
+        dict_params_labels['seed'] = -1983291474829197226
         stages = [model]  # [vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels)  # dict gets updated
 
@@ -134,10 +135,14 @@ class ExecuteWorkflow(object):
                 withMean=False, withStd=False).fit(vector_df)
 
         scaled_df = scaling_model.transform(vector_df)
-        return scaled_df.withColumn(
-            colName='scaled_features',
-            col=to_dense_udf(*self._list_feature)
-        )
+
+        return scaled_df
+
+        # scaled_df\
+        #     .withColumn(
+        #     colName='scaled_features',
+        #     col=to_dense_udf(*self._list_feature)
+        # )
 
     @staticmethod
     def _to_dense(*args):

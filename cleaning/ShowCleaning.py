@@ -332,7 +332,7 @@ class ShowResults(object):
              'distance', 'is_outlier'
              ]
         ).alias(data_point_name)  # here we loose the rest of the columns... # self._id, *self._labels, *self._features,
-        percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)  # where do 'percentage_outlier' and 'amount' come from??
+        percentage_outlier = F.round(100 * F.col('percentage_outlier') / F.col('amount'), 3)
 
         bucket_df = ShowResults.frontend_result(
             sc=sc, dataframe=dataframe,

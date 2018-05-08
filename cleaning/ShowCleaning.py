@@ -267,7 +267,8 @@ class ShowResults(object):
                 if ratio * i < dist <= ratio * (i+1):
                     num[i] += 1
                     if dist > boundary:
-                        out[i] = 1
+                        out[i] += 1
+                    break
         return list(zip(range(n_buckets), num, out))
 
     @staticmethod

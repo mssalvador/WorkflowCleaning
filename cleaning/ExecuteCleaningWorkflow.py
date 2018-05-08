@@ -111,7 +111,8 @@ class ExecuteWorkflow(object):
         )
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
-        dict_params_labels['seed'] = -1983291474829197226
+        # dict_params_labels['seed'] = -1983291474829197226
+        # dict_params_labels['initMode'] = 'random'
         stages = [model]  # [vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels)  # dict gets updated
 

@@ -116,27 +116,18 @@ class ExecuteWorkflow(object):
 
         return Pipeline(stages=stages)
 
-    def _vector_scale(self, df):
+    def _vector_scale(self, df, feature_name='features'):
         to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
-        feature_str = 'features'
-
         vector_df = df.withColumn(
-            colName=feature_str,
-            col=to_dense_udf(*self._list_feature)
+            colName=feature_name, col=to_dense_udf(*self._list_feature)
         )
-        if self._bool_standardize:
-            scaling_model = features.StandardScaler(
-                inputCol=feature_str, outputCol="scaled_features",
-                withMean=True, withStd=True).fit(vector_df)
-        else:
-            scaling_model = features.StandardScaler(
-                inputCol=feature_str, outputCol="scaled_features",
-                withMean=False, withStd=False).fit(vector_df)
-
+        scaling_model = features.StandardScaler(
+            inputCol=feature_name, outputCol="scaled_features",
+            withMean=self._bool_standardize, withStd=self._bool_standardize
+        )
         scaled_df = scaling_model.transform(vector_df)
         return scaled_df.withColumn(
-            colName='scaled_features',
-            col=to_dense_udf(*self._list_feature)
+            colName='scaled_features', col=to_dense_udf(*self._list_feature)
         )
 
     @staticmethod

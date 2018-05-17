@@ -111,24 +111,39 @@ class ExecuteWorkflow(object):
         )
         # Add algorithm dict_params_labels
         dict_params_labels['algorithm'] = self._algorithm
+        # dict_params_labels['seed'] = -1983291474829197226
+        # dict_params_labels['initMode'] = 'random'
         stages = [model]  # [vectorized_features, caster, scaling_model, model]
         self._dict_parameters.update(dict_params_labels)  # dict gets updated
 
         return Pipeline(stages=stages)
 
-    def _vector_scale(self, df, feature_name='features'):
+    def _vector_scale(self, df):
         to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
+        feature_str = 'features'
+
         vector_df = df.withColumn(
-            colName=feature_name, col=to_dense_udf(*self._list_feature)
+            colName=feature_str,
+            col=to_dense_udf(*self._list_feature)
         )
-        scaling_model = features.StandardScaler(
-            inputCol=feature_name, outputCol="scaled_features",
-            withMean=self._bool_standardize, withStd=self._bool_standardize
-        )
+        if self._bool_standardize:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=True, withStd=True).fit(vector_df)
+        else:
+            scaling_model = features.StandardScaler(
+                inputCol=feature_str, outputCol="scaled_features",
+                withMean=False, withStd=False).fit(vector_df)
+
         scaled_df = scaling_model.transform(vector_df)
-        return scaled_df.withColumn(
-            colName='scaled_features', col=to_dense_udf(*self._list_feature)
-        )
+
+        return scaled_df
+
+        # scaled_df\
+        #     .withColumn(
+        #     colName='scaled_features',
+        #     col=to_dense_udf(*self._list_feature)
+        # )
 
     @staticmethod
     def _to_dense(*args):

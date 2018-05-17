@@ -1,10 +1,10 @@
-'''
+"""
 Created on Jul 10, 2017
 
 @author: svanhmic
 
 @description: Create a widget page in a class, for selecting parameters for classification
-'''
+"""
 
 import logging
 import sys
@@ -18,17 +18,23 @@ from pyspark.ml.tuning import CrossValidator
 from pyspark.ml import evaluation
 import numpy as np
 
+
 class ExecuteWorkflowClassification(object):
 
-    #@logger_info_decorator
-    def __init__(self, dict_params=None, standardize=False, feature_cols=None, label_col=None, id_col=None):
-        '''
+    # @logger_info_decorator
+    def __init__(self,
+                 dict_params=None,
+                 standardize=False,
+                 feature_cols=None,
+                 label_col=None,
+                 id_col=None):
+        """
         Constructor for ExecuteWorkflowClassification.
         :param dict_params:
         :param standardize:
         :param feature_cols:
-        :param labelCols:
-        '''
+        :param label_col:
+        """
         self._algorithm = ExecuteWorkflowClassification._check_algorithm(
             algorithm=dict_params.pop('algorithm', 'LogisticRegression')
         )
@@ -45,12 +51,10 @@ class ExecuteWorkflowClassification(object):
             print(te)
             print('something went wrong in pipeline')
 
-
     @property
     @logger_info_decorator
     def parameter_grid(self):
         return self._parameter_grid
-
 
     @property
     @logger_info_decorator
@@ -74,10 +78,10 @@ class ExecuteWorkflowClassification(object):
 
     def create_custom_pipeline(self):
 
-        '''
+        """
         TODO: create a method that can create a custom transformation... This could be a good opportunity
         :return:
-        '''
+        """
 
         # import statements
         from pyspark.ml import feature
@@ -88,10 +92,10 @@ class ExecuteWorkflowClassification(object):
         print("\n".join(all_transformation))
 
     def create_standard_pipeline(self, cross_validate=False):
-        '''
+        """
         This method creates a standard pipeline, standard meaning: vectorize, standardize and model...
         :return: Pipeline for pyspark, ParameterGrid for Pyspark pipeline
-        '''
+        """
 
         # Feature columns are created from instance variables
         # feature_columns = [i.name for i in self._feature_cols]
@@ -127,17 +131,17 @@ class ExecuteWorkflowClassification(object):
 
     @logger_info_decorator
     def run_cross_val(self, data, evaluator, n_folds):
-        '''
+        """
         :param data:
         :param evaluator:
         :param n_folds:
         :return:
-        '''
+        """
         if not isinstance(evaluator, evaluation.Evaluator):
             print("this {} is not good. Should have been of type {}".format(evaluator, evaluation.Evaluator))
             return
 
-        #print(self._parameter_grid)
+        # print(self._parameter_grid)
         cv = CrossValidator(
             estimator=self._pipeline,
             estimatorParamMaps=self._parameter_grid,
@@ -148,12 +152,12 @@ class ExecuteWorkflowClassification(object):
 
     @staticmethod
     def generate_equidistant_params(dict_param, number_of_spaces=3):
-        '''
+        """
         Create a generator for parameter list
         :param dict_param:
         :param number_of_spaces:
         :return:
-        '''
+        """
         params = dict(filter(lambda x: isinstance(x[1], tuple), dict_param.items()))
         for key, val in params.items():
             if isinstance(val, tuple) and isinstance(val[0], int):

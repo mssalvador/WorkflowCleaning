@@ -60,7 +60,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
         data_point_name=d_point, **algorithm_params
     )
     training_data_frame.unpersist()
-    return output_df
+    return output_df.sort('prediction')
 
 
 def create_sub_schema(columns, type='label'):

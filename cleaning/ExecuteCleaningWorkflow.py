@@ -19,7 +19,7 @@ class ExecuteWorkflow(object):
             dict_params=None,
             cols_features=None,
             cols_labels=None,
-            standardize=False):
+            standardize=True):
         """
         Constructor for ExecuteWorkflow
         :param dict_params:

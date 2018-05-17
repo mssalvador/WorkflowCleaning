@@ -264,11 +264,30 @@ class ShowResults(object):
 
         for dist in distances:
             for i in range(n_buckets):
-                if ratio * i < dist <= ratio * (i+1):
+                if ratio * i < dist <= ratio * (i + 1):
                     num[i] += 1
                     if dist > boundary:
                         out[i] += 1
                     break
+                if i == 0:
+                    if 0 <= dist <= ratio:
+                        num[i] += 1
+                        if dist > boundary:
+                            out[i] += 1
+                        break
+                elif i == n_buckets - 1:
+                    if ratio * i < dist:
+                        num[i] += 1
+                        if dist > boundary:
+                            out[i] += 1
+                        break
+                else:
+                    if ratio * i < dist <= ratio * (i + 1):
+                        num[i] += 1
+                        if dist > boundary:
+                            out[i] += 1
+                        break
+
         return list(zip(range(n_buckets), num, out))
 
     @staticmethod

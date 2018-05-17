@@ -58,7 +58,7 @@ if __name__ == '__main__':
         js = rdd.collect()
         # print(js)
         if arguments.job_name == 'cleaning':
-            print("""{"cluster":["""+','.join(js)+"""]}""")
+            print("""{"Cluster":["""+','.join(js)+"""]}""")
         elif arguments.job_name == 'classification':
             print("""{"classification":[""" + ','.join(js) + """]}""")
         elif arguments.job_name == 'semisupervised':

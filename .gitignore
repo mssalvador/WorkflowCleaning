@@ -20,6 +20,7 @@ misc
 build/
 develop-eggs/
 dist_workflow/
+tmp_.idea
 downloads/
 eggs/
 .eggs/

@@ -287,10 +287,6 @@ class ShowResults(object):
                         if dist > boundary:
                             out[i] += 1
                         break
-<<<<<<< HEAD
-=======
-
->>>>>>> dev
         return list(zip(range(n_buckets), num, out))
 
     @staticmethod

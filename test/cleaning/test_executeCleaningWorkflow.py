@@ -4,7 +4,6 @@ from pandas.util.testing import assert_frame_equal
 from pyspark.sql import SparkSession
 from pyspark.tests import ReusedPySparkTestCase, PySparkTestCase
 from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
-
 TEST_DATA_PATH = '/home/svanhmic/workflow/data/DABAI/sparkdata/csv/test.csv'
 
 

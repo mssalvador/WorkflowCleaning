@@ -2,6 +2,7 @@
 import os
 import sys
 import importlib
+
 import pyspark
 
 package_dict = {
@@ -58,10 +59,10 @@ if __name__ == '__main__':
         js = rdd.collect()
         # print(js)
         if arguments.job_name == 'cleaning':
-            print("""{"cluster":["""+','.join(js)+"""]}""")
+            print("""{"cluster":[""" + ','.join(js)+"""]}""")
         elif arguments.job_name == 'classification':
             print("""{"classification":[""" + ','.join(js) + """]}""")
         elif arguments.job_name == 'semisupervised':
-            print("""{"semisuper":["""+ ','.join(js)+"""]}""")
+            print("""{"semisuper":[""" + ','.join(js)+"""]}""")
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

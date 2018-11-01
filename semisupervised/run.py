@@ -1,6 +1,7 @@
 from semisupervised.labelpropagation import label_propagation
 from shared.WorkflowLogger import logger_info_decorator
 from shared.parse_algorithm_variables import parse_algorithm_variables
+from shared.data_import import import_dataframe
 #from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
 import  functools
@@ -24,20 +25,26 @@ def run(sc, **kwargs):
         if key not in algo_types:
             algo_types[key] = default_lp_param[key]
 
-    #Import data
-    input_data_frame = spark.read.csv(
-        path=input_data, header=True, inferSchema=True, #schema=T.StructType(id_column+label_columns+feature_columns),
-       mode='PERMISSIVE', nullValue=float('NAN'), nanValue=float('NAN'))
+    # Import data
+    input_data_frame = import_dataframe(
+        spark_context=spark,
+        data=input_data
+    )
+
     # Execute algorithm
     try:
         partial_lp = functools.partial(
-            label_propagation, sc=sc, data_frame=input_data_frame,
-            label_col=kwargs.get('labels', None)[0], id_col=kwargs.get('id', 'id')[0],
-            feature_cols=kwargs.get('features', None))
+            label_propagation,
+            sc=sc,
+            data_frame=input_data_frame,
+            label_col=kwargs.get('labels', None)[0],
+            id_col=kwargs.get('id', 'id')[0],
+            feature_cols=kwargs.get('features', None)
+        )
 
         output_data_frame = partial_lp(**algo_types)
     except Exception as e:
         print('missing some parameters in partial_lp'+str(e))
-        output_data_frame = input_data_frame.sample(withReplacement=True,fraction=0.1)
+        output_data_frame = input_data_frame.sample(withReplacement=True, fraction=0.1)
     # output_data_frame.show()
     return output_data_frame

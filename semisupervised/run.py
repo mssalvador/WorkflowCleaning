@@ -4,7 +4,7 @@ from shared.parse_algorithm_variables import parse_algorithm_variables
 from shared.data_import import import_dataframe
 #from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
-import  functools
+import functools
 
 default_lp_param = {'sigma': 0.42, 'tol':0.01, 'k': 2, 'max_iters': 5,
                     'eval_type': None, 'standardize': True, 'priors': None}
@@ -30,7 +30,7 @@ def run(sc, **kwargs):
         spark_context=spark,
         data=input_data
     )
-
+    input_data_frame.printSchema()
     # Execute algorithm
     try:
         partial_lp = functools.partial(
@@ -44,7 +44,7 @@ def run(sc, **kwargs):
 
         output_data_frame = partial_lp(**algo_types)
     except Exception as e:
-        print('missing some parameters in partial_lp'+str(e))
+        print('missing some parameters in partial_lp '+str(e))
         output_data_frame = input_data_frame.sample(withReplacement=True, fraction=0.1)
     # output_data_frame.show()
     return output_data_frame

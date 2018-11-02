@@ -4,6 +4,7 @@ from pyspark.ml import feature
 from pyspark.sql.functions import udf
 import numpy as np
 
+
 def _compute_bfs(vec_1, vec_2, sigma=0.42):
     return np.exp(-vec_1.squared_distance(vec_2) / sigma ** 2)
 
@@ -34,10 +35,10 @@ def _scale_data_frame(df, vector=None):
             withMean=True, withStd=True,
             inputCol=vector, outputCol='std_vector')
         model = scale.fit(df)
-        return (model
-            .transform(df)
-            .select([i for i in df.columns if i != vector] + [scale.getOutputCol()])
-            .withColumnRenamed(existing=scale.getOutputCol(), new=vector))
+        return (model.
+                transform(df).
+                select([i for i in df.columns if i != vector] + [scale.getOutputCol()]).
+                withColumnRenamed(existing=scale.getOutputCol(), new=vector))
 
 
 def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
@@ -56,9 +57,9 @@ def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
     if id_col:
         vector_dict = scaled_df.select(id_col, feature_col).rdd.collectAsMap()
     else:
-        vector_dict = (scaled_df.select(feature_col)
-            .rdd.zipWithIndex().map(lambda x: (x[1], x[0][feature_col]))
-            .collectAsMap())
+        vector_dict = (scaled_df.select(feature_col).
+                       rdd.zipWithIndex().map(lambda x: (x[1], x[0][feature_col]))
+                       .collectAsMap())
     bc_vec = sc.broadcast(vector_dict)
 
     index_rdd = df.rdd.map(lambda x: x[id_col]).cache()
@@ -71,6 +72,6 @@ def do_cartesian(sc, df, id_col=None, feature_col=None, **kwargs):
             sigma=sigma))
     )
 
-    index_rdd.unpersist() # Memory cleanup!
+    index_rdd.unpersist()  # Memory cleanup!
     tol_cut = functools.partial(_tolerance_cut, tol=tol)
     return cartesian_distance_demon.filter(lambda x: tol_cut(x.value))

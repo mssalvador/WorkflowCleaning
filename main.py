@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # visma_cluster_path = 'file:/home/ml/deployments/workflows'
     py_files = ['/shared.zip', '/examples.zip', '/cleaning.zip', '/classification.zip', '/semisupervised.zip']
 
-    spark_conf = pyspark.SparkConf(loadDefaults=False)
+    spark_conf = pyspark.SparkConf()
     (spark_conf
         .set('spark.executor.cores', 4)
         .set('spark.executor.memory', '1G')
@@ -55,8 +55,8 @@ if __name__ == '__main__':
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
         # data_frame.show()
-        rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
-        js = rdd.collect()
+        # rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        js = []# rdd.collect()
         # print(js)
         if arguments.job_name == 'cleaning':
             print("""{"cluster":[""" + ','.join(js)+"""]}""")

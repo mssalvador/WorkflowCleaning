@@ -2,7 +2,6 @@ from semisupervised.labelpropagation import label_propagation
 from shared.WorkflowLogger import logger_info_decorator
 from shared.parse_algorithm_variables import parse_algorithm_variables
 from shared.data_import import import_dataframe
-#from shared.Plot2DGraphs import plot3D
 from pyspark.sql import SparkSession
 import functools
 
@@ -17,9 +16,6 @@ def run(sc, **kwargs):
     spark = SparkSession(sparkContext=sc)
     # spark.conf.set("spark.sql.crossJoin.enabled", "true")
     input_data = kwargs.get('input_data', None)
-    # feature_columns = [T.StructField(f, T.DoubleType(), False) for f in kwargs.get('features', None)]
-    # label_columns = [T.StructField(kwargs.get('labels', None), T.IntegerType(), True)]
-    # id_column = [T.StructField(idx, T.IntegerType(), False) for idx in kwargs.get('id', 'id')]
     algo_types = parse_algorithm_variables(kwargs.get('algo_params', {}))
     for key in default_lp_param.keys():
         if key not in algo_types:
@@ -38,7 +34,7 @@ def run(sc, **kwargs):
             sc=sc,
             data_frame=input_data_frame,
             label_col=kwargs.get('labels', None)[0],
-            id_col=kwargs.get('id', 'id')[0],
+            id_col=kwargs.get('id', None),
             feature_cols=kwargs.get('features', None)
         )
 

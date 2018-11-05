@@ -3,13 +3,10 @@ from pyspark.mllib.linalg.distributed import CoordinateMatrix
 from semisupervised.labelpropagation import lp_helper
 from semisupervised.labelpropagation import lp_iteration
 from semisupervised.labelpropagation.lp_preamble import preamble
+from semisupervised.labelpropagation.generate_label_matrix import create_label_matrix
 
 
-def label_propagation(
-        sc, data_frame=None,
-        id_col='id',
-        label_col='label',
-        **kwargs):
+def label_propagation(sc, data_frame=None, id_col=None, label_col='label', **kwargs):
     """
     New Version of Labelpropagation with sparks matrix lib used
     :param sc:
@@ -19,7 +16,6 @@ def label_propagation(
     :param kwargs: iterations, tol, standardize, sigma, priors, evaluation_type, k
     :return:
     """
-    n = data_frame.count()
     max_iter = kwargs.get('max_iters', 25)
     demon_matrix, ncol = preamble(
         sc=sc,
@@ -58,12 +54,13 @@ def label_propagation(
     hat_transition_rdd.take(1)
     # cartesian_demon_rdd.unpersist() # Memory Cleanup!
 
-    clamped_y_rdd, initial_y_matrix = lp_helper.generate_label_matrix(
+    clamped_y_rdd, initial_y_matrix = create_label_matrix(
         df=data_frame,
         label_col=label_col,
         id_col=id_col,
         k=kwargs.get('k', None)
     )
+
     final_label_matrix = lp_iteration.propagation_step(
         sc=sc,
         transition_matrix=hat_transition_rdd,
@@ -71,17 +68,20 @@ def label_propagation(
         clamped=clamped_y_rdd,
         max_iterations=max_iter
     )
+
     coordinate_label_matrix = distributed.CoordinateMatrix(
         entries=final_label_matrix,
         numRows=initial_y_matrix.numRows(),
         numCols=initial_y_matrix.numCols()
     )
+
     output_data_frame = lp_helper.merge_data_with_label(
         sc=sc, org_data_frame=data_frame,
         coordinate_label_rdd=coordinate_label_matrix,
         id_col=id_col
     )
     hat_transition_rdd.unpersist()  # Memory Cleanup!
+
     return lp_helper.evaluate_label_based_on_eval(
         sc=sc,
         data_frame=output_data_frame,

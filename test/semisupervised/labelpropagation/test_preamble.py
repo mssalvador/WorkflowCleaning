@@ -1,4 +1,5 @@
 import pyspark
+from pyspark.mllib.linalg.distributed import MatrixEntry
 from shared.PySparkTest import PySparkTest
 from semisupervised.labelpropagation.lp_preamble import preamble
 
@@ -24,5 +25,6 @@ class TestPreamble(PySparkTest):
             **self.keyval_args
         )
         self.assertTrue(data, pyspark.rdd)
+        self.assertTrue(data.take(1)[0], MatrixEntry)
         print(data.take(5))
         # self.assertTrue()

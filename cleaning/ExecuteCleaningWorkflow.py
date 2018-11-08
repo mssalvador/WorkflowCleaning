@@ -7,7 +7,7 @@ from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql import functions as F
 # from shared.WorkflowLogger import logger_info_decorator, logger
-import numpy as np
+
 
 
 class ExecuteWorkflow(object):
@@ -245,6 +245,8 @@ class ExecuteWorkflow(object):
         :param centers: center of n_clusters
         :return: dict with all clusters
         """
+        # import numpy as np
         assert isinstance(k, int), str(k)+" is not integer"
         assert isinstance(centers, list), " center is type: "+str(type(centers))
-        return dict(zip(np.array(range(0, k, 1)), centers))
+        # return dict(zip(np.array(range(0, k, 1)), centers))
+        return dict(zip(range(0, k, 1), centers))

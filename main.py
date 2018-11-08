@@ -16,15 +16,15 @@ for zip_file, path in package_dict.items():
         sys.path.insert(0, path)
 
 if __name__ == '__main__':
-    from shared.OwnArguments import OwnArguments
-    arguments = OwnArguments()
-    arguments.add_argument('--cluster_path', types=str, required=True, dest='cluster_path')
-    arguments.add_argument('--job', types=str, required=True, dest='job_name')
-    arguments.add_argument('--job_args', dest='job_args', nargs='*')
-    arguments.add_argument('--input_data', dest='input_data', types=str)
-    arguments.add_argument('--features', dest='features', types=str, nargs='*')
-    arguments.add_argument('--id', dest='id', types=str, nargs='*')
-    arguments.add_argument('--labels', dest='labels', types=str, nargs='*', required=False)
+    from shared import OwnArgumentParser
+    arguments = OwnArgumentParser()
+    arguments.add_argument('--cluster_path', type=str, required=False)
+    arguments.add_argument('--job', type=str, required=False)
+    arguments.add_argument('--job_args', nargs='*')
+    arguments.add_argument('--input_data', type=str)
+    arguments.add_argument('--features', type=str, nargs='*')
+    arguments.add_argument('--id', type=str, nargs='*')
+    arguments.add_argument('--labels', type=str, nargs='*', required=False)
     arguments.parse_arguments()
 
     all_args = dict()
@@ -46,23 +46,23 @@ if __name__ == '__main__':
         .set('spark.executor.memory', '1G')
         .set('spark.executors', 2)
     )
-    sc = pyspark.SparkContext(appName=arguments.job_name)
-    job_module = importlib.import_module('{:s}'.format(arguments.job_name))
+    sc = pyspark.SparkContext(appName=arguments.job)
+    job_module = importlib.import_module('{:s}'.format(arguments.job))
     # sc = pyspark.SparkContext(
-    #     appName=arguments.job_name, pyFiles=[arguments.cluster_path+py_file for py_file in py_files], conf=spark_conf)
+    #     appName=arguments.job_name, pyFiles=[cluster_path+py_file for py_file in py_files], conf=spark_conf)
     # job_module = importlib.import_module('{:s}'.format(arguments.job_name))
     try:
         data_frame = job_module.run(sc, **all_args)
         # data_frame.printSchema()
         # data_frame.show()
-        # rdd = data_frame.toJSON() # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
-        js = []# rdd.collect()
+        rdd = data_frame.toJSON()  # .saveAsTextFile('hdfs:///tmp/cleaning.txt')
+        js = rdd.collect()
         # print(js)
-        if arguments.job_name == 'cleaning':
+        if arguments.job == 'cleaning':
             print("""{"cluster":[""" + ','.join(js)+"""]}""")
-        elif arguments.job_name == 'classification':
+        elif arguments.job == 'classification':
             print("""{"classification":[""" + ','.join(js) + """]}""")
-        elif arguments.job_name == 'semisupervised':
+        elif arguments.job == 'semisupervised':
             print("""{"semisuper":[""" + ','.join(js)+"""]}""")
     except TypeError as te:
         print('Did not run', te)  # make this more logable...

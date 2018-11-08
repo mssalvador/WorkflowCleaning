@@ -1,84 +1,50 @@
 import sys
+from string import digits
 
-class LittleOwnArg(object):
-    "container class"
-    def __init__(self, name='dummy', nargs=1, types=str,
-                 dest=None, helper=None, required=False):
-        # print(sys.argv)
-        self._name = name
-        self._nargs = nargs
-        self._types = types
-        self._dest = dest
-        self._helper = helper
-        self._required = required
-        self._values = None
+class OwnArgumentParser(object):
 
-    @staticmethod
-    def _set_all_main_args(definition='--'):
-        return [definition in arg for arg in sys.argv]
+    all_args = {}
 
-    @staticmethod
-    def _correct_type(value, types=str):
-        try:
-            return types(value)
-        except TypeError as te:
-            print('something be wrong!')
-            return value
-        except Exception as e:
-            print('something be really wrong!')
+    def __init__(self, name=None, type=str, required=False, nargs=1):
+        if nargs == '*' and type == str:
+            type = list
+        if name:
+            dest = name.replace('--', '')
+            self.all_args[dest] = {"type":type, "required":required, "nargs":nargs}
 
-    def parse_argument(self):
-        if self._name in sys.argv or self._required:
-            idx = sys.argv.index(self._name)
-            sub_list = self.extract_sublist(idx)
-        else:
-            return None
-
-        if self._nargs != '*' and len(sub_list) == 2: #the short one
-            self._values = LittleOwnArg._correct_type(sub_list[1], self._types)
-        else:
-            self._values = sub_list[1:]
-
-        if self._dest == None:
-            self._dest = self._name
-
-    def extract_sublist(self, idx):
-        if self._nargs == '*':
-            main_args_after = LittleOwnArg._set_all_main_args()[idx + 1:]
-            try:
-                odx = main_args_after.index(True)
-            except ValueError as Ve:
-                odx = len(main_args_after)
-        else:
-            odx = self._nargs
-        sub_list = sys.argv[idx:idx + odx + 1]
-        return sub_list
-
-
-class OwnArguments(object):
-    def __init__(self):
-        self._all_arguments = []
-
-    def __str__(self):
-        return 'OwnArguments({})'.format(self.__dict__)
-
-    def __repr__(self):
-        return 'Called'
-
-    def add_argument(self, name='dummy', nargs=1,
-                     types=str, dest=None, helper=None, required=False):
-        self._all_arguments.append(LittleOwnArg(
-            name=name, nargs=nargs, types=types,
-            dest=dest, helper=helper, required=required)
-        )
+    def get_all(self):
+        for name in OwnArgumentParser.all_args.keys():
+            print("{}: {}".format(name, getattr(self, name)))
 
     def parse_arguments(self):
-        for arg in self._all_arguments:
-            arg.parse_argument()
-            self.__dict__.update({arg._dest:arg._values})
-        return self._all_arguments
+        stringed_args = str(" ".join(sys.argv)).split("--")[1:]
+        params = list(filter(lambda x: x != "",map(lambda arg: arg.rstrip().split(' '), stringed_args)))
+        for p in params:
+            stored_value = self.all_args.get(p[0], None)
+            if stored_value:
+                if isinstance(stored_value["nargs"], str) and stored_value["type"] == dict:
+                    splitted_sub_vals = map(lambda x: x.split("="), p[1:])
+                    sub_vals = dict((key, OwnArgumentParser.cast_to(val)) for key, val in splitted_sub_vals)
+                    setattr(self, p[0], sub_vals)
+                elif isinstance(stored_value["nargs"], str) and stored_value["type"] == list:
+                    setattr(self, p[0], [OwnArgumentParser.cast_to(val) for val in p[1:]])
+                else:
+                    setattr(self, p[0], stored_value["type"](p[1]))
 
+    @classmethod
+    def add_argument(cls, name=None, type=str, required=False, nargs=1):
+        return cls(name=name, type=type, required=required, nargs=nargs)
 
-
-
-
+    @staticmethod
+    def cast_to( value: str):
+        if value in digits:
+            if '.' in value:
+                return float(value)
+            else:
+                return int(value)
+        elif value.lower() in ("true", 'yes', 't'):
+            return True
+        elif value.lower() in ("false", 'no', 'f'):
+            return False
+        else:
+            return value

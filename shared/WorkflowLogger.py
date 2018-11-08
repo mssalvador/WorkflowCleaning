@@ -32,9 +32,10 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
     return logger
 
+
 now = datetime.datetime.now()
 logger = create_logger(
-    argument='/tmp/{year}_{month}_{day}_workflow_test.log'.format(
+    argument='{year}_{month}_{day}_workflow_test.log'.format(
         year=now.year, month=now.month, day=now.day))
 
 

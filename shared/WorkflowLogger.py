@@ -35,12 +35,11 @@ def create_logger(argument='/tmp/workflow_test.log'):
 
 now = datetime.datetime.now()
 logger = create_logger(
-    argument='{year}_{month}_{day}_workflow_test.log'.format(
+    argument='/tmp/{year}_{month}_{day}_workflow_test.log'.format(
         year=now.year, month=now.month, day=now.day))
 
 
 def _log_info(orig_function, logger=logger):
-
     @wraps(orig_function)
     def wrapper_func(*args, **kwargs):
         # 'application' code
@@ -49,8 +48,7 @@ def _log_info(orig_function, logger=logger):
             #       .format(orig_function.__name__, args, kwargs))
             logger.info('Ran {}; args {}; kwargs {}'
                         .format(orig_function.__name__,
-                                args, kwargs)
-                        )
+                                args, kwargs))
             return orig_function(*args, **kwargs)
         except Exception as e:
             tb = sys.exc_info()[2]

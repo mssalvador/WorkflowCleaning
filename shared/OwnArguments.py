@@ -12,6 +12,15 @@ class OwnArgumentParser(object):
             dest = name.replace('--', '')
             self.all_args[dest] = {"type":type, "required":required, "nargs":nargs}
 
+    def __repr__(self):
+        return "OwnArgumentParser({})".format(self.all_values.keys())
+
+    def __str__(self):
+        return "OwnArgumentParser - args"
+
+    @property
+    def all_values(self):
+        return {key:getattr(self, key) for key in self.all_args.keys()}
 
     def get_all(self):
         for name in OwnArgumentParser.all_args.keys():

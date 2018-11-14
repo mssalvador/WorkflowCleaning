@@ -1,10 +1,10 @@
 import pyspark
 import pyspark.sql.types as T
-# from shared.WorkflowLogger import logger_info_decorator
+from shared.WorkflowLogger import logger_info_decorator
 
 
-# @logger_info_decorator
-def run(sc: pyspark.SparkContext, **kwargs):
+@logger_info_decorator
+def run(sc: pyspark.SparkContext, *args,**kwargs):
 
     from shared.parse_algorithm_variables import parse_algorithm_variables
     from cleaning.ExecuteCleaningWorkflow import ExecuteWorkflow
@@ -17,7 +17,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     id_column = kwargs.get('id', 'id')
     # header_columns = kwargs.get('headers', None)
     algorithm_params = parse_algorithm_variables(
-        vars=kwargs.get('algo_params', None)
+        vars=kwargs.get('job_args', None)
     )
     standardizer = algorithm_params.get('standardizer', False)
     spark_session = pyspark.sql.SparkSession(sc)
@@ -29,14 +29,13 @@ def run(sc: pyspark.SparkContext, **kwargs):
     # training_data_schema = T.StructType(all_structs)
 
     training_data_frame = spark_session.read.load(
-        path=import_path, format='csv', inferSchema=True,
-        header=True
+        path=import_path, format='csv', header=True, inferschema=True
     ).persist()
     header_columns = training_data_frame.columns
     # training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
-        cols_labels=label_columns, standardize=standardizer
+        cols_labels=label_columns[0], standardize=standardizer
     )
     training_model = cleaning_workflow.execute_pipeline(
         data_frame=training_data_frame
@@ -47,7 +46,7 @@ def run(sc: pyspark.SparkContext, **kwargs):
     # clustered_data_frame.show()
     show_result = ShowResults(
         id=id_column[0], list_features=feature_columns,
-        list_labels=label_columns, list_headers=header_columns, **algorithm_params
+        list_labels=label_columns[0], list_headers=header_columns, **algorithm_params
     )
     all_info_df = show_result.prepare_table_data(
         dataframe=clustered_data_frame, **algorithm_params

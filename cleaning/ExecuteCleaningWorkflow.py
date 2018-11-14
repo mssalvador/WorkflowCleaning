@@ -6,7 +6,7 @@ from pyspark.ml import linalg
 from pyspark import SQLContext
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql import functions as F
-# from shared.WorkflowLogger import logger_info_decorator, logger
+from shared.WorkflowLogger import logger_info_decorator, logger
 
 
 
@@ -36,7 +36,7 @@ class ExecuteWorkflow(object):
         # logger.info('Initialized pipeline with transformations {}'.format(self._pipeline.getStages()))
 
     def __repr__(self):
-        return "ExecuteWorkflow('{}', '{}', '{}', '{}')".format(
+        return "ExecuteWorkflow({}, {}, {}, {})".format(
             self._dict_parameters,
             self._list_feature,
             self._list_labels,
@@ -57,7 +57,7 @@ class ExecuteWorkflow(object):
             print(e.args[0])
             return
 
-    # @logger_info_decorator
+    @logger_info_decorator
     def _check_algorithm(self):
         try:
             applicable_algos = {
@@ -88,7 +88,7 @@ class ExecuteWorkflow(object):
     def labels(self):
         return self._list_labels
 
-    # @logger_info_decorator
+    @logger_info_decorator
     def construct_pipeline(self):
         """
         Method that creates a spark pipeline.
@@ -118,10 +118,12 @@ class ExecuteWorkflow(object):
 
         return Pipeline(stages=stages)
 
+    @logger_info_decorator
     def _vector_scale(self, df):
         to_dense_udf = F.udf(self._to_dense, linalg.VectorUDT())
         feature_str = 'features'
 
+        # print(self._list_feature)
         vector_df = df.withColumn(
             colName=feature_str,
             col=to_dense_udf(*self._list_feature)
@@ -149,7 +151,7 @@ class ExecuteWorkflow(object):
     def _to_dense(*args):
         return linalg.Vectors.dense(*args)
 
-    # @logger_info_decorator
+    @logger_info_decorator
     def execute_pipeline(self, data_frame):
         """
         Executes the pipeline with the dataframe
@@ -162,7 +164,7 @@ class ExecuteWorkflow(object):
         model = self._pipeline.fit(self._vector_scale(data_frame))
         return model
 
-    # @logger_info_decorator
+    @logger_info_decorator
     def apply_model(self, sc, model, data_frame):
         """
         Runs the model on a data frame

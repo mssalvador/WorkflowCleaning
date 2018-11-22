@@ -1,0 +1,1 @@
+from semisupervised.label2propagation.label_propagation import label_propagation

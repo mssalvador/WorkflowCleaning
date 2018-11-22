@@ -12,15 +12,19 @@ def to_submatries(df: dataframe, broadcast_l, **kwargs):
     # output: output - list(dataframe[id, feature, label] for submatrix)
 
     input_features = kwargs.get("feature", "vectors")
-    idx = kwargs.get("id", "id")
+    output_id = kwargs.get("output_id", "n_id")
+    label = kwargs.get("label", "label")
     split_schema = T.StructType([T.StructField("left", VectorUDT()), T.StructField("right", VectorUDT())])
     split_udf = F.udf(f=lambda x: [Vectors.dense(x[:broadcast_l.value]), Vectors.dense(x[broadcast_l.value:])],
                       returnType=split_schema) # Does the splitting of the dense vector into two dense vectors
 
-    df_len = df.count()
     vert_splited_df = df.withColumn("splitted_vectors", split_udf(input_features)).cache()
-    bottom_splitted_df = vert_splited_df.sort(idx, ascending=False).limit(df_len-broadcast_l.value)
+    bottom_splitted_df = (vert_splited_df.
+                          filter(F.isnan(label) | F.isnull(label)).
+                          rdd.
+                          zipWithIndex().
+                          map(lambda x: [*x[0], x[1]]).toDF(vert_splited_df.columns+[output_id]))
 
-    T_ul = bottom_splitted_df.select([idx]+[input_features]+["splitted_vectors.left"])
-    T_uu = bottom_splitted_df.select([idx]+[input_features]+["splitted_vectors.right"])
+    T_ul = bottom_splitted_df.select([output_id]+[input_features]+["splitted_vectors.left"])
+    T_uu = bottom_splitted_df.select([output_id]+[input_features]+["splitted_vectors.right"])
     return [T_ul, T_uu]

@@ -30,13 +30,14 @@ class TestTo_submatries(tests.ReusedPySparkTestCase):
                       zipWithIndex().
                       map(lambda x: [*x[0], x[1]]).
                       toDF(["old_id", "feature", "label", "new_id"]))
+
     def test_to_submatries(self):
         broadcast_l = self.sc.broadcast(self.input.filter(~F.isnan("label")).count())
         # self.input.show()
         key_val = {"feature": "feature", "label": "label", "id": "new_id"}
         T_ul, T_uu = to_submatries(self.input, broadcast_l=broadcast_l, **key_val)
         # T_ul.show()
-        # T_uu.show()
+        T_uu.show()
 
         # Is our output dataframes?
         self.assertIsInstance(T_ul, dataframe.DataFrame)

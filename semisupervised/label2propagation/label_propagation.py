@@ -3,9 +3,12 @@ from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from pyspark.sql import functions as F
 from pyspark.mllib.linalg.distributed import RowMatrix
+from pyspark.mllib.linalg import VectorUDT
+from pyspark.mllib.linalg import Vectors
 from shared.WorkflowLogger import logger_info_decorator
 import numpy as np
 from split_to_submatrix import to_submatries
+from matrix_inversion import invert
 
 
 @logger_info_decorator
@@ -42,16 +45,26 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
         # TODO Use method to compute T
         None
 
-    known_lab = data_frame.count() - data_frame.filter(F.isnan(label) or F.isnull(label)).count()
+    unknown_lab = data_frame.filter(F.isnan(label) or F.isnull(label)).count()
+    known_lab = data_frame.count() - unknown_lab
 
     broad_l = sc.broadcast(known_lab)
+    broad_u = sc.broadcast(unknown_lab)
     T_ul, T_uu = to_submatries(df=data_frame, broadcast_l=broad_l, **kwargs)
-    # TODO Compute: I-Tuu
 
-    # TODO Compute (I-Tuu)^-1
+    # Compute: I-Tuu
+    create_sparse_ident = F.udf(lambda x: Vectors.sparse(broad_u.value, [x - broad_l.value], [1.0]), VectorUDT())
+    subtract = F.udf(lambda x, y: x - y, VectorUDT())
 
-    # TODO Compute (I-Tuu)^-1 + TulYL = Yu
+    identity_df = T_uu.withColumn(colName="Identity", col=create_sparse_ident(F.col(id)))
+    I_minus_Tuu = identity_df.select(F.col(id),
+                                     subtract(F.col("Identity"), F.col("right")).alias("Iminus"))
 
+    # Compute (I-Tuu)^-1
+    inverted_mat = invert(sc=sc, data_frame=I_minus_Tuu, column="Iminus")
+
+    # Compute (I-Tuu)^-1 + TulYL = Yu
+    T_ul
     # TODO Append {YL, YU} to output as corrected label
 
     identity = np.eye(data_frame.count())

@@ -23,21 +23,16 @@ class TestTo_submatries(tests.ReusedPySparkTestCase):
             T.StructField("feature", VectorUDT()),
             T.StructField("label", T.FloatType())])
 
-        self.input = (self.spark.
-                      createDataFrame(data,schema).
-                      sort("label").
-                      rdd.
-                      zipWithIndex().
-                      map(lambda x: [*x[0], x[1]]).
-                      toDF(["old_id", "feature", "label", "new_id"]))
+        self.input = self.spark.createDataFrame(data,schema)
 
     def test_to_submatries(self):
         broadcast_l = self.sc.broadcast(self.input.filter(~F.isnan("label")).count())
         # self.input.show()
-        key_val = {"feature": "feature", "label": "label", "id": "new_id"}
-        T_ul, T_uu = to_submatries(self.input, broadcast_l=broadcast_l, **key_val)
+        key_val = {"feature": "feature", "label": "label", "id": "id"}
+        T_ll, T_lu, T_ul, T_uu = to_submatries(self.input, broadcast_l=broadcast_l, **key_val)
         # T_ul.show()
         T_uu.show()
+        T_ll.show()
 
         # Is our output dataframes?
         self.assertIsInstance(T_ul, dataframe.DataFrame)
@@ -51,10 +46,10 @@ class TestTo_submatries(tests.ReusedPySparkTestCase):
 
         # Does a random element in the original correspond to the new values?
         r = np.random.choice(self.val-1, 1)
-        self.assertListEqual(self.input.filter(F.col("old_id") == int(r)).collect()[0]["feature"][:broadcast_l.value].tolist(),
-                             T_ul.filter(F.col("old_id") == int(r)).collect()[0]["left"].tolist()
+        self.assertListEqual(self.input.filter(F.col("id") == int(r)).collect()[0]["feature"][:broadcast_l.value].tolist(),
+                             T_ul.filter(F.col("id") == int(r)).collect()[0]["left"].tolist()
                              )
 
-        self.assertListEqual(self.input.filter(F.col("old_id") == int(r)).collect()[0]["feature"][broadcast_l.value:].tolist(),
-                             T_uu.filter(F.col("old_id") == int(r)).collect()[0]["right"].tolist()
+        self.assertListEqual(self.input.filter(F.col("id") == int(r)).collect()[0]["feature"][broadcast_l.value:].tolist(),
+                             T_uu.filter(F.col("id") == int(r)).collect()[0]["right"].tolist()
                              )

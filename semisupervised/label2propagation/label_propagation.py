@@ -9,6 +9,7 @@ from shared.WorkflowLogger import logger_info_decorator
 import numpy as np
 from split_to_submatrix import to_submatries
 from matrix_inversion import invert
+from create_label_matrix import label_matrix
 
 
 @logger_info_decorator
@@ -50,7 +51,7 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
 
     broad_l = sc.broadcast(known_lab)
     broad_u = sc.broadcast(unknown_lab)
-    T_ul, T_uu = to_submatries(df=data_frame, broadcast_l=broad_l, **kwargs)
+    T_ll, T_lu, T_ul, T_uu = to_submatries(df=data_frame, broadcast_l=broad_l, **kwargs)
 
     # Compute: I-Tuu
     create_sparse_ident = F.udf(lambda x: Vectors.sparse(broad_u.value, [x - broad_l.value], [1.0]), VectorUDT())
@@ -63,7 +64,9 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
     # Compute (I-Tuu)^-1
     inverted_mat = invert(sc=sc, data_frame=I_minus_Tuu, column="Iminus")
 
-    # Compute (I-Tuu)^-1 + TulYL = Yu
+    # TODO create Y_l and Y_u as respectfully (l x C) and (u x C) matrices. C is the number of class'
+
+    # TODO Compute (I-Tuu)^-1 + TulYL = Yu
     T_ul
     # TODO Append {YL, YU} to output as corrected label
 

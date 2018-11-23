@@ -13,6 +13,7 @@ def to_submatries(df: dataframe, broadcast_l, **kwargs):
 
     input_features = kwargs.get("feature", "vectors")
     output_id = kwargs.get("output_id", "n_id")
+    idx = kwargs.get("id", "id")
     label = kwargs.get("label", "label")
     split_schema = T.StructType([T.StructField("left", VectorUDT()), T.StructField("right", VectorUDT())])
     split_udf = F.udf(f=lambda x: [Vectors.dense(x[:broadcast_l.value]), Vectors.dense(x[broadcast_l.value:])],
@@ -25,6 +26,14 @@ def to_submatries(df: dataframe, broadcast_l, **kwargs):
                           zipWithIndex().
                           map(lambda x: [*x[0], x[1]]).toDF(vert_splited_df.columns+[output_id]))
 
-    T_ul = bottom_splitted_df.select([output_id]+[input_features]+["splitted_vectors.left"])
-    T_uu = bottom_splitted_df.select([output_id]+[input_features]+["splitted_vectors.right"])
-    return [T_ul, T_uu]
+    top_splitted_df = (vert_splited_df.
+                          filter(~(F.isnan(label) | F.isnull(label))).
+                          rdd.
+                          zipWithIndex().
+                          map(lambda x: [*x[0], x[1]]).toDF(vert_splited_df.columns+[output_id]))
+
+    T_ll = top_splitted_df.select([output_id, idx]+[label]+[input_features]+["splitted_vectors.left"])
+    T_lu = top_splitted_df.select([output_id, idx]+[label]+[input_features]+["splitted_vectors.right"])
+    T_ul = bottom_splitted_df.select([output_id, idx]+[label]+[input_features]+["splitted_vectors.left"])
+    T_uu = bottom_splitted_df.select([output_id, idx]+[label]+[input_features]+["splitted_vectors.right"])
+    return [T_ll, T_lu, T_ul, T_uu]

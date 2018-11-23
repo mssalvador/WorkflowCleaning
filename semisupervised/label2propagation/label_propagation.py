@@ -2,14 +2,13 @@ from pyspark.sql import DataFrame
 from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from pyspark.sql import functions as F
-from pyspark.mllib.linalg.distributed import RowMatrix
+from pyspark.mllib.linalg.distributed import IndexedRowMatrix, IndexedRow, BlockMatrix
 from pyspark.mllib.linalg import VectorUDT
 from pyspark.mllib.linalg import Vectors
 from shared.WorkflowLogger import logger_info_decorator
 import numpy as np
 from split_to_submatrix import to_submatries
-from matrix_inversion import invert
-from create_label_matrix import label_matrix
+from equation import compute_equation
 
 
 @logger_info_decorator
@@ -49,32 +48,13 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
     unknown_lab = data_frame.filter(F.isnan(label) or F.isnull(label)).count()
     known_lab = data_frame.count() - unknown_lab
 
+    # Split T into for sub-matrices
     broad_l = sc.broadcast(known_lab)
     broad_u = sc.broadcast(unknown_lab)
-    T_ll, T_lu, T_ul, T_uu = to_submatries(df=data_frame, broadcast_l=broad_l, **kwargs)
+    T_ll_df, T_lu_df, T_ul_df, T_uu_df = to_submatries(df=data_frame, broadcast_l=broad_l, **kwargs)
 
-    # Compute: I-Tuu
-    create_sparse_ident = F.udf(lambda x: Vectors.sparse(broad_u.value, [x - broad_l.value], [1.0]), VectorUDT())
-    subtract = F.udf(lambda x, y: x - y, VectorUDT())
-
-    identity_df = T_uu.withColumn(colName="Identity", col=create_sparse_ident(F.col(id)))
-    I_minus_Tuu = identity_df.select(F.col(id),
-                                     subtract(F.col("Identity"), F.col("right")).alias("Iminus"))
-
-    # Compute (I-Tuu)^-1
-    inverted_mat = invert(sc=sc, data_frame=I_minus_Tuu, column="Iminus")
-
-    # TODO create Y_l and Y_u as respectfully (l x C) and (u x C) matrices. C is the number of class'
-
-    # TODO Compute (I-Tuu)^-1 + TulYL = Yu
-    T_ul
-    # TODO Append {YL, YU} to output as corrected label
-
-    identity = np.eye(data_frame.count())
-    identity_rdd = sc.parallelize(identity.tolist())
-    Identity_mat = RowMatrix(identity_rdd)
-
-
+    # Do computations
+    output = compute_equation(sc=sc, T_uu=T_uu_df, T_ll=T_ll_df, T_ul=T_ul_df,u_broadcast=broad_u, **kwargs)
 
 
     output = None

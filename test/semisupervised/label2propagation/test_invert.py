@@ -30,11 +30,11 @@ class TestInvert(tests.ReusedPySparkTestCase):
                       rdd.
                       zipWithIndex().
                       map(lambda x: [*x[0], x[1]]).
-                      toDF(["old_id", "feature", "label", "id"]))
+                      toDF(["id", "feature", "label", "n_id"]))
 
     def test_invert(self):
         inverted_col = "inverted_array"
-        output = invert(sc=self.sc, data_frame=self.input, column="feature", output_cols=inverted_col, id_col="id")
+        output = invert(sc=self.sc, data_frame=self.input, column="feature", output_cols=inverted_col, id_col="n_id")
         inverted_matrix = np.asarray(list(map(lambda x: x["feature"], self.input.collect())))
         output.show()
         # Is the input data consistent?

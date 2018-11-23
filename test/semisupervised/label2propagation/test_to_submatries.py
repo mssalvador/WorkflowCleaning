@@ -31,7 +31,7 @@ class TestTo_submatries(tests.ReusedPySparkTestCase):
         key_val = {"feature": "feature", "label": "label", "id": "id"}
         T_ll, T_lu, T_ul, T_uu = to_submatries(self.input, broadcast_l=broadcast_l, **key_val)
         # T_ul.show()
-        T_uu.show()
+        T_uu.show(truncate=False)
         T_ll.show()
 
         # Is our output dataframes?
@@ -45,7 +45,8 @@ class TestTo_submatries(tests.ReusedPySparkTestCase):
         self.assertIs(self.val-broadcast_l.value, len(T_uu.select("right").take(1)[0]["right"]))
 
         # Does a random element in the original correspond to the new values?
-        r = np.random.choice(self.val-1, 1)
+        samples = list(map(lambda x: x["id"], T_uu.select('id').collect()))
+        r = np.random.choice(samples, 1)
         self.assertListEqual(self.input.filter(F.col("id") == int(r)).collect()[0]["feature"][:broadcast_l.value].tolist(),
                              T_ul.filter(F.col("id") == int(r)).collect()[0]["left"].tolist()
                              )

@@ -6,6 +6,7 @@ from pyspark.mllib.linalg import DenseVector, VectorUDT
 from pyspark import SparkContext
 import numpy as np
 import itertools as it
+import functools as ft
 
 SIGMA = 0.3
 
@@ -17,7 +18,7 @@ def compute_distances(sc: SparkContext, data_frame: DataFrame, **kwargs):
     # Output: output:DataFrame[id, label, distances:vector]
     id_col = kwargs.get("id", "id")
     label_col = kwargs.get("label", "label")
-    feature_col = kwargs.get("feature", "feature")
+    feature_col = kwargs.get("features", "feature")
     cnt = data_frame.count()
     indicies_rdd = sc.parallelize(list(it.combinations_with_replacement(range(cnt), 2)))
     all_vectors_df = (indicies_rdd.
@@ -42,10 +43,11 @@ def compute_distances(sc: SparkContext, data_frame: DataFrame, **kwargs):
                  flatMap(lambda x: create_opposite_mat_elem(x=x, idx=id_col, jdx="jd", ilabel="i_"+label_col, jlabel="j_"+label_col, val="w")).
                  toDF().
                  groupBy("id", "label").
-                 agg(F.collect_list(F.struct(F.col("jd"), F.col("w"))).alias("vector")).
+                 agg(F.collect_list(F.struct(F.col("jd"), F.col("w"))).alias(feature_col)).
                  rdd.
-                 map(lambda row: Row(id=row["id"], label=row["label"], vector=create_distance_vector(row["vector"]))).
-                 toDF()
+                 map(lambda row: Row(id=row["id"], label=row["label"], vector=create_distance_vector(row[feature_col]))).
+                 toDF().
+                 withColumnRenamed("vector", feature_col)
                  # sort("i_"+label_col)
                  )
     return output_df
@@ -56,7 +58,9 @@ def create_distance_vector(x):
     # Input: x - list[list(index:int, value:double)]
     # Inpit: length - sc.broadcast value, containing length of the vectors
     # Output: output: - mllib.linalg.DenseVector, containing distances from: i to j.
-    vector = [i[1] for i in sorted(x, key=take_first)]
+    sum = ft.reduce(lambda val_x, val_y: val_x+val_y, map(lambda val: val[1], x))
+    vector = [i[1]/sum for i in sorted(x, key=take_first)]
+
     return DenseVector(vector)
 
 def take_first(elem):

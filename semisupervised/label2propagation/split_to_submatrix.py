@@ -11,7 +11,7 @@ def to_submatries(df: dataframe, broadcast_l, **kwargs):
     # input: kwargs - dict containing feature_col, id_col, etc
     # output: output - list(dataframe[id, feature, label] for submatrix)
 
-    input_features = kwargs.get("feature", "vectors")
+    input_features = kwargs.get("features", "vectors")
     output_id = kwargs.get("output_id", "n_id")
     idx = kwargs.get("id", "id")
     label = kwargs.get("label", "label")

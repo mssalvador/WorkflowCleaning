@@ -43,12 +43,12 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
     # Define T Matrix as the Probability matrix
     precomputed_T = kwargs.get('precomputed_distance', False)
     if not precomputed_T:
-        # TODO Use method to compute T
+        # Use method to compute T
         distances_df = compute_distances(sc=sc, data_frame=data_frame, id=id, label_col=label, feature_col=features)
     else:
         distances_df = data_frame
 
-    unknown_lab = distances_df.filter(F.isnan(label) or F.isnull(label)).count()
+    unknown_lab = distances_df.filter(F.isnan(label) | F.isnull(label)).count()
     known_lab = distances_df.count() - unknown_lab
 
     # Split T into for sub-matrices

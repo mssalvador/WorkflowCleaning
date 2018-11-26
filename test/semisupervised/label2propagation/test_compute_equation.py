@@ -15,11 +15,11 @@ class TestCompute_equation(tests.ReusedPySparkTestCase):
         self.spark = SparkSession(self.sc)
 
         self.val = 30
-        sample = [np.nan, 1, 2]
+        self.sample = [np.nan, 1, 2]
         prob = [.8, .1, .1]
         data = [{"id":i,
                  "feature": Vectors.dense(np.random.rand(self.val)),
-                 "label": float(np.random.choice(sample, 1, replace=True, p=prob))} for i in range(self.val)]
+                 "label": float(np.random.choice(self.sample, 1, replace=True, p=prob))} for i in range(self.val)]
         schema = T.StructType([
             T.StructField("id", T.IntegerType()),
             T.StructField("feature", VectorUDT()),
@@ -54,5 +54,10 @@ class TestCompute_equation(tests.ReusedPySparkTestCase):
             T_ul=self.T_ul_df,
             u_broadcast=self.broad_u,
         )
+
+        for x in map(lambda x: len(x["vector_labels"]), result.select("vector_labels").collect()):
+            self.assertEqual(len(list(filter(lambda x: not math.isnan(x), self.sample))), x)
+
+        self.assertEqual(result.select('id').distinct().count(), self.val)
 
         result.show(30, truncate=False)

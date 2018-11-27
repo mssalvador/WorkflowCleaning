@@ -2,6 +2,7 @@
 import os
 import sys
 import importlib
+import pprint
 
 import pyspark
 
@@ -59,7 +60,8 @@ if __name__ == '__main__':
         js = rdd.collect()
         # print(js)
         if arguments.job == 'cleaning':
-            print("""{"cluster":[""" + ','.join(js)+"""]}""")
+             print("""{"cluster":[""" + ','.join(js)+"""]}""")
+            # pprint.pprint(js)
         elif arguments.job == 'classification':
             print("""{"classification":[""" + ','.join(js) + """]}""")
         elif arguments.job == 'semisupervised':

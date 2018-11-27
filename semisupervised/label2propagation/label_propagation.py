@@ -1,15 +1,12 @@
 from pyspark.sql import DataFrame
-from pyspark.sql import SQLContext
 from pyspark import SparkContext
 from pyspark.sql import functions as F
-from pyspark.mllib.linalg.distributed import IndexedRowMatrix, IndexedRow, BlockMatrix
 from pyspark.mllib.linalg import VectorUDT
-from pyspark.mllib.linalg import Vectors
 from shared.WorkflowLogger import logger_info_decorator
-import numpy as np
 from split_to_submatrix import to_submatries
 from equation import compute_equation
 from compute_distances import compute_distances
+from class_mass_norm import class_mass_norm
 
 
 @logger_info_decorator
@@ -37,9 +34,6 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
         label=label,
         cols=", ".join(data_frame.columns)
     )
-
-    sqlCtx = SQLContext(sc)
-
     # Define T Matrix as the Probability matrix
     precomputed_T = kwargs.get('precomputed_distance', False)
     if not precomputed_T:
@@ -54,8 +48,12 @@ def label_propagation(sc: SparkContext, data_frame: DataFrame, *args, **kwargs):
     # Split T into for sub-matrices
     broad_l = sc.broadcast(known_lab)
     broad_u = sc.broadcast(unknown_lab)
+    broad_prior = sc.broadcast(distances_df.groupBy(label).count().rdd.collectAsMap())
     T_ll_df, T_lu_df, T_ul_df, T_uu_df = to_submatries(df=distances_df, broadcast_l=broad_l, **kwargs)
 
     # Do computations
     output = compute_equation(sc=sc, T_uu=T_uu_df, T_ll=T_ll_df, T_ul=T_ul_df,u_broadcast=broad_u, **kwargs)
-    return output
+
+    # Perform class mass normalization
+    cls_mass_norm = F.udf(lambda x: class_mass_norm(x, broadcast_labels=broad_prior, broad_l=broad_l), VectorUDT())
+    return output.withColumn("vector_labels", cls_mass_norm(F.col("vector_labels")))

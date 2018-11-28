@@ -1,5 +1,6 @@
 import pyspark
 import pyspark.sql.types as T
+import pyspark.sql.functions as F
 from shared.WorkflowLogger import logger_info_decorator
 
 
@@ -13,12 +14,16 @@ def run(sc: pyspark.SparkContext, *args,**kwargs):
     # Initialization phase v.1.0
     import_path = kwargs.get('input_data', None)
     feature_columns = kwargs.get('features', None)
+    # print("kwargs in run: {}".format(kwargs))
+    # print(feature_columns)
     label_columns = kwargs.get('labels', None)
     id_column = kwargs.get('id', 'id')
     # header_columns = kwargs.get('headers', None)
     algorithm_params = parse_algorithm_variables(
         vars=kwargs.get('job_args', None)
     )
+
+    feature_columns = list(map(lambda x: x.lstrip(), feature_columns))
     standardizer = algorithm_params.get('standardizer', False)
     spark_session = pyspark.sql.SparkSession(sc)
 
@@ -30,8 +35,14 @@ def run(sc: pyspark.SparkContext, *args,**kwargs):
 
     training_data_frame = spark_session.read.load(
         path=import_path, format='csv', header=True, inferschema=True
-    ).persist()
+    )
     header_columns = training_data_frame.columns
+    formatted_header_col = list(map(lambda x: F.col(x).alias(x.lstrip()), header_columns))
+    training_data_frame = training_data_frame.select(*formatted_header_col).persist()
+
+
+    # print(formatted_header_col)
+    # training_data_frame.select(feature_columns).show()
     # training_data_frame.show()
     cleaning_workflow = ExecuteWorkflow(
         dict_params=algorithm_params, cols_features=feature_columns,
@@ -45,8 +56,11 @@ def run(sc: pyspark.SparkContext, *args,**kwargs):
     )
     # clustered_data_frame.show()
     show_result = ShowResults(
-        id=id_column[0], list_features=feature_columns,
-        list_labels=label_columns[0], list_headers=header_columns, **algorithm_params
+        id=id_column[0],
+        list_features=feature_columns,
+        list_labels=label_columns[0],
+        list_headers=list(map(lambda x: x.lstrip(), header_columns)),
+        **algorithm_params
     )
     all_info_df = show_result.prepare_table_data(
         dataframe=clustered_data_frame, **algorithm_params

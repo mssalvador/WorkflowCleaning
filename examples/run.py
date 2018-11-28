@@ -8,7 +8,7 @@ default_lp_param = {'sigma': 340, 'tol':0.01, 'k': 10, 'max_iters': 5,
 
 
 def run(sc, **kwargs):
-    from semisupervised.labelpropagation.lp2 import label_propagation
+    from semisupervised.labelpropagation.label_propagation import label_propagation
     from shared.Experiments import Experiments
     from shared.parse_algorithm_variables import parse_algorithm_variables
 

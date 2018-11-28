@@ -1,9 +1,8 @@
 import itertools
 from semisupervised.labelpropagation import lp_matrix_multiply
 
-def propagation_step(sc, transition_matrix,
-                     label_matrix, clamped=None,
-                     max_iterations=25):
+
+def propagation_step(sc, transition_matrix, label_matrix, clamped=None, max_iterations=25):
     """
     Does max_iterations mutliplications.
     :param transition_matrix:
@@ -31,18 +30,24 @@ def propagation_step(sc, transition_matrix,
     broadcasted_clamped = sc.broadcast(clamped_dict)
 
     new_y_matrix = lp_matrix_multiply.naive_multiplication_rdd(
-        mat_a=persisted_transition_matrix, mat_b=label_matrix, is_triangle=True
+        mat_a=persisted_transition_matrix,
+        mat_b=label_matrix,
+        is_triangle=True
     )
-    new_y_matrix =_remove_clamped_values(
-        label_matrix=new_y_matrix, clamped=clamped,
+    new_y_matrix = _remove_clamped_values(
+        label_matrix=new_y_matrix,
+        clamped=clamped,
         broad_casted_clamped=broadcasted_clamped
     )
     while iterations < max_iterations:
         new_y_matrix = lp_matrix_multiply.naive_multiplication_rdd(
-            mat_a=persisted_transition_matrix, mat_b=new_y_matrix, is_triangle=True
+            mat_a=persisted_transition_matrix,
+            mat_b=new_y_matrix,
+            is_triangle=True
         )
         new_y_matrix = _remove_clamped_values(
-            label_matrix=new_y_matrix, clamped=clamped,
+            label_matrix=new_y_matrix,
+            clamped=clamped,
             broad_casted_clamped=broadcasted_clamped
         )
         iterations += 1
@@ -59,6 +64,7 @@ def _generate_clamped_zeros(clamped_values, n_label_cols):
 
 
 def _remove_clamped_values(label_matrix, clamped, broad_casted_clamped):
-    return (label_matrix
-        .filter(lambda x: (x.i, x.j) not in broad_casted_clamped.value)
-        .union(clamped))
+    return (label_matrix.
+            filter(lambda x: (x.i, x.j) not in broad_casted_clamped.value).
+            union(clamped)
+            )

@@ -12,9 +12,7 @@ def triangle_mat_summation(mat_element):
         return (mat_element.i, mat_element.value), (mat_element.j, mat_element.value)
 
 
-def merge_data_with_label(sc, org_data_frame,
-                          coordinate_label_rdd,
-                          id_col='id'):
+def merge_data_with_label(sc, org_data_frame, coordinate_label_rdd, id_col='id'):
     spark = SparkSession(sc)
     indexed_label_rdd = (coordinate_label_rdd.
                          toIndexedRowMatrix().
@@ -39,8 +37,7 @@ def merge_data_with_label(sc, org_data_frame,
     return merged_data_frame
 
 
-def evaluate_label_based_on_eval(sc, data_frame,
-                                 label_col='label', **kwargs):
+def evaluate_label_based_on_eval(sc, data_frame, label_col='label', **kwargs):
     priors = kwargs.get('priors', None)
     assert 'probabilities' in data_frame.columns, 'Column not in dataframe!'
     if ~isinstance(priors, list):

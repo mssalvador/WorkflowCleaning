@@ -343,8 +343,12 @@ class ShowResults(object):
                )
         return tmp.select(prediction_col, 'buckets')
 
-    def arrange_output(self, sc, dataframe,
-                       data_point_name='data_points', **kwargs):
+    def arrange_output(
+            self,
+            sc,
+            dataframe,
+            data_point_name='data_points',
+            **kwargs):
         predict_col = kwargs.get('predictionCol', 'Prediction')
         show_buckets = kwargs.get('showBuckets', None)
         new_struct = F.struct(

@@ -12,16 +12,15 @@ def _class_mass_parse_type(dataframe):
     print(t_count)
     prior_calc = F.count('label') / F.col('t_count')
 
-    priors = (dataframe
-        .filter('is_clamped')
-        .withColumn(colName='t_count',
-                    col=F.lit(t_count))
-        .groupby('label', 't_count')
-        .agg(prior_calc)
-        .drop('t_count')
-        .rdd
-        .collectAsMap()
-    )
+    priors = (dataframe.
+              filter('is_clamped').
+              withColumn(colName='t_count', col=F.lit(t_count)).
+              groupby('label', 't_count').
+              agg(prior_calc).
+              drop('t_count').
+              rdd.
+              collectAsMap()
+              )
     print(priors)
     return list(map(
         func=lambda x: x[1],
@@ -34,7 +33,7 @@ def class_mass_normalization(context, data_frame):
     k = context.constants['k'].value
     priors = context.constants['priors'].value
     if isinstance(priors, list) and len(priors) == k:
-        assert float(reduce(lambda x,y: x+y, priors)) == 1.0, "sum must be equal to 1.0, not {}".format(priors)
+        assert float(reduce(lambda x, y: x+y, priors)) == 1.0, "sum must be equal to 1.0, not {}".format(priors)
         priors = priors
     else:
         priors = _class_mass_parse_type(data_frame)

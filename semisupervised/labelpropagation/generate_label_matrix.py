@@ -1,5 +1,6 @@
 from pyspark.sql import functions as F
 from pyspark.mllib.linalg import distributed
+from functools import partial
 
 
 def generate_label_matrix(df, label_col='label',
@@ -49,19 +50,9 @@ def create_label_matrix(df, **kwargs):
     id_col = kwargs.get('id_col', None)
     label_col = kwargs.get('label_col', 'label')
     k = kwargs.get('k', None)
+    part_generate_label_matrix = partial(generate_label_matrix, df=df, label_col=label_col, k=k)
     if id_col:  # same as usual
-        clamped_y_rdd, initial_y_matrix = generate_label_matrix(
-                df=df,
-                label_col=label_col,
-                id_col=id_col,
-                k=k
-            )
+        clamped_y_rdd, initial_y_matrix = part_generate_label_matrix(id_col=id_col)
     else:
-        id_col = 'label_a'
-        clamped_y_rdd, initial_y_matrix = generate_label_matrix(
-                df=df,
-                label_col=label_col,
-                id_col=id_col,
-                k=k
-            )
+        clamped_y_rdd, initial_y_matrix = part_generate_label_matrix(id_col='label_a')
     return clamped_y_rdd, initial_y_matrix
